@@ -17,8 +17,8 @@ data class Config(
 ) {
     val needsLogAccess get() = keyEvent == null
     val isTaught get() = keyEvent != null || logSignature != null
-    /** Press & hold can't be told apart from a press when the log line doesn't repeat while held. */
-    val canDetectHold get() = keyEvent != null || holdRepeats
+    /** A hold needs either explicit down/up edges or log lines that repeat while held. */
+    val canDetectHold get() = keyEvent != null || logSignature?.hasExplicitKeyEdges == true || holdRepeats
 
     fun action(gesture: Gesture): SnapAction = actions[gesture] ?: SnapAction.NoAction
 }

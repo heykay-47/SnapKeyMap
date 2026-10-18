@@ -14,6 +14,8 @@ fun isKnownOplusKeyLine(tag: String, message: String): Boolean =
 
 /** A system log line that shows up every time the Snap Key is pressed. */
 data class KeySignature(val tag: String, val message: String) {
+    val hasExplicitKeyEdges: Boolean get() = isKnownOplusKeyLine(tag, message)
+
     fun matches(lineTag: String, lineMessage: String): Boolean =
         lineTag == tag && normalizeLogMessage(lineMessage) == message
 }
@@ -31,7 +33,9 @@ sealed interface LearnResult {
         /** True if the log line keeps repeating while the key is held, so press & hold can be detected. */
         val holdRepeats: Boolean,
         val releaseGapMs: Long,
-    ) : LearnResult
+    ) : LearnResult {
+        val canDetectHold: Boolean get() = signature.hasExplicitKeyEdges || holdRepeats
+    }
     data object NothingFound : LearnResult
 }
 

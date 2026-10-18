@@ -46,11 +46,24 @@ jobs:
         run: gradle --no-daemon testReleaseUnitTest assembleRelease
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/release/app-release.apk "SnapKeyMap-1.0.${{ github.run_number }}.apk"
+        run: |
+          VERSION=$(sed -n 's/^appVersion=//p' gradle.properties)
+          if [[ "$GITHUB_REF" == refs/tags/v* && "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
+            echo "::error::Release tag does not match appVersion=$VERSION"
+            exit 1
+          fi
+          cp app/build/outputs/apk/release/app-release.apk "SnapKeyMap-$VERSION.apk"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-results
+          path: app/build/test-results/testReleaseUnitTest/
 
       - uses: actions/upload-artifact@v6
         with:
-          name: SnapKeyMap-1.0.${{ github.run_number }}
+          name: SnapKeyMap
           path: SnapKeyMap-*.apk
 
       # Pushing a tag like v1.0.0 publishes the APK on the repository's Releases page,

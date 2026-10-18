@@ -35,18 +35,18 @@ Also recommended: allow notifications, and let the app run in the background (Ap
 
 ## Limits
 
-- Press & hold only works if your phone keeps writing the log line while the key is held. The teach step checks this and tells you.
+- Find X9's known key log reports press and release, with duplicate lines. These are deduplicated to detect single press, double press and hold. Other learned log lines still need to repeat while held to support press & hold.
 - With a double press action set, a single press waits about a third of a second to see if a second press follows.
 - With the screen off, a press is handled when the phone wakes up enough to read the log. That isn't guaranteed on every phone.
 - Shortcuts from apps that only support the new pinned-shortcut API can't be picked. Use **Open a link** with a deep link instead.
 
 ## Building
 
-Every push to `main` builds a signed APK in GitHub Actions (see `.github/workflows/build.yml`). Pushing a tag like `v1.0.1` also publishes it as a release:
+Every push to `main` builds a signed APK in GitHub Actions (see `.github/workflows/build.yml`). Set `appVersion` in `gradle.properties` before releasing. The release tag must match it; only Android's internal version code uses the build number. Pushing a tag like `v1.0.3` also publishes it as a release:
 
 ```
-git tag v1.0.1
-git push origin v1.0.1
+git tag v1.0.3
+git push origin v1.0.3
 ```
 
 The signing key is stored in the repository secrets `SIGNING_KEYSTORE_BASE64`, `SIGNING_STORE_PASSWORD`, `SIGNING_KEY_ALIAS` and `SIGNING_KEY_PASSWORD`. Every build uses the same key, so updates install over the old version. Without these secrets, the build falls back to a throwaway debug key.

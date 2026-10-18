@@ -23,7 +23,7 @@ enum class LogAccess {
  * in the background for as long as the process lives.
  */
 class LogReader(
-    private val onLine: (pid: Int, tag: String, message: String) -> Unit,
+    private val onLine: (timestamp: String, tag: String, message: String) -> Unit,
     private val onAccess: (LogAccess) -> Unit,
 ) {
     @Volatile private var session: Session? = null
@@ -77,15 +77,16 @@ class LogReader(
                 while (active) {
                     val line = reader.readLine() ?: break
                     val match = LINE.matchEntire(line) ?: continue
-                    val pid = match.groupValues[1].toIntOrNull() ?: continue
-                    val tag = match.groupValues[2]
-                    val message = match.groupValues[3]
+                    val timestamp = match.groupValues[1]
+                    val pid = match.groupValues[2].toIntOrNull() ?: continue
+                    val tag = match.groupValues[3]
+                    val message = match.groupValues[4]
                     if (pid != myPid) {
                         if (!full) {
                             full = true
                             report(LogAccess.FULL)
                         }
-                        onLine(pid, tag, message)
+                        onLine(timestamp, tag, message)
                     } else if (!full && tag == TAG && message == PROBE && ++ownProbes >= 2) {
                         // Our own probes arrive but nothing from other apps: access was declined.
                         result = LogAccess.LIMITED
@@ -115,6 +116,6 @@ class LogReader(
         const val PROBE = "log access probe"
 
         // threadtime format: "10-18 04:27:44.123  1234  5678 D Tag     : message"
-        val LINE = Regex("""^\d\d-\d\d\s+[\d:.]+\s+(\d+)\s+\d+\s+[VDIWEFA]\s+(.*?)\s*: (.*)$""")
+        val LINE = Regex("""^(\d\d-\d\d\s+[\d:.]+)\s+(\d+)\s+\d+\s+[VDIWEFA]\s+(.*?)\s*: (.*)$""")
     }
 }

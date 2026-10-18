@@ -25,6 +25,10 @@ object SnapEngine {
     private lateinit var reader: LogReader
     private lateinit var keyGestures: GestureDetector
     private lateinit var logGestures: GestureDetector
+    private val oplusEdges = OplusKeyEdges(
+        onDown = { logGestures.down() },
+        onUp = { logGestures.up() },
+    )
 
     private val accessState = MutableStateFlow(LogAccess.OFF)
     val logAccess: StateFlow<LogAccess> = accessState.asStateFlow()
@@ -48,12 +52,19 @@ object SnapEngine {
         app = context.applicationContext
         store = ConfigStore(app)
         reader = LogReader(onLine = ::onLogLine, onAccess = { access -> main.post { onAccessChanged(access) } })
-        keyGestures = GestureDetector(main, longPressMs = 500, onGesture = ::onGesture)
-        logGestures = GestureDetector(main, longPressMs = 650, onGesture = ::onGesture)
+        keyGestures = gestureDetector(longPressMs = 500)
+        logGestures = gestureDetector(longPressMs = 650)
         Notifications.createChannel(app)
     }
 
     fun now(): Long = SystemClock.elapsedRealtime()
+
+    private fun gestureDetector(longPressMs: Long) = GestureDetector(
+        schedule = { task, delay -> main.postDelayed(task, delay); Unit },
+        cancel = { task -> main.removeCallbacks(task) },
+        longPressMs = longPressMs,
+        onGesture = ::onGesture,
+    )
 
     fun hasLogPermission(): Boolean =
         app.checkSelfPermission(Manifest.permission.READ_LOGS) == PackageManager.PERMISSION_GRANTED
@@ -84,6 +95,7 @@ object SnapEngine {
         if (access == LogAccess.OFF || access == LogAccess.LIMITED) {
             main.removeCallbacks(logKeyUp)
             logKeyDown = false
+            oplusEdges.reset()
             logGestures.reset()
             if (!uiVisible) notifyIfPaused()
         }
@@ -97,7 +109,7 @@ object SnapEngine {
     }
 
     // Called on the logcat thread for every line from another process.
-    private fun onLogLine(pid: Int, tag: String, message: String) {
+    private fun onLogLine(timestamp: String, tag: String, message: String) {
         learning?.let { list ->
             synchronized(list) { list += Observation(now(), KeyLearning.logKey(tag, message)) }
             return
@@ -105,14 +117,18 @@ object SnapEngine {
         val config = store.config.value
         if (!config.enabled || !config.needsLogAccess) return
         val isSnapKey = config.logSignature?.matches(tag, message) ?: isKnownOplusKeyLine(tag, message)
-        if (isSnapKey) main.post(::onLogKeyLine)
+        if (isSnapKey) main.post { onLogKeyLine(timestamp, isKnownOplusKeyLine(tag, message)) }
     }
 
-    /** The log only says "the key is active", so a press is a burst of lines and release is the silence after. */
-    private fun onLogKeyLine() {
+    /** Known Oppo logs report edges; other learned logs retain the silence-based fallback. */
+    private fun onLogKeyLine(timestamp: String, explicitEdges: Boolean) {
         val config = store.config.value
         logGestures.wantsDouble = config.action(Gesture.DOUBLE) != SnapAction.NoAction
-        logGestures.wantsLong = config.holdRepeats && config.action(Gesture.LONG) != SnapAction.NoAction
+        logGestures.wantsLong = (explicitEdges || config.holdRepeats) && config.action(Gesture.LONG) != SnapAction.NoAction
+        if (explicitEdges) {
+            oplusEdges.accept(timestamp)
+            return
+        }
         if (!logKeyDown) {
             logKeyDown = true
             logGestures.down()
@@ -156,6 +172,9 @@ object SnapEngine {
     }
 
     fun startLearning() {
+        main.removeCallbacks(logKeyUp)
+        logKeyDown = false
+        oplusEdges.reset()
         keyGestures.reset()
         logGestures.reset()
         learning = mutableListOf()

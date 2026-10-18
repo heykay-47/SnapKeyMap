@@ -1,7 +1,5 @@
 package com.heykay.snapkeymap
 
-import android.os.Handler
-
 /**
  * Turns key down/up into press, double press or press & hold. Runs on the main thread.
  *
@@ -9,7 +7,8 @@ import android.os.Handler
  * down; a double press fires on the second key down.
  */
 class GestureDetector(
-    private val handler: Handler,
+    private val schedule: (Runnable, Long) -> Unit,
+    private val cancel: (Runnable) -> Unit,
     private val longPressMs: Long,
     private val onGesture: (Gesture) -> Unit,
 ) {
@@ -35,7 +34,7 @@ class GestureDetector(
         handled = false
         when {
             waitingForSecond -> {
-                handler.removeCallbacks(singlePress)
+                cancel(singlePress)
                 waitingForSecond = false
                 handled = true
                 onGesture(Gesture.DOUBLE)
@@ -44,26 +43,26 @@ class GestureDetector(
                 handled = true
                 onGesture(Gesture.SINGLE)
             }
-            wantsLong -> handler.postDelayed(longPress, longPressMs)
+            wantsLong -> schedule(longPress, longPressMs)
         }
     }
 
     fun up() {
         if (!pressed) return
         pressed = false
-        handler.removeCallbacks(longPress)
+        cancel(longPress)
         if (handled) return
         if (wantsDouble) {
             waitingForSecond = true
-            handler.postDelayed(singlePress, DOUBLE_PRESS_WINDOW_MS)
+            schedule(singlePress, DOUBLE_PRESS_WINDOW_MS)
         } else {
             onGesture(Gesture.SINGLE)
         }
     }
 
     fun reset() {
-        handler.removeCallbacks(longPress)
-        handler.removeCallbacks(singlePress)
+        cancel(longPress)
+        cancel(singlePress)
         pressed = false
         handled = false
         waitingForSecond = false

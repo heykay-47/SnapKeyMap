@@ -228,7 +228,7 @@ private fun Finished(result: LearnResult, finishedAt: Long, onRetry: () -> Unit,
 
     val body = when (result) {
         is LearnResult.KeyEventFound -> "Your Snap Key talks to apps directly, so no log access is needed."
-        is LearnResult.LogLineFound -> if (result.holdRepeats) {
+        is LearnResult.LogLineFound -> if (result.canDetectHold) {
             "The app will spot your Snap Key in the system log."
         } else {
             "The app will spot your Snap Key in the system log. Your phone doesn't report holding the " +
