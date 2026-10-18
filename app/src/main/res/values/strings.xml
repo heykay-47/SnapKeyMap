@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SnapKey Map</string>
+    <string name="service_description">Lets SnapKey Map notice when you press the Snap Key and run the action you picked: open an app, take a screenshot, go home, and so on. It does not read what is on your screen.</string>
+</resources>

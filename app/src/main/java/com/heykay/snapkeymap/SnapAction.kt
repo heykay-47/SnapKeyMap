@@ -1,0 +1,87 @@
+package com.heykay.snapkeymap
+
+import org.json.JSONObject
+
+enum class Gesture(val title: String) {
+    SINGLE("Press"),
+    DOUBLE("Double press"),
+    LONG("Press & hold"),
+}
+
+enum class Section(val title: String) {
+    PHONE("Phone"),
+    SCREEN("Screen & navigation"),
+    MEDIA("Music & video"),
+    OPEN("Open"),
+}
+
+/** Built-in things the key can do. [needsService] actions go through the accessibility service. */
+enum class DeviceAction(val label: String, val section: Section, val needsService: Boolean = false) {
+    FLASHLIGHT("Flashlight on / off", Section.PHONE),
+    RINGER_CYCLE("Ring → Vibrate → Silent", Section.PHONE),
+    DO_NOT_DISTURB("Do Not Disturb on / off", Section.PHONE),
+    SCREENSHOT("Take a screenshot", Section.SCREEN, needsService = true),
+    LOCK_SCREEN("Lock the screen", Section.SCREEN, needsService = true),
+    NOTIFICATIONS("Show notifications", Section.SCREEN, needsService = true),
+    QUICK_SETTINGS("Show quick settings", Section.SCREEN, needsService = true),
+    RECENT_APPS("Recent apps", Section.SCREEN, needsService = true),
+    HOME("Go to home screen", Section.SCREEN, needsService = true),
+    BACK("Go back", Section.SCREEN, needsService = true),
+    POWER_MENU("Power menu", Section.SCREEN, needsService = true),
+    SPLIT_SCREEN("Split screen", Section.SCREEN, needsService = true),
+    PLAY_PAUSE("Play / pause", Section.MEDIA),
+    NEXT_TRACK("Next track", Section.MEDIA),
+    PREVIOUS_TRACK("Previous track", Section.MEDIA),
+    VOLUME_PANEL("Show volume slider", Section.MEDIA),
+    CAMERA("Camera", Section.OPEN),
+    VIDEO_CAMERA("Video camera", Section.OPEN),
+    ASSISTANT("Voice assistant", Section.OPEN),
+    INTERNET_PANEL("Wi-Fi & internet panel", Section.OPEN),
+}
+
+sealed interface SnapAction {
+    data object NoAction : SnapAction
+    data class OpenApp(val packageName: String, val appName: String) : SnapAction
+    /** An app shortcut (direct dial, a Tasker task, a Maps route...) stored as an intent URI. */
+    data class OpenShortcut(val intentUri: String, val name: String) : SnapAction
+    data class OpenLink(val url: String) : SnapAction
+    data class Device(val action: DeviceAction) : SnapAction
+
+    val label: String
+        get() = when (this) {
+            NoAction -> "Do nothing"
+            is OpenApp -> "Open $appName"
+            is OpenShortcut -> name
+            is OpenLink -> "Open $url"
+            is Device -> action.label
+        }
+
+    fun toJson(): String {
+        val json = JSONObject()
+        when (this) {
+            NoAction -> json.put("type", "none")
+            is OpenApp -> json.put("type", "app").put("package", packageName).put("name", appName)
+            is OpenShortcut -> json.put("type", "shortcut").put("uri", intentUri).put("name", name)
+            is OpenLink -> json.put("type", "link").put("url", url)
+            is Device -> json.put("type", "device").put("action", action.name)
+        }
+        return json.toString()
+    }
+
+    companion object {
+        fun fromJson(text: String?): SnapAction? {
+            if (text == null) return null
+            return runCatching {
+                val json = JSONObject(text)
+                when (json.getString("type")) {
+                    "none" -> NoAction
+                    "app" -> OpenApp(json.getString("package"), json.getString("name"))
+                    "shortcut" -> OpenShortcut(json.getString("uri"), json.getString("name"))
+                    "link" -> OpenLink(json.getString("url"))
+                    "device" -> Device(DeviceAction.valueOf(json.getString("action")))
+                    else -> null
+                }
+            }.getOrNull()
+        }
+    }
+}
