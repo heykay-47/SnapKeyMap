@@ -4,6 +4,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/** A logcat time [ms] milliseconds after 11:05:00. */
+private fun stamp(ms: Long): String {
+    val total = 5 * 60_000 + ms
+    return "10-18 11:%02d:%02d.%03d".format(total / 60_000, total / 1000 % 60, total % 1000)
+}
+
 class OplusKeyEdgesTest {
     private class Clock {
         var now = 0L
@@ -35,12 +41,12 @@ class OplusKeyEdgesTest {
 
         fun duplicatedLine(time: Long, deliveredAt: Long = time) {
             clock.advanceTo(deliveredAt)
-            repeat(2) { edges.accept("10-18 11:05:$time") }
+            repeat(2) { edges.accept(stamp(time)) }
         }
 
         fun observedLine(time: Long) {
             clock.advanceTo(time)
-            repeat(2) { edges.observe("10-18 11:05:$time") }
+            repeat(2) { edges.observe(stamp(time)) }
         }
     }
 
@@ -113,12 +119,27 @@ class OplusKeyEdgesTest {
     }
 
     @Test
+    fun copiesAcrossASecondOrMidnightAreOneEdgeButSeparateEdgesAreNot() {
+        val edgesSeen = mutableListOf<String>()
+        val edges = OplusKeyEdges({ edgesSeen += "down" }, { edgesSeen += "up" })
+        listOf(
+            "10-18 12:07:40.999", "10-18 12:07:41.000",
+            "10-18 12:07:41.020",
+            "10-31 23:59:59.999", "11-01 00:00:00.000",
+            "11-01 00:00:00.062", "11-01 00:00:00.062",
+            "not a timestamp",
+        ).forEach(edges::accept)
+
+        assertEquals(listOf("down", "up", "down", "up"), edgesSeen)
+    }
+
+    @Test
     fun resetAllowsFirstEventOfANewSession() {
         val edgesSeen = mutableListOf<String>()
         val edges = OplusKeyEdges({ edgesSeen += "down" }, { edgesSeen += "up" })
-        edges.accept("first")
+        edges.accept(stamp(0))
         edges.reset()
-        edges.accept("first")
+        edges.accept(stamp(0))
         assertEquals(listOf("down", "down"), edgesSeen)
     }
 
@@ -216,7 +237,7 @@ class OplusKeyEdgesTest {
     @Test
     fun silentDownQueuedDuringLearningCanRunAfterFinishBeforeRelease() {
         val h = Harness()
-        val queuedDown = Runnable { repeat(2) { h.edges.observe("learning-down") } }
+        val queuedDown = Runnable { repeat(2) { h.edges.observe(stamp(2000)) } }
         h.detector.reset()
         h.clock.advanceTo(2000)
         h.detector.reset()
@@ -235,14 +256,14 @@ class OplusKeyEdgesTest {
     fun observingEdgesNeverCallsEitherCallbackIncludingAcrossDispatchDuplicates() {
         val callbacks = mutableListOf<String>()
         val edges = OplusKeyEdges({ callbacks += "down" }, { callbacks += "up" })
-        repeat(2) { edges.observe("down") }
-        edges.accept("down")
-        repeat(2) { edges.observe("up") }
-        edges.accept("up")
+        repeat(2) { edges.observe(stamp(0)) }
+        edges.accept(stamp(0))
+        repeat(2) { edges.observe(stamp(100)) }
+        edges.accept(stamp(100))
         assertTrue(callbacks.isEmpty())
 
-        edges.accept("next-down")
-        edges.accept("next-up")
+        edges.accept(stamp(1000))
+        edges.accept(stamp(1100))
         assertEquals(listOf("down", "up"), callbacks)
     }
 
