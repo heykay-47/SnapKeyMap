@@ -10,10 +10,19 @@ class OplusKeyEdges(private val onDown: () -> Unit, private val onUp: () -> Unit
     private var pressed = false
 
     fun accept(timestamp: String) {
-        if (timestamp == lastTimestamp) return
+        if (!advance(timestamp)) return
+        if (pressed) onDown() else onUp()
+    }
+
+    fun observe(timestamp: String) {
+        advance(timestamp)
+    }
+
+    private fun advance(timestamp: String): Boolean {
+        if (timestamp == lastTimestamp) return false
         lastTimestamp = timestamp
         pressed = !pressed
-        if (pressed) onDown() else onUp()
+        return true
     }
 
     fun reset() {

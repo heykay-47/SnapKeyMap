@@ -37,6 +37,11 @@ class OplusKeyEdgesTest {
             clock.advanceTo(deliveredAt)
             repeat(2) { edges.accept("10-18 11:05:$time") }
         }
+
+        fun observedLine(time: Long) {
+            clock.advanceTo(time)
+            repeat(2) { edges.observe("10-18 11:05:$time") }
+        }
     }
 
     @Test
@@ -97,6 +102,130 @@ class OplusKeyEdgesTest {
         edges.reset()
         edges.accept("first")
         assertEquals(listOf("down", "down"), edgesSeen)
+    }
+
+    @Test
+    fun finalLearningHoldReleasedAfterFinishDoesNotTurnFirstSingleIntoDouble() {
+        val h = Harness(enableHold = false)
+        h.detector.reset()
+        listOf(0L, 100L, 1000L, 1100L, 2000L, 2100L, 3000L).forEach(h::observedLine)
+        h.clock.advanceTo(5000)
+        assertTrue(h.gestures.isEmpty())
+
+        h.detector.reset()
+        h.duplicatedLine(5100)
+        h.clock.advanceTo(6000)
+        assertTrue(h.gestures.isEmpty())
+
+        h.duplicatedLine(6100)
+        h.duplicatedLine(6200)
+        h.clock.advanceTo(6550)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+
+        listOf(7000L, 7100L, 7200L, 7300L).forEach { h.duplicatedLine(it) }
+        h.clock.advanceTo(9000)
+        assertEquals(listOf(Gesture.SINGLE, Gesture.DOUBLE), h.gestures)
+    }
+
+    @Test
+    fun finalLearningHoldReleasedBeforeFinishLeavesFirstSingleIntact() {
+        val h = Harness()
+        h.detector.reset()
+        h.observedLine(0)
+        h.observedLine(2000)
+        h.detector.reset()
+        h.clock.advanceTo(3000)
+        assertTrue(h.gestures.isEmpty())
+
+        h.duplicatedLine(3100)
+        h.duplicatedLine(3200)
+        h.clock.advanceTo(4000)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
+    fun duplicateCrossingLearningBoundaryDoesNotDispatchAnObservedDown() {
+        val h = Harness(enableHold = false)
+        h.observedLine(0)
+        h.detector.reset()
+        h.duplicatedLine(0, deliveredAt = 1000)
+        h.duplicatedLine(1100)
+        h.clock.advanceTo(2000)
+        assertTrue(h.gestures.isEmpty())
+
+        h.duplicatedLine(2100)
+        h.duplicatedLine(2200)
+        h.clock.advanceTo(3000)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
+    fun learningStartedWithKeyDownPreservesPhaseAndCancelsPendingHold() {
+        val h = Harness()
+        h.duplicatedLine(0)
+        h.detector.reset()
+        h.observedLine(1000)
+        h.observedLine(2000)
+        h.clock.advanceTo(4000)
+        assertTrue(h.gestures.isEmpty())
+
+        h.detector.reset()
+        h.duplicatedLine(4100)
+        h.duplicatedLine(5000)
+        h.duplicatedLine(5100)
+        h.clock.advanceTo(6000)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
+    fun learningCancelsPendingSingleAndSilentTrackingSurvivesCancel() {
+        val h = Harness()
+        h.duplicatedLine(0)
+        h.duplicatedLine(100)
+        h.detector.reset()
+        h.observedLine(200)
+        h.clock.advanceTo(2000)
+        assertTrue(h.gestures.isEmpty())
+
+        h.detector.reset()
+        h.duplicatedLine(2100)
+        h.duplicatedLine(3000)
+        h.duplicatedLine(3100)
+        h.clock.advanceTo(4000)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
+    fun silentDownQueuedDuringLearningCanRunAfterFinishBeforeRelease() {
+        val h = Harness()
+        val queuedDown = Runnable { repeat(2) { h.edges.observe("learning-down") } }
+        h.detector.reset()
+        h.clock.advanceTo(2000)
+        h.detector.reset()
+        queuedDown.run()
+        h.clock.advanceTo(3000)
+        assertTrue(h.gestures.isEmpty())
+
+        h.duplicatedLine(3100)
+        h.duplicatedLine(4000)
+        h.duplicatedLine(4100)
+        h.clock.advanceTo(5000)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
+    fun observingEdgesNeverCallsEitherCallbackIncludingAcrossDispatchDuplicates() {
+        val callbacks = mutableListOf<String>()
+        val edges = OplusKeyEdges({ callbacks += "down" }, { callbacks += "up" })
+        repeat(2) { edges.observe("down") }
+        edges.accept("down")
+        repeat(2) { edges.observe("up") }
+        edges.accept("up")
+        assertTrue(callbacks.isEmpty())
+
+        edges.accept("next-down")
+        edges.accept("next-up")
+        assertEquals(listOf("down", "up"), callbacks)
     }
 
     @Test
