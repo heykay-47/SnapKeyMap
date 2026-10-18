@@ -20,6 +20,9 @@ data class KeySignature(val tag: String, val message: String) {
         lineTag == tag && normalizeLogMessage(lineMessage) == message
 }
 
+internal fun acceptsKeyLog(signature: KeySignature?, tag: String, message: String): Boolean =
+    signature?.matches(tag, message) ?: isKnownOplusKeyLine(tag, message)
+
 /** A real key event that Android passes to accessibility services. */
 data class LearnedKey(val keyCode: Int, val scanCode: Int)
 
@@ -75,7 +78,12 @@ object KeyLearning {
             }
 
         val holdKeys = keysIn(hold)
-        val best = candidates.entries.maxByOrNull { (key, rounds) ->
+        val explicitEdges = candidates.entries.filter { (key, _) ->
+            val (_, tag, message) = key.split(SEP)
+            KeySignature(tag, message).hasExplicitKeyEdges
+        }
+        val logCandidates = explicitEdges.ifEmpty { candidates.entries.toList() }
+        val best = logCandidates.maxByOrNull { (key, rounds) ->
             val linesPerTap = observations.count { o -> o.key == key && taps.any { o.timeMs in it } } / taps.size
             var score = rounds * 100
             if (key.contains("key", ignoreCase = true)) score += 50

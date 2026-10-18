@@ -110,14 +110,23 @@ object SnapEngine {
 
     // Called on the logcat thread for every line from another process.
     private fun onLogLine(timestamp: String, tag: String, message: String) {
+        val explicitEdges = isKnownOplusKeyLine(tag, message)
         learning?.let { list ->
-            synchronized(list) { list += Observation(now(), KeyLearning.logKey(tag, message)) }
+            synchronized(list) {
+                if (learning === list) list += Observation(now(), KeyLearning.logKey(tag, message))
+            }
+            if (explicitEdges) main.post { oplusEdges.observe(timestamp) }
             return
         }
         val config = store.config.value
-        if (!config.enabled || !config.needsLogAccess) return
-        val isSnapKey = config.logSignature?.matches(tag, message) ?: isKnownOplusKeyLine(tag, message)
-        if (isSnapKey) main.post { onLogKeyLine(timestamp, isKnownOplusKeyLine(tag, message)) }
+        val isSnapKey = config.enabled && config.needsLogAccess && acceptsKeyLog(config.logSignature, tag, message)
+        if (explicitEdges || isSnapKey) main.post {
+            if (learning != null) {
+                if (explicitEdges) oplusEdges.observe(timestamp)
+            } else if (isSnapKey) {
+                onLogKeyLine(timestamp, explicitEdges)
+            }
+        }
     }
 
     /** Known Oppo logs report edges; other learned logs retain the silence-based fallback. */
@@ -172,22 +181,35 @@ object SnapEngine {
     }
 
     fun startLearning() {
-        main.removeCallbacks(logKeyUp)
-        logKeyDown = false
-        oplusEdges.reset()
-        keyGestures.reset()
-        logGestures.reset()
+        resetGestures()
         learning = mutableListOf()
     }
 
+    /** Called after the hands-off step: the key is released and lines from earlier presses have been handled. */
+    fun markKeyReleased() {
+        oplusEdges.reset()
+    }
+
+    private fun resetGestures() {
+        main.removeCallbacks(logKeyUp)
+        logKeyDown = false
+        keyGestures.reset()
+        logGestures.reset()
+    }
+
     fun cancelLearning() {
+        if (learning == null) return
+        resetGestures()
         learning = null
     }
 
     fun finishLearning(baseline: LongRange, taps: List<LongRange>, hold: LongRange): LearnResult {
         val list = learning ?: return LearnResult.NothingFound
-        learning = null
-        val observations = synchronized(list) { list.toList() }
+        resetGestures()
+        val observations = synchronized(list) {
+            learning = null
+            list.toList()
+        }
         val result = KeyLearning.analyze(observations, baseline, taps, hold)
         when (result) {
             is LearnResult.KeyEventFound -> store.update { it.copy(keyEvent = result.key, logSignature = null) }

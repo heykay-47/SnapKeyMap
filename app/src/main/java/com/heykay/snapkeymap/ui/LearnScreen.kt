@@ -78,6 +78,7 @@ fun LearnScreen(onDone: () -> Unit) {
         }
 
         val baseline = phase("Hands off", "Don't touch the phone for a moment…", 5000)
+        SnapEngine.markKeyReleased()
         val taps = (1..3).map { round ->
             val window = phase("Press the Snap Key once", "Press $round of 3", 3000)
             phase("Let go", "Get ready for the next one…", 1000)
