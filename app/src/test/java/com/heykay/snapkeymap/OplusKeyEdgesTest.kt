@@ -95,6 +95,24 @@ class OplusKeyEdgesTest {
     }
 
     @Test
+    fun duplicateCopiesSplitAcrossAMillisecondStillCountAsOneEdge() {
+        // A Find X9 capture logged one edge at 12:07:40.908932 and 12:07:40.909046.
+        val h = Harness(enableHold = false)
+        fun edge(time: Long, vararg timestamps: String) {
+            h.clock.advanceTo(time)
+            timestamps.forEach(h.edges::accept)
+        }
+        edge(0, "10-18 12:07:40.908", "10-18 12:07:40.909")
+        edge(100, "10-18 12:07:41.008", "10-18 12:07:41.008")
+        h.clock.advanceTo(1000)
+        edge(3000, "10-18 12:07:43.908", "10-18 12:07:43.908")
+        edge(3100, "10-18 12:07:44.008", "10-18 12:07:44.008")
+        h.clock.advanceTo(4000)
+
+        assertEquals(listOf(Gesture.SINGLE, Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
     fun resetAllowsFirstEventOfANewSession() {
         val edgesSeen = mutableListOf<String>()
         val edges = OplusKeyEdges({ edgesSeen += "down" }, { edgesSeen += "up" })
