@@ -185,6 +185,11 @@ object SnapEngine {
         learning = mutableListOf()
     }
 
+    /** Called after the hands-off step: the key is released and lines from earlier presses have been handled. */
+    fun markKeyReleased() {
+        oplusEdges.reset()
+    }
+
     private fun resetGestures() {
         main.removeCallbacks(logKeyUp)
         logKeyDown = false
