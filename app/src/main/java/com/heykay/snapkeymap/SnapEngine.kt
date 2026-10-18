@@ -116,7 +116,7 @@ object SnapEngine {
         }
         val config = store.config.value
         if (!config.enabled || !config.needsLogAccess) return
-        val isSnapKey = config.logSignature?.matches(tag, message) ?: isKnownOplusKeyLine(tag, message)
+        val isSnapKey = acceptsKeyLog(config.logSignature, tag, message)
         if (isSnapKey) main.post { onLogKeyLine(timestamp, isKnownOplusKeyLine(tag, message)) }
     }
 

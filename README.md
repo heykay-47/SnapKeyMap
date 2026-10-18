@@ -33,6 +33,8 @@ Android asks "Allow access to all device logs?" each time the app starts listeni
 
 Also recommended: allow notifications, and let the app run in the background (App info › Battery). Otherwise ColorOS may close it.
 
+After updating from v1.0.3 or earlier, run **Teach the Snap Key again** once before testing your mappings. Older calibration can select a message that matches only key-down events and merges double presses. The new learning step prefers the known Oppo press-and-release source when it is present. Your action assignments stay unchanged.
+
 ## Limits
 
 - Find X9's known key log reports press and release, with duplicate lines. These are deduplicated to detect single press, double press and hold. Other learned log lines still need to repeat while held to support press & hold.
