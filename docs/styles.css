@@ -55,21 +55,42 @@ p { margin-bottom: 20px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* Phone illustration. Every size is relative to the stage width, so the scene scales as one piece. */
-.phone-stage { --press: 0; --finger: 0; position: relative; container-type: inline-size; aspect-ratio: 1 / .92; border-radius: 22px; overflow: hidden; background: radial-gradient(120% 90% at 70% 10%, #f1f6ec, #d5e3cb 70%); transition: background-color 400ms; }
+.phone-stage { --press: 0; --finger: 0; position: relative; container-type: inline-size; aspect-ratio: 1 / .98; border-radius: 22px; overflow: hidden; background: radial-gradient(ellipse at 70% 12%, #fffefa, #e7eae3 50%, #cdd4c8); }
+.phone-stage::after { content: ""; position: absolute; left: 24%; right: 8%; bottom: 2%; height: 8%; border-radius: 50%; background: #374237; filter: blur(3cqw); opacity: .22; pointer-events: none; }
 .phone-stage svg { width: auto; height: auto; }
 .beam { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 260ms var(--ease); background:
-  radial-gradient(16cqw 14cqw at 52cqw 9cqw, #fffdf0, rgba(255, 248, 206, .8) 40%, transparent 75%),
-  conic-gradient(from 250deg at 52cqw 9cqw, transparent 0deg, rgba(255, 250, 222, .95) 25deg, rgba(255, 246, 200, .5) 55deg, transparent 80deg),
+  radial-gradient(30cqw 25cqw at 42cqw 31cqw, #fffdf0, rgba(255, 248, 206, .65) 30%, transparent 75%),
   radial-gradient(70cqw 60cqw at 30cqw 0, rgba(255, 248, 214, .7), transparent 70%); }
 .phone-stage[data-torch="on"] .beam { opacity: 1; }
 .phone-rig { position: absolute; inset: 0; }
-.phone { --w: 42cqw; --h: 88cqw; --t: 3.8cqw; --r: 6.5cqw; position: absolute; left: 47cqw; top: 6cqw; width: var(--w); height: var(--h); transform-style: preserve-3d; transform: perspective(170cqw) rotateY(38deg) rotateX(9deg) rotateZ(-6deg); }
+.phone { --w: 38cqw; --h: 80.69cqw; --t: 4.107cqw; --r: 5.3cqw; position: absolute; left: 51cqw; top: 6cqw; width: var(--w); height: var(--h); transform-style: preserve-3d; transform: perspective(190cqw) rotateY(29deg) rotateX(7deg) rotateZ(-8deg); }
 .phone-back, .phone-front { position: absolute; inset: 0; border-radius: var(--r); }
-.phone-back { transform: translateZ(calc(var(--t) / -2)); background: linear-gradient(160deg, #a9aeab, #6f7571); box-shadow: -4cqw 8cqw 12cqw rgba(33, 52, 38, .28); }
-.phone-side { position: absolute; left: calc(var(--t) / -2); top: var(--r); width: var(--t); height: calc(var(--h) - 2 * var(--r)); transform: rotateY(-90deg); transform-style: preserve-3d; background: linear-gradient(90deg, #6d736f, #c3c8c4 55%, #8c928e); }
-.phone-key { position: absolute; left: 20%; right: 20%; top: 12%; height: 13cqw; border-radius: 9px; background: linear-gradient(90deg, #1f4630, #3b7550); transform: translateZ(calc(.7cqw - var(--press) * .6cqw)); box-shadow: 0 0 0 .5cqw rgba(40, 88, 59, .25); }
-.phone-front { transform: translateZ(calc(var(--t) / 2)); background: #121513; padding: 1.2cqw; box-shadow: inset 0 0 0 .45cqw #9ba19d; }
-.screen { position: relative; height: 100%; overflow: hidden; border-radius: calc(var(--r) - 1.2cqw); background: linear-gradient(165deg, #3d6b4c, #1f3d2b 55%, #16281d); color: #f4f7f1; }
+.phone-back { transform: translateZ(calc(var(--t) / -2)); background: linear-gradient(120deg, #d0cdca, #a8a5a4 65%, #c1bdba); box-shadow: inset 0 0 0 .22cqw #e1dedb, -3cqw 4cqw 6cqw rgba(32, 33, 30, .22); }
+.phone-side { position: absolute; left: calc(var(--t) / -2); top: var(--r); width: var(--t); height: calc(var(--h) - 2 * var(--r)); transform: rotateY(-90deg); transform-style: preserve-3d; background: linear-gradient(90deg, #777470, #bcb8b2 20%, #d0cbc4 65%, #aaa59e); box-shadow: inset .12cqw 0 .16cqw #f6f3ef, inset -.14cqw 0 .2cqw #6f6d6a; }
+.phone-side::before, .phone-side::after { content: ""; position: absolute; inset-inline: 0; height: .45cqw; background: #8c8a86; box-shadow: 0 .1cqw .12cqw #ddd9d3; }
+.phone-side::before { top: 14%; } .phone-side::after { bottom: 13%; }
+.phone-key { position: absolute; left: 24%; right: 24%; top: calc(var(--h) * .343 - var(--r)); height: calc(var(--h) * .103); border-radius: 2cqw; background: linear-gradient(90deg, #787672, #c3bfba 30%, #d7d3ce 60%, #9f9c97); transform: translateZ(calc(.32cqw - var(--press) * .3cqw)); box-shadow: 0 0 0 .18cqw #6c6a66, -.12cqw 0 .18cqw #f6f3ed, .13cqw .1cqw .25cqw #67645f; }
+.phone-top, .phone-bottom { position: absolute; left: var(--r); width: calc(var(--w) - 2 * var(--r)); height: var(--t); background: linear-gradient(#a5a29e, #d9d4cd 45%, #8f8d8a); transform: rotateX(90deg); }
+.phone-top { top: calc(var(--t) / -2); } .phone-bottom { bottom: calc(var(--t) / -2); }
+.phone-bottom span { position: absolute; left: 39%; right: 39%; top: 30%; bottom: 30%; background: #282826; border-radius: 1cqw; }
+.phone-front { transform: translateZ(calc(var(--t) / 2)); background: #141414; padding: .59cqw; box-shadow: inset 0 0 0 .19cqw #e3ded7, inset 0 0 .5cqw .3cqw #4f4d49; }
+.screen { position: relative; height: 100%; overflow: hidden; border-radius: calc(var(--r) - .59cqw); background: radial-gradient(ellipse 100% 65% at 12% 86%, transparent 60%, #d9b9a5 62%, #5c443c 65%, transparent 67%), radial-gradient(ellipse 125% 74% at 100% -4%, #ab9589 20%, #62463c 65%, #e4c0a8 67%, #34271f 70%, transparent 71%), linear-gradient(135deg, #3f302b, #ad9486 60%, #2b211e); color: #f4f7f1; }
+.screen::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(115deg, rgba(255,255,255,.12), transparent 32%, transparent 75%, rgba(255,255,255,.05)); box-shadow: inset .15cqw 0 .22cqw #fff3, inset -.15cqw 0 .2cqw #0008; pointer-events: none; }
+.phone-rear { left: 16cqw; top: 10cqw; transform: perspective(190cqw) rotateY(-18deg) rotateX(5deg) rotateZ(-9deg); }
+.phone-rear .phone-back { transform: translateZ(calc(var(--t) / 2)); background: linear-gradient(125deg, #ddd9d5, #b4b1ae 38%, #aaa6a3 65%, #ccc6c0); }
+.phone-rear .phone-back::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: repeating-linear-gradient(10deg, #fff0 0 2px, #fff1 3px, #fff0 4px); opacity: .13; pointer-events: none; }
+.rear-side { left: auto; right: calc(var(--t) / -2); transform: rotateY(90deg); }
+.frame-volume, .frame-power { position: absolute; left: 30%; right: 30%; border-radius: 1cqw; background: linear-gradient(90deg, #898681, #d6d1cb, #a49f99); box-shadow: 0 0 0 .12cqw #77736e; transform: translateZ(.2cqw); }
+.frame-volume { top: 18%; height: 12%; } .frame-power { top: 36%; height: 6%; }
+.camera-island { position: absolute; left: 5.5%; top: 3.1%; width: 62%; height: 29%; border-radius: 5.1cqw; transform: translateZ(1.1cqw); transform-style: preserve-3d; background: linear-gradient(145deg, #d5d1cd, #96938f 25%, #c3bfba 58%, #787672); box-shadow: 0 0 0 .24cqw #aaa59f, 0 0 0 .48cqw #d5d0c9, .4cqw .8cqw 1cqw #423e3b80, inset 0 0 0 .2cqw #f5efe5; }
+.rear-optic { position: absolute; left: 10%; width: 36%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 46% 44%, #2363a2 0 3%, #0a0b16 5% 12%, #27434e 14%, #03050a 20% 30%, #172026 33%, #070809 37% 58%, #141516 60% 65%, #74716b 67%, #d0ccc6 70%, #55534f 74%, #aaa69f 78%, #77736d 85%); box-shadow: .25cqw .4cqw .6cqw #35322f80; }
+.rear-optic::after { content: ""; position: absolute; inset: 32%; border-radius: 50%; background: radial-gradient(circle at 30% 25%, #b8e6e9a0, #4198ba22 25%, transparent 50%); }
+.rear-optic-wide { top: 9%; } .rear-optic-ultrawide { bottom: 9%; }
+.telephoto-capsule { position: absolute; right: 10%; top: 11%; width: 23%; height: 48%; border-radius: 3cqw; background: linear-gradient(90deg, #65635e, #0c0d0f 12% 88%, #969189); box-shadow: 0 0 0 .18cqw #d6cfc6; }
+.telephoto-glass { position: absolute; left: 13%; right: 13%; top: 11%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 45% 40%, #527a94, #0d1720 16%, #183849 23%, #05070c 37%, #13181b 54%, #000 66%); }
+.spectral-sensor { position: absolute; left: 22%; bottom: 13%; width: 17%; aspect-ratio: 1; background: #18303b; border-radius: 50%; box-shadow: 1.5cqw -.1cqw 0 .06cqw #242624, 1.5cqw -1.4cqw 0 .02cqw #202322; }
+.rear-flash { position: absolute; right: 10%; bottom: 11%; width: 23%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, #eee6cc 20%, #a29e91 24% 40%, #f2eedb 45% 52%, #aeaba0 60%, #dcd8c9 70%); box-shadow: 0 0 0 .12cqw #e8e3d8; transition: box-shadow 260ms, background-color 260ms; }
+.phone-stage[data-torch="on"] .rear-flash { background: #fffbea; box-shadow: 0 0 1.2cqw .4cqw #fffbe5, 0 0 5cqw 2cqw #fff5becc; }
 .screen p { margin: 0; line-height: 1.15; }
 .screen-home { position: absolute; inset: 0; padding: 11cqw 3.5cqw 0; transition: opacity 300ms, filter 300ms; }
 .clock { font-size: 9cqw; font-weight: 600; letter-spacing: -.04em; }
@@ -78,15 +99,15 @@ p { margin-bottom: 20px; }
 .apps i { aspect-ratio: 1; border-radius: 2.4cqw; background: rgba(244, 247, 241, .22); }
 .apps i:nth-child(2) { background: #e9c46a; } .apps i:nth-child(5) { background: #8fb996; } .apps i:nth-child(8) { background: #f4f7f1; }
 .phone-stage[data-screen="music"] .screen-home { opacity: .35; filter: blur(3px); }
-.island { position: absolute; top: 2.2cqw; left: 50%; display: flex; align-items: center; justify-content: center; gap: 1cqw; width: 3cqw; height: 3cqw; border-radius: 3cqw; background: #050605; transform: translateX(-50%); overflow: hidden; color: #fff3c4; font-size: 2.2cqw; font-weight: 600; transition: width 380ms var(--ease); }
+.island { position: absolute; top: 1.5cqw; left: 50%; display: flex; align-items: center; justify-content: center; gap: 1cqw; width: 1.65cqw; height: 1.65cqw; border-radius: 3cqw; background: radial-gradient(circle at 40% 40%, #283c43, #080c0e 35%, #020303 60%, #403e39 70%, #080909); transform: translateX(-50%); overflow: hidden; color: #fff3c4; font-size: 2cqw; font-weight: 600; transition: width 380ms var(--ease), height 380ms var(--ease); }
 .island svg { width: 2.6cqw; height: 2.6cqw; stroke-width: 2.4; flex: none; }
 .island > * { opacity: 0; transition: opacity 160ms; }
-.phone-stage[data-torch="on"] .island { width: 13cqw; }
+.phone-stage[data-torch="on"] .island { width: 13cqw; height: 3cqw; background: #050605; }
 .phone-stage[data-torch="on"] .island > * { opacity: 1; transition-delay: 160ms; }
-.screen-music { position: absolute; left: 3cqw; right: 3cqw; top: 26cqw; padding: 3.5cqw; border-radius: 4cqw; background: rgba(244, 247, 241, .94); color: #213426; opacity: 0; transform: translateY(6cqw) scale(.94); transition: opacity 300ms, transform 420ms var(--ease); }
+.screen-music { position: absolute; left: 3cqw; right: 3cqw; top: 22cqw; padding: 3cqw; border-radius: 4cqw; background: rgba(244, 247, 241, .94); color: #213426; opacity: 0; transform: translateY(6cqw) scale(.94); transition: opacity 300ms, transform 420ms var(--ease); }
 .phone-stage[data-screen="music"] .screen-music { opacity: 1; transform: none; }
 .album { aspect-ratio: 1; border-radius: 2.6cqw; background: radial-gradient(circle at 30% 30%, #f2c46d, #d0683f 55%, #5b2a3a); margin-bottom: 3cqw; }
-.track { font-size: 3.2cqw; font-weight: 700; }
+.track { font-size: 2.8cqw; font-weight: 700; }
 .artist { font-size: 2.4cqw; opacity: .65; margin-top: .6cqw !important; }
 .track-bar { height: .8cqw; border-radius: 1cqw; background: rgba(33, 52, 38, .15); margin: 2.6cqw 0; overflow: hidden; }
 .track-bar i { display: block; height: 100%; width: 30%; background: #28583b; border-radius: inherit; }
@@ -116,17 +137,17 @@ p { margin-bottom: 20px; }
 .shutter { position: absolute; left: 50%; bottom: 4cqw; width: 8.5cqw; height: 8.5cqw; border-radius: 50%; transform: translateX(-50%); background: #f4f7f1; box-shadow: 0 0 0 .7cqw #0b0d0c, 0 0 0 1.1cqw #f4f7f1; }
 
 /* Close-up of the Snap Key. */
-.lens { position: absolute; left: 5cqw; top: 12cqw; width: 31cqw; aspect-ratio: 1; }
+.lens { position: absolute; left: 5cqw; top: 53cqw; width: 31cqw; aspect-ratio: 1; }
 .lens-view { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; background: #c9d8c0; box-shadow: 0 0 0 1.2cqw var(--paper), 0 3cqw 7cqw rgba(33, 52, 38, .28); }
 .lens-view > span { position: absolute; display: block; }
 .lens-glass { left: 50%; top: -10%; bottom: -10%; right: -10%; background: #121513; transform: rotate(-12deg); transform-origin: left center; }
-.lens-frame { left: 38%; top: -10%; bottom: -10%; width: 16%; border-radius: 2cqw 0 0 2cqw; background: linear-gradient(90deg, #6d736f, #d0d4d1 45%, #8c928e); transform: rotate(-12deg); }
-.lens-key { left: calc(31% + var(--press) * 1.4cqw); top: 27%; width: 4.2cqw; height: 13cqw; border-radius: 3cqw; background: linear-gradient(90deg, #3b7550, #1f4630); transform: rotate(-12deg); box-shadow: -.4cqw .4cqw 0 rgba(0, 0, 0, .12); }
+.lens-frame { left: 38%; top: -10%; bottom: -10%; width: 24%; border-radius: 1cqw 0 0 1cqw; background: linear-gradient(90deg, #77736f, #c4beb7 18%, #dfd9d0 42%, #a49e96 88%, #f0e9dd); transform: rotate(-12deg); box-shadow: inset .2cqw 0 .25cqw #fff8; }
+.lens-key { left: calc(34% + var(--press) * 1.4cqw); top: 27%; width: 4cqw; height: 12cqw; border-radius: 3cqw; background: linear-gradient(90deg, #8e8880, #c2bbb2 28%, #dbd4ca 60%, #aaa299); transform: rotate(-12deg); box-shadow: -.2cqw .1cqw .2cqw #f5eee3, .15cqw .1cqw .3cqw #393530, 0 0 0 .2cqw #7d766d; }
 .ripple { left: 33%; top: 47%; width: 14cqw; height: 14cqw; margin: -7cqw 0 0 -7cqw; border-radius: 50%; box-shadow: 0 0 0 .5cqw #28583b; opacity: 0; }
 .finger { left: -32%; top: 31%; width: 22cqw; height: 9.5cqw; border-radius: 1cqw 5cqw 5cqw 1cqw; background: linear-gradient(90deg, #c08f6c, #dfb393 80%, #e6bf9f); transform: translateX(calc((var(--finger) - 1) * 9cqw + var(--press) * 1.4cqw)) rotate(-12deg); opacity: calc(var(--finger) * 1.5); box-shadow: 0 1.2cqw 2cqw rgba(33, 52, 38, .25); }
 .finger::after { content: ""; position: absolute; right: 1.2cqw; top: 1.6cqw; width: 4.6cqw; height: 6.2cqw; border-radius: 1cqw 3cqw 3cqw 1cqw; background: rgba(255, 238, 226, .55); }
 .hold-ring { position: absolute; inset: -2.4cqw; width: calc(100% + 4.8cqw) !important; height: calc(100% + 4.8cqw) !important; transform: rotate(-90deg); fill: none; stroke: #28583b; stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
-.lens-label { position: absolute; left: 5cqw; top: 48cqw; width: 31cqw; margin: 0; text-align: center; font-size: max(13px, 3.4cqw); font-weight: 650; letter-spacing: -.01em; }
+.lens-label { position: absolute; left: 5cqw; top: 88cqw; width: 31cqw; margin: 0; text-align: center; font-size: max(13px, 3.4cqw); font-weight: 650; letter-spacing: -.01em; }
 .lens-link { position: absolute; inset: 0; width: 100% !important; height: 100% !important; overflow: visible; pointer-events: none; }
 .lens-link line { stroke: #28583b; stroke-width: 1.5; stroke-dasharray: 3 4; }
 .lens-link circle { fill: none; stroke: #28583b; stroke-width: 1.5; }
