@@ -22,7 +22,7 @@ if (window.gsap && window.ScrollTrigger) {
   const { gsap, ScrollTrigger } = window;
   gsap.registerPlugin(ScrollTrigger);
 
-  gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', (context) => {
+  gsap.context((context) => {
     const intro = gsap.timeline({ defaults: { duration: 0.65, ease: 'power3.out' } });
     intro
       .from('.headline-line > span', { yPercent: 110, stagger: 0.1 }, 0)
