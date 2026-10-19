@@ -28,7 +28,7 @@ jobs:
       # The signing key lives in repository secrets, so push builds are signed the same way and
       # new versions install over old ones without losing the one-time log permission.
       - name: Set up signing key
-        if: github.event_name == 'push'
+        if: github.event_name != 'pull_request'
         env:
           SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
         run: |
@@ -42,9 +42,9 @@ jobs:
       # Only push builds get the passwords; pull requests build with the debug key.
       - name: Test and build
         env:
-          SIGNING_STORE_PASSWORD: ${{ github.event_name == 'push' && secrets.SIGNING_STORE_PASSWORD || '' }}
-          SIGNING_KEY_ALIAS: ${{ github.event_name == 'push' && secrets.SIGNING_KEY_ALIAS || '' }}
-          SIGNING_KEY_PASSWORD: ${{ github.event_name == 'push' && secrets.SIGNING_KEY_PASSWORD || '' }}
+          SIGNING_STORE_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.SIGNING_STORE_PASSWORD || '' }}
+          SIGNING_KEY_ALIAS: ${{ github.event_name != 'pull_request' && secrets.SIGNING_KEY_ALIAS || '' }}
+          SIGNING_KEY_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.SIGNING_KEY_PASSWORD || '' }}
         run: gradle --no-daemon testReleaseUnitTest assembleRelease
 
       - name: Delete signing key
