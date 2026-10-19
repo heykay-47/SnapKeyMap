@@ -12,6 +12,8 @@
   <link rel="canonical" href="https://heykay-47.github.io/SnapKeyMap/">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
+  <script src="vendor/gsap/gsap.min.js" defer></script>
+  <script src="vendor/gsap/ScrollTrigger.min.js" defer></script>
   <script src="script.js" defer></script>
   <title>SnapKey Map — Your key. Your rules.</title>
 </head>
@@ -32,7 +34,7 @@
   <main id="main">
     <section class="hero wrap" aria-labelledby="hero-heading">
       <div class="hero-copy">
-        <h1 id="hero-heading">Your key.<br>Your rules.</h1>
+        <h1 id="hero-heading"><span class="headline-line"><span>Your key.</span></span> <span class="headline-line"><span>Your rules.</span></span></h1>
         <p class="intro">Give your Oppo Find X9’s Snap Key a new job. Open an app, switch on the flashlight, or control your music with a press, double press, or hold.</p>
         <a class="button" href="https://github.com/heykay-47/SnapKeyMap/releases/latest">Download APK <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5"/></svg></a>
         <p class="download-note">Free to download. No root. One-time computer setup.</p>
@@ -112,7 +114,7 @@
         <div>
           <p>SnapKey Map processes system logs locally to detect the key. It does not upload them, and the Android app declares no internet permission.</p>
           <p>Log access is a broad permission, not just access to key events. The accessibility service runs device actions; its configuration does not allow it to read window content. Apps and websites you open have their own privacy policies.</p>
-          <p class="website-note">This website has no analytics or third-party scripts. It is hosted on GitHub Pages, which may log visitors’ IP addresses for security. See <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement">GitHub’s privacy statement</a>.</p>
+          <p class="website-note">This website has no analytics. Animation scripts are hosted with this site, not loaded from external services. It is hosted on GitHub Pages, which may log visitors’ IP addresses for security. See <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement">GitHub’s privacy statement</a>.</p>
         </div>
       </div>
     </section>
