@@ -32,8 +32,20 @@ object ActionRunner {
                     if (intent == null) toast(context, "${action.appName} isn't installed any more")
                     else start(context, intent.addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED))
                 }
-                is SnapAction.OpenShortcut -> start(context, Intent.parseUri(action.intentUri, Intent.URI_INTENT_SCHEME))
-                is SnapAction.OpenLink -> start(context, Intent(Intent.ACTION_VIEW, Uri.parse(action.url)))
+                is SnapAction.OpenShortcut -> {
+                    val intent = Intent.parseUri(action.intentUri, Intent.URI_INTENT_SCHEME).apply {
+                        selector = null
+                        removeFlags(
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                                Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or Intent.FLAG_GRANT_PREFIX_URI_PERMISSION,
+                        )
+                    }
+                    start(context, intent)
+                }
+                is SnapAction.OpenLink -> start(
+                    context,
+                    Intent(Intent.ACTION_VIEW, Uri.parse(action.url)).addCategory(Intent.CATEGORY_BROWSABLE),
+                )
                 is SnapAction.Device -> runDevice(context, action.action)
             }
         } catch (e: ActivityNotFoundException) {
