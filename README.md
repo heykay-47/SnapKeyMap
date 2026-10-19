@@ -4,6 +4,8 @@ Assign actions to the Oppo Find X9's Snap Key. Set a different action for a sing
 
 Open an app, run a supported app shortcut, open a link, toggle the flashlight, take a screenshot, or control music. Android and ColorOS still restrict some actions. This app cannot bypass the lock screen or control every function in every app.
 
+The app follows Material 3 with dynamic colour and a System, Light, or Dark theme choice.
+
 No root or paid tools are required. Download a prebuilt APK or use GitHub Actions to build one without installing the Android build tools on your computer. Private repository builds use your account's Actions allowance.
 
 - [Install and set up](#install-and-set-up)

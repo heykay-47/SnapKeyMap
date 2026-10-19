@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Check
@@ -28,16 +27,12 @@ import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -74,7 +69,6 @@ private fun loadActivities(pm: PackageManager, intent: Intent, exclude: String):
         .filter { it.packageName != exclude }
         .sortedBy { it.label.lowercase() }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
     val context = LocalContext.current
@@ -119,16 +113,7 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
     val search = query.trim()
     fun matches(text: String) = search.isEmpty() || text.contains(search, ignoreCase = true)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(gesture.title) },
-                navigationIcon = {
-                    IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back") }
-                },
-            )
-        },
-    ) { padding ->
+    SnapScaffold(title = gesture.title, onBack = onDone) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding)) {
             item {
                 OutlinedTextField(
