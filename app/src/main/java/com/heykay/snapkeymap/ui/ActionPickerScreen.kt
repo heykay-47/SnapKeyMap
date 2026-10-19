@@ -287,7 +287,7 @@ private val iconCache = LruCache<String, ImageBitmap>(300)
 private fun AppIcon(component: ComponentName) {
     val pm = LocalContext.current.packageManager
     val key = component.flattenToString()
-    val icon by produceState(iconCache.get(key), key) {
+    val icon by produceState<ImageBitmap?>(iconCache.get(key), key) {
         if (value == null) {
             value = withContext(Dispatchers.IO) {
                 runCatching { pm.getActivityIcon(component).toBitmap(96, 96).asImageBitmap() }

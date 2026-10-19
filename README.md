@@ -1,56 +1,185 @@
 # SnapKey Map
 
-Make the Snap Key on an Oppo Find X9 do anything: open any app, run an app shortcut, open a link, toggle the flashlight, take a screenshot, control music, and more. You can set a different action for a press, a double press, and a press & hold.
+Assign actions to the Oppo Find X9's Snap Key. Set a different action for a single press, double press, or press and hold.
 
-Everything is free. The APK is built by GitHub Actions, so your computer doesn't have to build it.
+Open an app, run a supported app shortcut, open a link, toggle the flashlight, take a screenshot, or control music. Android and ColorOS still restrict some actions. This app cannot bypass the lock screen or control every function in every app.
 
-## How it works
+No root or paid tools are required. Download a prebuilt APK or use GitHub Actions to build one without installing the Android build tools on your computer. Private repository builds use your account's Actions allowance.
 
-ColorOS doesn't hand the Snap Key to other apps the way it does with volume keys. But each press shows up in the phone's system log. SnapKey Map watches that log on the phone and runs your action when the Snap Key line shows up. Nothing leaves the phone. The OnePlus 15 [Plus Key Remapper](https://github.com/SelenStudio/plus-key-remapper) uses the same idea.
+- [Install and set up](#install-and-set-up)
+- [Troubleshoot](#troubleshoot)
+- [Permissions and limits](#permissions-and-limits)
+- [Develop the app](#develop-the-app)
+- [Author and credits](#author-and-credits)
 
-This needs two one-time permissions:
+## Install and set up
 
-1. **Accessibility service.** Lets the app keep running, open apps from the background, and do things like screenshot, home, back, and lock.
-2. **Log access (`READ_LOGS`).** Android only lets you grant this from a computer with ADB, once. It stays after restarts and app updates.
+You need an Oppo Find X9, a USB cable, and a computer for the one-time permission setup. Other devices and ColorOS versions may behave differently.
 
-Android asks "Allow access to all device logs?" each time the app starts listening, and it can only ask while the app is open. After a phone restart you get a notification. Tap it and choose **Allow**.
+### 1. Install the APK
 
-## Install
+1. Open the [latest release](https://github.com/heykay-47/SnapKeyMap/releases/latest) on your phone.
+2. Download `SnapKeyMap-*.apk` and open it.
+3. Allow your browser or file manager to install apps when Android asks.
 
-1. On the phone, open this repository's **Releases** page and download the latest `SnapKeyMap-*.apk`. You can also download it from the **Actions** tab: open a run and look under *Artifacts*.
-2. Open the APK and allow your browser or file manager to install apps.
-3. Open **SnapKey Map** and follow the setup steps on the main screen:
-   - **Turn on the SnapKey Map service.** If the switch is greyed out ("Restricted setting"), open App info, tap ⋮, choose **Allow restricted settings**, and try again.
-   - **Give one-time log access.** On the computer, install Google's free [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools). Turn on USB debugging on the phone, plug it in, and run:
+The repository and release downloads are public. You do not need a GitHub account to download the APK.
 
-     ```
-     adb shell pm grant com.heykay.snapkeymap android.permission.READ_LOGS
-     ```
+To update, install the new APK over the existing app. Do not uninstall first. An update signed with the same key preserves your mappings and granted log permission.
 
-     If ColorOS refuses, turn on **Disable permission monitoring** in Developer options and run the command again.
-   - **Teach the app your Snap Key.** First set Oppo's own Snap Key action to **None** (Settings › Snap Key). Then press the key 3 times and hold it once when the app asks. The app works out which log line the key writes.
-4. Pick what **Press**, **Double press** and **Press & hold** should do.
+### 2. Enable the accessibility service
 
-Also recommended: allow notifications, and let the app run in the background (App info › Battery). Otherwise ColorOS may close it.
+Open SnapKey Map and tap **Open settings** in the first setup step. Find SnapKey Map in the accessibility settings and turn it on.
+
+If Android blocks the switch, open SnapKey Map's **App info**. Tap the three-dot menu, choose **Allow restricted settings**, and try again.
+
+### 3. Grant log access once
+
+1. Download Google's free [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools) on your computer and unzip them.
+2. On the phone, open Settings, then About device, then Version. Tap the build or version number seven times to enable Developer options.
+3. In Developer options, turn on USB debugging.
+4. Connect the phone with a USB cable. Accept the USB debugging prompt on the phone.
+5. Open a terminal in the unzipped `platform-tools` folder and run:
+
+```shell
+adb shell pm grant com.heykay.snapkeymap android.permission.READ_LOGS
+```
+
+In Windows PowerShell, use `.\adb` in place of `adb` if the command is not on your PATH.
+
+Success normally returns to the command prompt without a message. If you get `GRANT_RUNTIME_PERMISSIONS`, follow the [ColorOS permission fix](#adb-refuses-to-grant-log-access).
+
+Reopen SnapKey Map and choose **Allow** when Android asks for access to device logs. The ADB grant survives restarts and app updates. Android may ask for consent again when the log reader reconnects.
+
+### 4. Choose your actions
+
+1. Open phone Settings, then Snap Key, and set Oppo's own action to **None**. Otherwise both actions may run.
+2. Return to SnapKey Map and start **Teach the app your Snap Key**.
+3. Follow the prompts to press the key three times and hold it once.
+4. Tap **Press**, **Double press**, or **Press & hold** on the home screen and choose an action.
+5. Test each gesture. Check the **Last:** text in the Ready card to see what the app detected.
+
+Allow notifications so the app can tell you when detection pauses. In App info, open Battery and allow background activity to reduce the chance of ColorOS closing the app.
 
 After updating from v1.0.3 or earlier, run **Teach the Snap Key again** once before testing your mappings. Older calibration can select a message that matches only key-down events and merges double presses. The new learning step prefers the known Oppo press-and-release source when it is present. Your action assignments stay unchanged.
 
-## Limits
+## Troubleshoot
 
-- Find X9's known key log reports press and release, with duplicate lines. These are deduplicated to detect single press, double press and hold. Other learned log lines still need to repeat while held to support press & hold.
-- With a double press action set, a single press waits about a third of a second to see if a second press follows.
-- With the screen off, a press is handled when the phone wakes up enough to read the log. That isn't guaranteed on every phone.
-- Shortcuts from apps that only support the new pinned-shortcut API can't be picked. Use **Open a link** with a deep link instead.
+### ADB refuses to grant log access
 
-## Building
+An error containing `Neither user 2000` and `GRANT_RUNTIME_PERMISSIONS` means ColorOS is blocking ADB from granting permissions.
 
-Every push to `main` builds a signed APK in GitHub Actions (see `.github/workflows/build.yml`). Set `appVersion` in `gradle.properties` before releasing. The release tag must match it; only Android's internal version code uses the build number. Pushing a tag like `v1.0.3` also publishes it as a release:
+1. Open Developer options on the phone.
+2. Turn on **Disable permission monitoring**. Newer firmware may call it **Disable system optimization**.
+3. If neither setting appears, temporarily switch the phone's system language to English, United States, and reopen Developer options.
+4. Read the warning before accepting. This setting relaxes manufacturer restrictions and may increase background power use.
+5. Reconnect the USB cable and run the grant command again.
 
+The name and location depend on your firmware. If the setting is still missing, include your ColorOS version when reporting the problem.
+
+### The key stops working after a restart
+
+Open SnapKey Map and allow device log access again. If the app shows **Paused**, tap **Connect**. You do not need to repeat the ADB grant unless you uninstalled the app or revoked the permission.
+
+If you declined the log-access prompt, wait a minute before trying again. Also check that the accessibility service remains enabled and that ColorOS allows background activity.
+
+### A double press runs the single-press action
+
+First set Oppo's own Snap Key action to None. Keep SnapKey Map open, double-press the key, and check the **Last:** text.
+
+- If it says `press`, the app did not recognise the double press. Use v1.0.3 or later, which fixes duplicate key events in the recorded Find X9 log format.
+- If it says `double press`, check the assigned action and confirm that the selected app is still installed.
+
+When reporting a detection problem, include your app version, ColorOS version, assigned actions, and the text shown under Last. Do not share an unfiltered system log. Device logs can contain sensitive information.
+
+## Permissions and limits
+
+The accessibility service receives supported key events and runs actions such as screenshot, home, back, and lock. Its configuration does not allow it to read window content.
+
+On the Find X9, the app reads system logs to detect the Snap Key. The log permission grants access to more than key events. SnapKey Map processes those logs on the phone and does not upload them. The app declares no internet permission. Apps and websites you open through an action have their own privacy policies.
+
+Keep these limits in mind:
+
+- A double-press assignment adds a 350 ms wait after release before the app runs the single-press action.
+- The known Find X9 log reports duplicated press and release events. Other learned log formats need repeated events while held to support press and hold.
+- Screen-off detection and background reliability depend on ColorOS. They are not guaranteed.
+- The shortcut picker supports apps that provide `ACTION_CREATE_SHORTCUT`. It cannot list every pinned shortcut. A deep link may work instead.
+- Silent mode and Do Not Disturb need notification policy access. Without it, the ringer action cycles between ring and vibrate.
+- System actions depend on Android permissions, the lock-screen state, and device support.
+
+## Develop the app
+
+The app uses Kotlin, Jetpack Compose, and Material 3. The package name is `com.heykay.snapkeymap`. The minimum Android version is 10, API 29, and the compile and target SDK are 36.
+
+### Find the relevant code
+
+Paths below are relative to [`app/src/main/java/com/heykay/snapkeymap`](app/src/main/java/com/heykay/snapkeymap).
+
+- `ui/` contains the screens and shared UI components.
+- `SnapEngine.kt` connects key detection to the configured actions.
+- `LogReader.kt` reads logcat and reports log-access status.
+- `KeyLearning.kt` identifies the key during setup.
+- `OplusKeyEdges.kt` removes duplicate log events and separates presses from releases.
+- `GestureDetector.kt` recognises single press, double press, and hold.
+- `SnapAction.kt` defines the actions. `ActionRunner.kt` executes them.
+- `ConfigStore.kt` saves mappings and key configuration in SharedPreferences.
+- `SnapAccessibilityService.kt` receives key events and provides accessibility actions.
+
+The [unit tests](app/src/test/java/com/heykay/snapkeymap) cover key learning and gesture detection. They include a replay of recorded Find X9 event timings. Passing tests do not replace testing on a phone.
+
+### Build with GitHub Actions
+
+The [Build APK workflow](.github/workflows/build.yml) runs tests and builds an APK on pushes to `main`, pull requests, version tags, and manual runs.
+
+To start a manual build, open the repository's Actions tab, select Build APK, and choose Run workflow. After a successful run, download the `SnapKeyMap` artifact and extract the APK. The `test-results` artifact contains the unit test reports.
+
+The workflow uses JDK 17 and Gradle 8.14.3. It runs:
+
+```shell
+gradle --no-daemon testReleaseUnitTest assembleRelease
 ```
-git tag v1.0.3
-git push origin v1.0.3
+
+### Build locally
+
+Install JDK 17, Gradle 8.14.3, and Android SDK Platform 36. Set `ANDROID_HOME` to your SDK directory, or set `sdk.dir` in an untracked `local.properties` file.
+
+This repository does not include a Gradle wrapper. Run the installed `gradle` command from the repository root:
+
+```shell
+gradle testReleaseUnitTest
+gradle assembleRelease
 ```
 
-The signing key is stored in the repository secrets `SIGNING_KEYSTORE_BASE64`, `SIGNING_STORE_PASSWORD`, `SIGNING_KEY_ALIAS` and `SIGNING_KEY_PASSWORD`. Every build uses the same key, so updates install over the old version. Without these secrets, the build falls back to a throwaway debug key.
+The APK is written to `app/build/outputs/apk/release/app-release.apk`. Local builds use the debug signing key unless you provide the signing environment variables defined in `app/build.gradle.kts`.
 
-To build locally instead, run `gradle assembleRelease` with JDK 17, Gradle 8.14 and the Android SDK installed.
+### Sign builds and publish releases
+
+Configure these repository secrets for a consistent release signing key:
+
+- `SIGNING_KEYSTORE_BASE64` holds the base64-encoded PKCS12 keystore.
+- `SIGNING_STORE_PASSWORD` holds the keystore password.
+- `SIGNING_KEY_ALIAS` identifies the signing key.
+- `SIGNING_KEY_PASSWORD` holds the key password.
+
+Back up the keystore and passwords outside Git. Without the signing secrets, CI uses a temporary debug key. That APK may not install over an earlier build. Never commit signing keys or passwords.
+
+To publish a release:
+
+1. Set `appVersion` in [`gradle.properties`](gradle.properties) to the version you want to release.
+2. Commit the release changes and push them to `main`.
+3. Check that the tests and build pass.
+4. Create and push a matching version tag. For example, if `appVersion` is `1.0.8`, run:
+
+```shell
+git tag v1.0.8
+git push origin v1.0.8
+```
+
+The tag starts another build and publishes the APK on GitHub Releases. The workflow rejects a tag that does not match `appVersion`. The release tag, APK filename, and app version share that version. Android's internal `versionCode` uses the workflow run number so updates can install over earlier CI builds.
+
+## Author and credits
+
+Krithik, [heykay-47 on GitHub](https://github.com/heykay-47), is the author of SnapKey Map.
+
+Version 1.0.8 adds an About / Credits page with the author's GitHub photo, app version, and repository and profile links. Open it with the home screen's info button. The photo is bundled and works offline.
+
+The system-log detection approach was informed by the OnePlus 15 [Plus Key Remapper](https://github.com/SelenStudio/plus-key-remapper). SnapKey Map uses free Android development tools and GitHub Actions for builds.

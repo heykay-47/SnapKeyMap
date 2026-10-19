@@ -43,12 +43,13 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun SnapKeyMapApp() {
-    // "home", "learn", "log-access" or "pick:<GESTURE>"
+    // "home", "about", "learn", "log-access" or "pick:<GESTURE>"
     var route by rememberSaveable { mutableStateOf("home") }
     val goHome = { route = "home" }
     if (route != "home") BackHandler(onBack = goHome)
 
     when {
+        route == "about" -> AboutScreen(onDone = goHome)
         route == "learn" -> LearnScreen(onDone = goHome)
         route == "log-access" -> LogAccessScreen(onDone = goHome)
         route.startsWith("pick:") -> ActionPickerScreen(
@@ -59,6 +60,7 @@ private fun SnapKeyMapApp() {
             onPick = { route = "pick:${it.name}" },
             onLearn = { route = "learn" },
             onLogAccess = { route = "log-access" },
+            onAbout = { route = "about" },
         )
     }
 }
