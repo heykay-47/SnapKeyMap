@@ -40,7 +40,9 @@ object ActionRunner {
                                 Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or Intent.FLAG_GRANT_PREFIX_URI_PERMISSION,
                         )
                     }
-                    start(context, intent)
+                    if (intent.action == Intent.ACTION_CALL) {
+                        toast(context, "Direct-dial shortcuts aren't supported. Use the dialer instead.")
+                    } else start(context, intent)
                 }
                 is SnapAction.OpenLink -> start(
                     context,
