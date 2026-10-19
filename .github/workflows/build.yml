@@ -52,6 +52,18 @@ jobs:
         if: always()
         run: rm -f "$RUNNER_TEMP/release.p12"
 
+      - name: Check APK permissions
+        shell: bash
+        run: |
+          AAPT2=$(find "$ANDROID_HOME/build-tools" -mindepth 2 -maxdepth 2 -type f -name aapt2 | sort -V | tail -n 1)
+          test -n "$AAPT2"
+          "$AAPT2" dump permissions app/build/outputs/apk/release/app-release.apk > "$RUNNER_TEMP/apk-permissions.txt"
+          sed -n "s/^uses-permission[^:]*: name='\([^']*\)'.*/\1/p" "$RUNNER_TEMP/apk-permissions.txt" | LC_ALL=C sort -u > "$RUNNER_TEMP/actual-permissions.txt"
+          if ! diff -u app/expected-permissions.txt "$RUNNER_TEMP/actual-permissions.txt"; then
+            echo "::error::APK permissions changed. Review the merged permissions and update app/expected-permissions.txt deliberately."
+            exit 1
+          fi
+
       - name: Rename APK
         run: |
           VERSION=$(sed -n 's/^appVersion=//p' gradle.properties)
