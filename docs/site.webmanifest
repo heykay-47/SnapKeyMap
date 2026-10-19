@@ -1,0 +1,13 @@
+{
+  "name": "SnapKey Map",
+  "short_name": "SnapKey Map",
+  "start_url": "./",
+  "scope": "./",
+  "display": "browser",
+  "background_color": "#fafbf7",
+  "theme_color": "#e6efdf",
+  "icons": [
+    { "src": "snapkeymap-svg/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "snapkeymap-svg/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

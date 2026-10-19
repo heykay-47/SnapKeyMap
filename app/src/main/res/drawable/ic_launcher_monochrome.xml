@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The white areas in the source SVG become transparent cutouts for Android's themed-icon tint. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="512" android:viewportHeight="512">
+    <group android:scaleX="0.72" android:scaleY="0.72" android:pivotX="256" android:pivotY="256">
+        <clip-path android:fillType="evenOdd" android:pathData="M0,0 H512 V512 H0 Z M171,104 A66,66 0,0 1,237 170 V342 A66,66 0,0 1,105 342 V170 A66,66 0,0 1,171 104 Z M348,136 A18,18 0,1 0,384 136 A18,18 0,1 0,348 136 Z M348,256 A18,18 0,1 0,384 256 A18,18 0,1 0,348 256 Z M348,376 A18,18 0,1 0,384 376 A18,18 0,1 0,348 376 Z" />
+        <path android:pathData="M241,198 C286,198 274,136 341,136 M241,256 H341 M241,314 C286,314 274,376 341,376" android:strokeColor="#FFFFFF" android:strokeWidth="24" android:strokeLineCap="round" />
+        <path android:fillColor="#FFFFFF" android:fillType="evenOdd" android:pathData="M171,88 A82,82 0,0 1,253 170 V342 A82,82 0,0 1,89 342 V170 A82,82 0,0 1,171 88 Z M171,104 A66,66 0,0 1,237 170 V342 A66,66 0,0 1,105 342 V170 A66,66 0,0 1,171 104 Z M316,136 A50,50 0,1 0,416 136 A50,50 0,1 0,316 136 Z M348,136 A18,18 0,1 0,384 136 A18,18 0,1 0,348 136 Z M316,256 A50,50 0,1 0,416 256 A50,50 0,1 0,316 256 Z M348,256 A18,18 0,1 0,384 256 A18,18 0,1 0,348 256 Z M316,376 A50,50 0,1 0,416 376 A50,50 0,1 0,316 376 Z M348,376 A18,18 0,1 0,384 376 A18,18 0,1 0,348 376 Z" />
+    </group>
+</vector>

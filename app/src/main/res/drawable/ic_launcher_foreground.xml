@@ -1,14 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A side key with a lightning bolt, inside the 66dp safe zone of the 108dp adaptive icon. -->
+<!-- Adapted from docs/snapkeymap-svg/snapkeymap-icon.svg. Artwork stays inside the adaptive safe circle. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M30,36 h6 a2,2 0 0 1 2,2 v32 a2,2 0 0 1 -2,2 h-6 z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M62,28 L44,58 L56,58 L52,80 L72,48 L60,48 L66,28 Z" />
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="512" android:viewportHeight="512">
+    <group android:scaleX="0.72" android:scaleY="0.72" android:pivotX="256" android:pivotY="256">
+        <path android:pathData="M241,198 C286,198 274,136 341,136" android:strokeColor="#6AD8FF" android:strokeWidth="24" android:strokeLineCap="round" />
+        <path android:pathData="M241,256 H341" android:strokeColor="#68CCFF" android:strokeWidth="24" android:strokeLineCap="round" />
+        <path android:pathData="M241,314 C286,314 274,376 341,376" android:strokeColor="#77DFFF" android:strokeWidth="24" android:strokeLineCap="round" />
+        <path android:fillColor="#072C86" android:pathData="M171,88 A82,82 0,0 1,253 170 V342 A82,82 0,0 1,89 342 V170 A82,82 0,0 1,171 88 Z" />
+        <path android:fillColor="#C7F2FF" android:pathData="M171,104 A66,66 0,0 1,237 170 V342 A66,66 0,0 1,105 342 V170 A66,66 0,0 1,171 104 Z" />
+        <path android:pathData="M171,120 A50,50 0,0 1,221 170 V342 A50,50 0,0 1,121 342 V170 A50,50 0,0 1,171 120 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear" android:startX="121" android:startY="120" android:endX="121" android:endY="392" android:startColor="#38BCFB" android:endColor="#1689F6" />
+            </aapt:attr>
+        </path>
+        <path android:fillColor="#08338F" android:pathData="M316,136 A50,50 0,1 0,416 136 A50,50 0,1 0,316 136 Z" />
+        <path android:fillColor="#1499F8" android:pathData="M316,256 A50,50 0,1 0,416 256 A50,50 0,1 0,316 256 Z" />
+        <path android:fillColor="#61CEF9" android:pathData="M316,376 A50,50 0,1 0,416 376 A50,50 0,1 0,316 376 Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M348,136 A18,18 0,1 0,384 136 A18,18 0,1 0,348 136 Z M348,256 A18,18 0,1 0,384 256 A18,18 0,1 0,348 256 Z M348,376 A18,18 0,1 0,384 376 A18,18 0,1 0,348 376 Z" />
+    </group>
 </vector>

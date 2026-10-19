@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">SnapKey Map symbol</title>
+  <desc id="desc">Standalone transparent SnapKey Map symbol using the same geometry as the main icon</desc>
+  <defs>
+    <linearGradient id="keyFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#38BCFB"/>
+      <stop offset="1" stop-color="#1689F6"/>
+    </linearGradient>
+  </defs>
+
+  <g fill="none" stroke-linecap="round" stroke-width="24">
+    <path d="M241 198 C286 198 274 136 341 136" stroke="#2EA9FB"/>
+    <path d="M241 256 H341" stroke="#269EFB"/>
+    <path d="M241 314 C286 314 274 376 341 376" stroke="#34B6FB"/>
+  </g>
+
+  <rect x="89" y="88" width="164" height="336" rx="82" fill="#072C86"/>
+  <rect x="105" y="104" width="132" height="304" rx="66" fill="#C7F2FF"/>
+  <rect x="121" y="120" width="100" height="272" rx="50" fill="url(#keyFill)"/>
+
+  <circle cx="366" cy="136" r="50" fill="#08338F"/>
+  <circle cx="366" cy="136" r="18" fill="#FFF"/>
+
+  <circle cx="366" cy="256" r="50" fill="#1499F8"/>
+  <circle cx="366" cy="256" r="18" fill="#FFF"/>
+
+  <circle cx="366" cy="376" r="50" fill="#61CEF9"/>
+  <circle cx="366" cy="376" r="18" fill="#FFF"/>
+</svg>
