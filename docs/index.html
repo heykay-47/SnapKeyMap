@@ -40,27 +40,72 @@
         <p class="download-note">Free to download. No root. One-time computer setup.</p>
       </div>
 
-      <div class="key-demo" role="group" aria-label="Illustrative examples of Snap Key mappings">
-        <div class="demo-heading"><span>One key, three ways.</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 7 7-7 7"/></svg></div>
-        <div class="mapping-list" role="group" aria-label="Choose an example gesture">
-          <button class="mapping" type="button" data-gesture="press" aria-pressed="true">
+      <div class="key-demo">
+        <div class="demo-heading">One key, three ways.</div>
+        <div class="phone-stage" data-torch="off" data-screen="home" data-music="paused" role="img" aria-label="Illustration of an Oppo Find X9 held at an angle, with a close-up of the Snap Key on its left edge. A press turns the flashlight on or off, a double press opens or closes the camera, and a press and hold plays or pauses music.">
+          <div class="beam" aria-hidden="true"></div>
+          <div class="phone-rig" aria-hidden="true">
+            <div class="phone">
+              <div class="phone-back"></div>
+              <div class="phone-side"><span class="phone-key"></span></div>
+              <div class="phone-front">
+                <div class="screen">
+                  <div class="screen-home">
+                    <p class="clock">08:30</p>
+                    <p class="date">Monday, 19 October</p>
+                    <div class="apps"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                  </div>
+                  <div class="screen-music">
+                    <div class="album"></div>
+                    <p class="track">Sunday Drive</p>
+                    <p class="artist">Snap Mix</p>
+                    <div class="track-bar"><i></i></div>
+                    <div class="player-row">
+                      <span class="eq"><i></i><i></i><i></i><i></i></span>
+                      <span class="play-glyph"></span>
+                    </div>
+                  </div>
+                  <div class="screen-camera">
+                    <div class="scene"><i class="sun"></i><i class="hill"></i><i class="hill hill-near"></i></div>
+                    <div class="focus"></div>
+                    <p class="modes"><span>VIDEO</span><b>PHOTO</b><span>PORTRAIT</span></p>
+                    <div class="shutter"></div>
+                  </div>
+                  <div class="island"><svg viewBox="0 0 24 24"><path d="M8 3h8M7 6h10l-3 6v8H10v-8L7 6Z"/></svg><span>On</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <svg class="lens-link" aria-hidden="true"><line></line><circle r="5"></circle></svg>
+          <div class="lens" aria-hidden="true">
+            <div class="lens-view">
+              <span class="lens-glass"></span>
+              <span class="lens-frame"></span>
+              <span class="lens-key"></span>
+              <span class="ripple"></span>
+              <span class="finger"></span>
+            </div>
+            <svg class="hold-ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="47" pathLength="1"></circle></svg>
+          </div>
+          <p class="lens-label" aria-hidden="true">Snap Key</p>
+        </div>
+        <div class="mapping-list" role="group" aria-label="Try a gesture">
+          <button class="mapping" type="button" data-gesture="press">
             <span class="gesture-shape" aria-hidden="true"><i></i></span>
             <span class="mapping-copy"><strong>Press</strong><span>Flashlight</span></span>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8M7 6h10l-3 6v8H10v-8L7 6ZM10 16h4"/></svg>
           </button>
-          <button class="mapping" type="button" data-gesture="double" aria-pressed="false">
+          <button class="mapping" type="button" data-gesture="double">
             <span class="gesture-shape" aria-hidden="true"><i></i><i></i></span>
             <span class="mapping-copy"><strong>Double press</strong><span>Camera</span></span>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h4l2-3h6l2 3h4v13H3V7Z"/><circle cx="12" cy="13" r="4"/></svg>
           </button>
-          <button class="mapping" type="button" data-gesture="hold" aria-pressed="false">
+          <button class="mapping" type="button" data-gesture="hold">
             <span class="gesture-shape" aria-hidden="true"><i class="long"></i></span>
             <span class="mapping-copy"><strong>Press &amp; hold</strong><span>Play / pause</span></span>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 10 8-10 8V4Zm14 0v16m4-16v16"/></svg>
           </button>
         </div>
-        <p class="demo-result" aria-live="polite">A press for a little light.</p>
-        <p class="demo-caption">Example mappings, not a live phone connection.<br>Choose your own actions in the app.</p>
+        <p class="demo-result" aria-hidden="true">Press once to turn on the flashlight.</p>
+        <p class="sr-only" id="demo-status" role="status"></p>
+        <p class="demo-caption">Example mappings, not a live phone connection. Choose your own actions in the app.</p>
       </div>
     </section>
 
