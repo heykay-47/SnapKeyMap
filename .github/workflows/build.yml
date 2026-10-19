@@ -31,21 +31,20 @@ jobs:
         if: github.event_name == 'push'
         env:
           SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
-          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
           if [ -n "$SIGNING_KEYSTORE_BASE64" ]; then
             echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.p12"
             echo "SIGNING_KEYSTORE_PATH=$RUNNER_TEMP/release.p12" >> "$GITHUB_ENV"
-            echo "SIGNING_STORE_PASSWORD=$SIGNING_STORE_PASSWORD" >> "$GITHUB_ENV"
-            echo "SIGNING_KEY_ALIAS=$SIGNING_KEY_ALIAS" >> "$GITHUB_ENV"
-            echo "SIGNING_KEY_PASSWORD=$SIGNING_KEY_PASSWORD" >> "$GITHUB_ENV"
           else
             echo "::warning::No signing key secret. The APK is signed with a throwaway debug key."
           fi
 
+      # Only push builds get the passwords; pull requests build with the debug key.
       - name: Test and build
+        env:
+          SIGNING_STORE_PASSWORD: ${{ github.event_name == 'push' && secrets.SIGNING_STORE_PASSWORD || '' }}
+          SIGNING_KEY_ALIAS: ${{ github.event_name == 'push' && secrets.SIGNING_KEY_ALIAS || '' }}
+          SIGNING_KEY_PASSWORD: ${{ github.event_name == 'push' && secrets.SIGNING_KEY_PASSWORD || '' }}
         run: gradle --no-daemon testReleaseUnitTest assembleRelease
 
       - name: Delete signing key
