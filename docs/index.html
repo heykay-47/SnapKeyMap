@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#e6efdf">
+  <meta name="description" content="Make the Oppo Find X9 Snap Key your own. Map a press, double press, or hold to apps, shortcuts, and device actions. No root required.">
+  <meta property="og:title" content="SnapKey Map — Your key. Your rules.">
+  <meta property="og:description" content="Remap the Oppo Find X9 Snap Key. Free to download, no root required, and everything stays on your phone.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://heykay-47.github.io/SnapKeyMap/">
+  <link rel="canonical" href="https://heykay-47.github.io/SnapKeyMap/">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+  <title>SnapKey Map — Your key. Your rules.</title>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header wrap">
+    <a class="brand" href="./" aria-label="SnapKey Map home">
+      <svg class="brand-icon" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="10" fill="currentColor"/><path d="M18 7 10 18h6l-2 7 9-12h-6l1-6Z" fill="#e6efdf"/></svg>
+      SnapKey Map
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="#setup">Set up</a>
+      <a href="#privacy">Privacy</a>
+      <a href="https://github.com/heykay-47/SnapKeyMap">GitHub <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero wrap" aria-labelledby="hero-heading">
+      <div class="hero-copy">
+        <h1 id="hero-heading">Your key.<br>Your rules.</h1>
+        <p class="intro">Give your Oppo Find X9’s Snap Key a new job. Open an app, switch on the flashlight, or control your music with a press, double press, or hold.</p>
+        <a class="button" href="https://github.com/heykay-47/SnapKeyMap/releases/latest">Download APK <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5"/></svg></a>
+        <p class="download-note">Free to download. No root. One-time computer setup.</p>
+      </div>
+
+      <div class="key-demo" role="group" aria-label="Illustrative examples of Snap Key mappings">
+        <div class="demo-heading"><span>One key, three ways.</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 7 7-7 7"/></svg></div>
+        <div class="mapping-list" role="group" aria-label="Choose an example gesture">
+          <button class="mapping" type="button" data-gesture="press" aria-pressed="true">
+            <span class="gesture-shape" aria-hidden="true"><i></i></span>
+            <span class="mapping-copy"><strong>Press</strong><span>Flashlight</span></span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8M7 6h10l-3 6v8H10v-8L7 6ZM10 16h4"/></svg>
+          </button>
+          <button class="mapping" type="button" data-gesture="double" aria-pressed="false">
+            <span class="gesture-shape" aria-hidden="true"><i></i><i></i></span>
+            <span class="mapping-copy"><strong>Double press</strong><span>Camera</span></span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h4l2-3h6l2 3h4v13H3V7Z"/><circle cx="12" cy="13" r="4"/></svg>
+          </button>
+          <button class="mapping" type="button" data-gesture="hold" aria-pressed="false">
+            <span class="gesture-shape" aria-hidden="true"><i class="long"></i></span>
+            <span class="mapping-copy"><strong>Press &amp; hold</strong><span>Play / pause</span></span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 10 8-10 8V4Zm14 0v16m4-16v16"/></svg>
+          </button>
+        </div>
+        <p class="demo-result" aria-live="polite">A press for a little light.</p>
+        <p class="demo-caption">Example mappings, not a live phone connection.<br>Choose your own actions in the app.</p>
+      </div>
+    </section>
+
+    <section class="possibilities" aria-labelledby="actions-heading">
+      <div class="wrap possibilities-inner">
+        <h2 id="actions-heading">Less tapping.<br>More doing.</h2>
+        <div>
+          <p>Launch your go-to app. Open a link or a supported app shortcut. Take a screenshot, change tracks, or pull down notifications.</p>
+          <p>You choose what each gesture does. Android permissions, device support, and your lock screen still apply.</p>
+          <a class="text-link" href="https://github.com/heykay-47/SnapKeyMap#permissions-and-limits">Read the capabilities and limits <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section id="setup" class="setup wrap" aria-labelledby="setup-heading">
+      <div class="section-heading">
+        <h2 id="setup-heading">Set up once.<br>Make it yours.</h2>
+        <p>Have your Find X9, a USB cable, and a computer ready. Other devices and ColorOS versions may behave differently.</p>
+      </div>
+      <ol class="steps">
+        <li>
+          <h3>Install the app</h3>
+          <p>Open the <a href="https://github.com/heykay-47/SnapKeyMap/releases/latest">latest release</a> on your phone, download the <code>SnapKeyMap-*.apk</code> file, and open it. Allow your browser or file manager to install apps when Android asks.</p>
+        </li>
+        <li>
+          <h3>Enable accessibility</h3>
+          <p>Open SnapKey Map, tap <strong>Open settings</strong>, and enable its accessibility service. If the switch is blocked, open the app’s <strong>App info → ⋮ → Allow restricted settings</strong>, then try again.</p>
+        </li>
+        <li>
+          <h3>Grant log access once</h3>
+          <p>Download Google’s <a href="https://developer.android.com/tools/releases/platform-tools">SDK Platform-Tools</a> on your computer. Enable Developer options and USB debugging on your phone, connect it, and accept the debugging prompt. From the Platform-Tools folder, run:</p>
+          <div class="command-block">
+            <pre><code id="adb-command">adb shell pm grant com.heykay.snapkeymap android.permission.READ_LOGS</code></pre>
+            <button id="copy-command" type="button" hidden>Copy command</button>
+          </div>
+          <p id="copy-status" class="copy-status" role="status"></p>
+          <p>In Windows PowerShell, use <code>.\adb</code> instead of <code>adb</code>. Reopen the app and allow device log access when prompted. The grant survives restarts and updates; Android may ask for consent again.</p>
+        </li>
+        <li>
+          <h3>Make it yours</h3>
+          <p>Set Oppo’s own Snap Key action to <strong>None</strong> in phone Settings. In SnapKey Map, choose <strong>Teach the app your Snap Key</strong> and follow the prompts. Then assign your press, double press, and hold actions.</p>
+          <p>Allow notifications and background activity so the app can keep listening and tell you when detection pauses.</p>
+        </li>
+      </ol>
+      <a class="text-link" href="https://github.com/heykay-47/SnapKeyMap#install-and-set-up">Full setup guide <span aria-hidden="true">↗</span></a>
+    </section>
+
+    <section id="privacy" class="privacy" aria-labelledby="privacy-heading">
+      <div class="wrap privacy-inner">
+        <h2 id="privacy-heading">Your phone.<br>Your data.</h2>
+        <div>
+          <p>SnapKey Map processes system logs locally to detect the key. It does not upload them, and the Android app declares no internet permission.</p>
+          <p>Log access is a broad permission, not just access to key events. The accessibility service runs device actions; its configuration does not allow it to read window content. Apps and websites you open have their own privacy policies.</p>
+          <p class="website-note">This website has no analytics or third-party scripts. It is hosted on GitHub Pages, which may log visitors’ IP addresses for security. See <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement">GitHub’s privacy statement</a>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="questions wrap" aria-labelledby="questions-heading">
+      <h2 id="questions-heading">Before you press.</h2>
+      <details>
+        <summary>Will it work on my phone?</summary>
+        <p>SnapKey Map is built around the Oppo Find X9’s Snap Key. Other devices and ColorOS versions may behave differently. It cannot bypass the lock screen, and screen-off detection and background reliability depend on ColorOS.</p>
+      </details>
+      <details>
+        <summary>What if the ADB command is refused?</summary>
+        <p>If the error mentions <code>GRANT_RUNTIME_PERMISSIONS</code>, ColorOS may be blocking permission grants. Developer options may have <strong>Disable permission monitoring</strong> or <strong>Disable system optimization</strong>. These settings relax manufacturer restrictions, so read the warning before changing them. Follow the <a href="https://github.com/heykay-47/SnapKeyMap#adb-refuses-to-grant-log-access">full troubleshooting guide</a> for details.</p>
+      </details>
+      <details>
+        <summary>Why does a single press have a slight delay?</summary>
+        <p>When a double-press action is assigned, the app waits 350 milliseconds after release to see whether another press follows before running the single-press action.</p>
+      </details>
+      <details>
+        <summary>How do I update or report a problem?</summary>
+        <p>Install the latest APK over the existing app without uninstalling it. Updates signed with the same key keep your mappings and log permission. For help, <a href="https://github.com/heykay-47/SnapKeyMap/issues">open a GitHub issue</a> with your app version, ColorOS version, assigned actions, and the <strong>Last:</strong> text. Never share an unfiltered system log.</p>
+      </details>
+    </section>
+  </main>
+
+  <footer class="site-footer wrap">
+    <div><a class="brand" href="./">SnapKey Map</a><p>Made by <a href="https://github.com/heykay-47">Krithik</a> for a more useful button.</p></div>
+    <div class="footer-links"><a href="https://github.com/heykay-47/SnapKeyMap">Source code</a><a href="https://github.com/heykay-47/SnapKeyMap/issues">Get help</a><a href="https://github.com/heykay-47/SnapKeyMap#author-and-credits">Credits</a></div>
+  </footer>
+</body>
+</html>
