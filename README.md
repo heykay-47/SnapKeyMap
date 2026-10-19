@@ -16,7 +16,7 @@ No root or paid tools are required. Download a prebuilt APK or use GitHub Action
 
 ## Install and set up
 
-You need an Oppo Find X9, a USB cable, and a computer for the one-time permission setup. Other devices and ColorOS versions may behave differently.
+You need an Oppo Find X9 and either a running Shizuku or a USB cable and computer for the one-time permission setup. Other devices and ColorOS versions may behave differently.
 
 ### 1. Install the APK
 
@@ -35,6 +35,10 @@ Open SnapKey Map and tap **Open settings** in the first setup step. Find SnapKey
 If Android blocks the switch, open SnapKey Map's **App info**. Tap the three-dot menu, choose **Allow restricted settings**, and try again.
 
 ### 3. Grant log access once
+
+**Without a computer:** install and start [Shizuku](https://shizuku.rikka.app/guide/setup/) using wireless debugging (Android 11+). Open SnapKey Map's log-access screen, tap **Grant with Shizuku**, and allow its permission request. The button appears only while Shizuku is running. You do not need to keep Shizuku running after the grant. If ColorOS blocks it, turn off Permission monitoring in Developer options (often labelled **Disable permission monitoring**), or use the computer method below.
+
+**With a computer:**
 
 1. Download Google's free [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools) on your computer and unzip them.
 2. On the phone, open Settings, then About device, then Version. Tap the build or version number seven times to enable Developer options.
@@ -98,6 +102,8 @@ When reporting a detection problem, include your app version, ColorOS version, a
 The accessibility service receives supported key events and runs actions such as screenshot, home, back, and lock. Its configuration does not allow it to read window content.
 
 On the Find X9, the app reads system logs to detect the Snap Key. The log permission grants access to more than key events. SnapKey Map processes those logs on the phone and does not upload them. The app declares no internet permission. Apps and websites you open through an action have their own privacy policies.
+
+Optional Shizuku access is used only to grant the log permission, not to read logs or run mapped actions.
 
 Keep these limits in mind:
 
