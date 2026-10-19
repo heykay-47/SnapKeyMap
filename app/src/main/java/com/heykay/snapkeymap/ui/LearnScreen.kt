@@ -9,23 +9,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -40,7 +35,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.heykay.snapkeymap.LearnResult
@@ -55,7 +49,6 @@ private sealed interface LearnState {
     data class Finished(val result: LearnResult) : LearnState
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LearnScreen(onDone: () -> Unit) {
     var state by remember { mutableStateOf<LearnState>(LearnState.Intro) }
@@ -93,16 +86,7 @@ fun LearnScreen(onDone: () -> Unit) {
         onDispose { SnapEngine.cancelLearning() }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Teach your Snap Key") },
-                navigationIcon = {
-                    IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back") }
-                },
-            )
-        },
-    ) { padding ->
+    SnapScaffold(title = "Teach your Snap Key", onBack = onDone) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -199,7 +183,6 @@ private fun Running(state: LearnState.Running, onCancel: () -> Unit) {
         Text(
             state.prompt,
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
         )
         Text(state.detail, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
