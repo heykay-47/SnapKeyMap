@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Button
@@ -61,7 +62,11 @@ fun LogAccessScreen(onDone: () -> Unit) {
     var message by remember { mutableStateOf<String?>(null) }
     val command = "adb shell pm grant ${context.packageName} android.permission.READ_LOGS"
 
+    // Only move on by itself when the grant arrives while this screen is open.
+    val grantedOnEntry = remember { SnapEngine.hasLogPermission() }
+
     LaunchedEffect(resumes) {
+        if (grantedOnEntry) return@LaunchedEffect
         while (true) {
             if (SnapEngine.hasLogPermission()) {
                 if (SnapEngine.logAccess.value == LogAccess.OFF) SnapEngine.connect()
@@ -116,6 +121,16 @@ fun LogAccessScreen(onDone: () -> Unit) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            if (grantedOnEntry) {
+                NoteCard(
+                    icon = Icons.Rounded.CheckCircle,
+                    title = "Done!",
+                    body = "Log access is granted. It stays after restarts and app updates, so you won't need to grant it again.",
+                    container = MaterialTheme.colorScheme.primaryContainer,
+                )
+                Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text("Continue") }
+            }
+
             Text(
                 "Grant system log access once using Shizuku or a computer. " +
                     "The permission stays after restarts and app updates.",
