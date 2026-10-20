@@ -62,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.heykay.snapkeymap.Gesture
 import com.heykay.snapkeymap.LogAccess
@@ -195,8 +196,33 @@ fun HomeScreen(onPick: (Gesture) -> Unit, onLearn: () -> Unit, onLogAccess: () -
             }
 
             if (!setupDone) {
-                item { SectionHeader("Set up") }
-                items(steps.size) { index -> StepCard(index + 1, steps[index]) }
+                val currentStep = steps.indexOfFirst { !it.done }
+                val otherSteps = steps.indices.filter { it != currentStep }
+                item { SectionHeader("Step ${currentStep + 1} of ${steps.size}") }
+                item { StepCard(currentStep + 1, steps[currentStep]) }
+                items(otherSteps.size) { row ->
+                    val index = otherSteps[row]
+                    val step = steps[index]
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Icon(
+                            if (step.done) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                            contentDescription = if (step.done) "Done" else "Not done",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Text(
+                            "${index + 1}. ${step.title}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
 
             item { SectionHeader("What the Snap Key does") }
