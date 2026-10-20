@@ -157,6 +157,7 @@
         <li><strong>Access notification policy</strong> (<code>ACCESS_NOTIFICATION_POLICY</code>): use Do Not Disturb and silent-mode controls.</li>
         <li><strong>Ask to ignore battery optimisation</strong> (<code>REQUEST_IGNORE_BATTERY_OPTIMIZATIONS</code>): request background operation.</li>
         <li><strong>Shizuku API access</strong> (<code>moe.shizuku.manager.permission.API_V23</code>): lets the app ask Shizuku for the one-time log permission grant. The app uses it only for that grant, not for log reading or mapped actions. Shizuku need not stay running afterwards.</li>
+        <li><strong>Internal receiver permission</strong> (<code>com.heykay.snapkeymap.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION</code>): added by the AndroidX library. Only this app holds it, and it keeps other apps from sending broadcasts to the app's private receivers.</li>
       </ul>
       <p>The code is <a href="https://github.com/heykay-47/SnapKeyMap">open source</a>. You can inspect the implementation and build it yourself.</p>
       <p><strong>Provided as is, without warranty.</strong></p>
