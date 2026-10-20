@@ -171,9 +171,12 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
                 }
             }
 
-            if (search.isEmpty()) {
+            val showCall = matches("Call a contact, dialer, phone number")
+            val showLink = matches("Open a link, website, URL, deep link")
+            val showShortcut = matches("App shortcut, direct dial, Tasker")
+            if (showCall || showLink || showShortcut) {
                 item { SectionHeader("More", Modifier.padding(horizontal = 16.dp)) }
-                item {
+                if (showCall) item {
                     PickRow(
                         icon = { VectorIcon(Icons.Rounded.Call) },
                         title = "Call a contact…",
@@ -189,7 +192,7 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
                         }
                     }
                 }
-                item {
+                if (showLink) item {
                     PickRow(
                         icon = { VectorIcon(Icons.Rounded.Link) },
                         title = "Open a link…",
@@ -198,7 +201,7 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
                         selected = current is SnapAction.OpenLink,
                     ) { showLinkDialog = true }
                 }
-                item {
+                if (showShortcut) item {
                     PickRow(
                         icon = { VectorIcon(Icons.Rounded.Bolt) },
                         title = "App shortcut…",
@@ -207,7 +210,7 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
                         selected = current is SnapAction.OpenShortcut,
                     ) { showShortcuts = !showShortcuts }
                 }
-                if (showShortcuts) {
+                if (showShortcut && showShortcuts) {
                     val list = shortcutApps
                     if (list == null) {
                         item { Loading() }
