@@ -67,6 +67,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.heykay.snapkeymap.Gesture
 import com.heykay.snapkeymap.LogAccess
+import com.heykay.snapkeymap.LogSource
 import com.heykay.snapkeymap.R
 import com.heykay.snapkeymap.SnapAccessibilityService
 import com.heykay.snapkeymap.SnapAction
@@ -327,6 +328,7 @@ private fun StatusCard(
     val last by SnapEngine.lastGesture.collectAsState()
     val lastKeySeenAt by SnapEngine.lastKeySeenAt.collectAsState()
     val listeningSince by SnapEngine.listeningSince.collectAsState()
+    val logSource by SnapEngine.logSource.collectAsState()
     val timeFormat = DateFormat.getTimeFormat(LocalContext.current)
     val now by produceState(SnapEngine.now()) {
         while (true) {
@@ -367,7 +369,10 @@ private fun StatusCard(
             }
             Text(
                 listOfNotNull(
-                    listeningSince?.let { "Listening since ${timeFormat.format(Date(it))}" },
+                    listeningSince?.let {
+                        "Listening since ${timeFormat.format(Date(it))}" +
+                            if (logSource == LogSource.SHIZUKU && access == LogAccess.FULL) " via Shizuku" else ""
+                    },
                     lastKeySeenAt?.let { "Last key press ${timeFormat.format(Date(it))}" } ?: "No key press yet",
                 ).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,

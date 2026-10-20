@@ -86,7 +86,7 @@ fun LogAccessScreen(onDone: () -> Unit) {
         scope.launch {
             try {
                 grantLogAccessWithShizuku(context)
-                message = "Log access granted. Reopen SnapKey Map and allow device logs if detection stays paused."
+                message = "Log access granted. While Shizuku is running and SnapKey Map is allowed in it, no device-logs prompt is needed."
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
@@ -135,6 +135,15 @@ fun LogAccessScreen(onDone: () -> Unit) {
                 "Grant system log access once using Shizuku or a computer. " +
                     "The permission stays after restarts and app updates.",
                 style = MaterialTheme.typography.bodyLarge,
+            )
+
+            Text(
+                "While Shizuku is running and SnapKey Map is allowed in it, the app also uses Shizuku " +
+                    "to run logcat as the shell user. This reads the log without the device-logs prompt. " +
+                    "Lines are still checked in memory and discarded, not saved as a log. " +
+                    "Otherwise, Android asks for one-time device-log access after each app or phone restart " +
+                    "and may ask again when the reader reconnects.",
+                style = MaterialTheme.typography.bodyMedium,
             )
 
             if (shizukuRunning) {

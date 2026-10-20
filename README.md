@@ -38,7 +38,7 @@ If Android blocks the switch, open SnapKey Map's **App info**. Tap the three-dot
 
 ### 3. Grant log access once
 
-**Without a computer:** install and start [Shizuku](https://shizuku.rikka.app/guide/setup/) using wireless debugging (Android 11+). Open SnapKey Map's log-access screen, tap **Grant with Shizuku**, and allow its permission request. The button appears only while Shizuku is running. You do not need to keep Shizuku running after the grant. If ColorOS blocks it, turn on **Disable permission monitoring** in Developer options, restart the phone (the setting only takes effect after a restart), start Shizuku again and retry. Or use the computer method below.
+**Without a computer:** install and start [Shizuku](https://shizuku.rikka.app/guide/setup/) using wireless debugging (Android 11+). Open SnapKey Map's log-access screen, tap **Grant with Shizuku**, and allow its permission request. The button appears only while Shizuku is running. Keep Shizuku running to read logs without Android's device-logs prompt. If ColorOS blocks the grant, turn on **Disable permission monitoring** in Developer options, restart the phone (the setting only takes effect after a restart), start Shizuku again and retry. Or use the computer method below.
 
 **With a computer:**
 
@@ -56,7 +56,7 @@ In Windows PowerShell, use `.\adb` in place of `adb` if the command is not on yo
 
 Success normally returns to the command prompt without a message. If you get `GRANT_RUNTIME_PERMISSIONS`, follow the [ColorOS permission fix](#adb-refuses-to-grant-log-access).
 
-Reopen SnapKey Map and choose **Allow** when Android asks for access to device logs. The ADB grant survives restarts and app updates. Android may ask for consent again when the log reader reconnects.
+The ADB grant survives restarts and app updates. While Shizuku runs and SnapKey Map is allowed in it, the app reads logs through Shizuku without the device-logs prompt. Otherwise, Android asks for one-time device-log access after each app or phone restart and may ask again when the reader reconnects. The accessibility service tries to show that prompt automatically; if ColorOS blocks it, reopen SnapKey Map and choose **Allow**.
 
 ### 4. Choose your actions
 
@@ -105,7 +105,7 @@ The accessibility service receives supported key events and runs actions such as
 
 On the Find X9, the app reads system logs to detect the Snap Key. The log permission grants access to more than key events. SnapKey Map processes those logs on the phone and does not upload them. The app declares no internet permission. Apps and websites you open through an action have their own privacy policies.
 
-Optional Shizuku access is used only to grant the log permission, not to read logs or run mapped actions.
+If you allow SnapKey Map in Shizuku, the app also uses Shizuku to run `logcat` as the shell user. Shizuku must be running for this; it avoids Android's device-logs prompt. Otherwise, Android asks for one-time access after each app or phone restart and may ask again on reconnect. Lines are still checked in memory and discarded, not saved as a log file. Teaching temporarily keeps observations in memory and saves one learned signature. Shizuku is not used to run mapped actions.
 
 Keep these limits in mind:
 

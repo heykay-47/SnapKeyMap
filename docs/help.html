@@ -72,9 +72,10 @@
       <ol>
         <li>Install <a href="https://shizuku.rikka.app/guide/setup/">Shizuku</a> and follow its Wireless debugging pairing and start instructions. Wireless debugging requires Android 11 or later.</li>
         <li>Once Shizuku is running, open SnapKey Map's log-access screen. Tap <strong>Grant with Shizuku</strong> and allow the Shizuku permission request. The button appears only while Shizuku is running.</li>
-        <li>Allow device log access when Android asks. You do not need to keep Shizuku running after the grant.</li>
+        <li>Keep Shizuku running. While SnapKey Map is allowed in it, the app reads logs through Shizuku without Android's device-logs prompt.</li>
       </ol>
       <p>If ColorOS blocks the grant, follow the <a href="#grant-refused">permission monitoring fix</a>, restart the phone, start Shizuku again, and retry.</p>
+      <p>Shizuku must be running for prompt-free reading. Otherwise Android asks for one-time device-log access after each app or phone restart and may ask again when the reader reconnects. The accessibility service tries to show the prompt automatically. If ColorOS blocks it, reopen SnapKey Map and allow device logs.</p>
       <h3>Manual fallback with aShell</h3>
       <p>If needed, open <a href="https://github.com/DP-Hridayan/aShell">aShell</a> while Shizuku is running and allow aShell to use Shizuku. Run the same permission grant directly in its shell, without the <code>adb shell</code> prefix:</p>
       <div class="command-block"><pre><code>pm grant com.heykay.snapkeymap android.permission.READ_LOGS</code></pre></div>
@@ -141,6 +142,7 @@
       <h3>What stays on the phone</h3>
       <p>The app declares no <code>INTERNET</code> permission. It does not send logs or settings off the phone. Apps and websites you open through an action handle their own data and have their own privacy policies.</p>
       <p>The reader checks incoming log lines in memory. It does not save a log file. Outside teaching, matching lines drive key detection and other lines are discarded.</p>
+      <p>If you allow SnapKey Map in Shizuku, the app also uses Shizuku to run <code>logcat</code> as the shell user. Shizuku must be running for this. Lines are still checked in memory and discarded, with the teaching exception below. Shizuku is not used to run mapped actions.</p>
       <p>During teaching, it temporarily keeps observations in memory: an arrival time, log tag, normalized message, and writer UID. Runs of message digits are replaced with <code>#</code>, and the message is trimmed and limited to 160 characters. This does not remove all sensitive text. Tags and UIDs are retained. Accessibility key-code observations can also be kept during teaching.</p>
       <p>After learning, the app saves one selected log signature, not the collected log: the tag, normalized message, and writer UID, plus hold detection and release timing settings. If Android supplies a usable key event instead, it saves the key and scan codes rather than a log signature. The observation list is not written to storage and is released after learning finishes or is cancelled.</p>
       <h3>How key lines are checked</h3>
@@ -156,7 +158,7 @@
         <li><strong>Show notifications</strong> (<code>POST_NOTIFICATIONS</code>): tell you when detection pauses.</li>
         <li><strong>Access notification policy</strong> (<code>ACCESS_NOTIFICATION_POLICY</code>): use Do Not Disturb and silent-mode controls.</li>
         <li><strong>Ask to ignore battery optimisation</strong> (<code>REQUEST_IGNORE_BATTERY_OPTIMIZATIONS</code>): request background operation.</li>
-        <li><strong>Shizuku API access</strong> (<code>moe.shizuku.manager.permission.API_V23</code>): lets the app ask Shizuku for the one-time log permission grant. The app uses it only for that grant, not for log reading or mapped actions. Shizuku need not stay running afterwards.</li>
+        <li><strong>Shizuku API access</strong> (<code>moe.shizuku.manager.permission.API_V23</code>): lets the app ask Shizuku for the one-time log permission grant and run logcat as the shell user while Shizuku is running. This avoids the device-logs prompt. Without it, Android asks for one-time access after each app or phone restart and may ask again on reconnect. Mapped actions do not use Shizuku.</li>
         <li><strong>Internal receiver permission</strong> (<code>com.heykay.snapkeymap.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION</code>): added by the AndroidX library. Only this app holds it, and it keeps other apps from sending broadcasts to the app's private receivers.</li>
       </ul>
       <p>The code is <a href="https://github.com/heykay-47/SnapKeyMap">open source</a>. You can inspect the implementation and build it yourself.</p>

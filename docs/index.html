@@ -155,7 +155,7 @@
         </li>
         <li>
           <h3>Grant log access once</h3>
-          <p><strong>Without a computer:</strong> start <a href="https://shizuku.rikka.app/guide/setup/">Shizuku</a> with Wireless debugging. Open SnapKey Map’s log-access screen, tap <strong>Grant with Shizuku</strong>, and allow the request. You can close Shizuku afterwards.</p>
+          <p><strong>Without a computer:</strong> start <a href="https://shizuku.rikka.app/guide/setup/">Shizuku</a> with Wireless debugging. Open SnapKey Map’s log-access screen, tap <strong>Grant with Shizuku</strong>, and allow the request. Keep Shizuku running to read logs without Android’s device-logs prompt.</p>
           <p><strong>With a computer:</strong> download Google’s <a href="https://developer.android.com/tools/releases/platform-tools">SDK Platform-Tools</a>. Enable Developer options and USB debugging on your phone, connect it, and accept the debugging prompt. From the Platform-Tools folder, run:</p>
           <div class="command-block">
             <pre><code id="adb-command">adb shell pm grant com.heykay.snapkeymap android.permission.READ_LOGS</code></pre>
