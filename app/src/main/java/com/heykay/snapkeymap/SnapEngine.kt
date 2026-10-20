@@ -2,6 +2,7 @@ package com.heykay.snapkeymap
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
@@ -9,6 +10,7 @@ import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.view.KeyEvent
+import com.heykay.snapkeymap.ui.ConsentActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -58,7 +60,10 @@ object SnapEngine {
     val uiResumes: StateFlow<Int> = resumeCount.asStateFlow()
 
     @Volatile private var learning: MutableList<Observation>? = null
-    private var uiVisible = false
+    private var mainUiVisible = false
+    private var consentVisible = false
+    private val uiVisible get() = mainUiVisible || consentVisible
+    private var consentAttempted = false
     private var wantsLog = false
     private var watchingShizuku = false
     private val binderReceived = Shizuku.OnBinderReceivedListener { main.post { connectShizukuIfNeeded() } }
@@ -76,7 +81,10 @@ object SnapEngine {
     @Volatile private var logGeneration = 0
     private var retryDelayMs = 1000L
     private val reconnect = Runnable {
-        if (wantsLog && store.config.value.enabled && hasLogPermission()) reader.start()
+        if (wantsLog && store.config.value.enabled && hasLogPermission()) {
+            if (uiVisible || !reader.needsForegroundConsent()) reader.start()
+            else startBackgroundLogs()
+        }
     }
     private var logKeyDown = false
     private val logKeyUp = Runnable {
@@ -98,11 +106,15 @@ object SnapEngine {
         logGestures = gestureDetector(longPressMs = 650)
         Notifications.createChannel(app)
         scope.launch {
-            store.config.map { it.enabled to it.needsLogAccess }.distinctUntilChanged().collect { (enabled, needsLog) ->
-                if (!enabled || !needsLog) stop()
-                else if (uiVisible && accessState.value == LogAccess.OFF) connect()
-                updateListeningSince()
-            }
+            store.config.map { Triple(it.enabled, it.needsLogAccess, it.isTaught) }
+                .distinctUntilChanged().collect { (enabled, needsLog, _) ->
+                    if (!enabled || !needsLog) {
+                        consentAttempted = false
+                        stop()
+                    } else if (uiVisible && accessState.value == LogAccess.OFF) connect()
+                    else if (!uiVisible) startBackgroundLogs()
+                    updateListeningSince()
+                }
         }
     }
 
@@ -121,6 +133,12 @@ object SnapEngine {
     /** Local readers need our screen on top; shell readers do not need foreground consent. */
     fun connect() {
         if (!store.config.value.enabled || !hasLogPermission()) return
+        wantLogs()
+        main.removeCallbacks(reconnect)
+        reader.start()
+    }
+
+    private fun wantLogs() {
         wantsLog = true
         if (!watchingShizuku) {
             watchingShizuku = true
@@ -128,8 +146,6 @@ object SnapEngine {
             Shizuku.addBinderDeadListener(binderDead)
             Shizuku.addRequestPermissionResultListener(shizukuPermission)
         }
-        main.removeCallbacks(reconnect)
-        reader.start()
     }
 
     fun stop() {
@@ -155,7 +171,7 @@ object SnapEngine {
     }
 
     fun onUiResumed() {
-        uiVisible = true
+        mainUiVisible = true
         resumeCount.value++
         Notifications.cancelPaused(app)
         val config = store.config.value
@@ -163,11 +179,45 @@ object SnapEngine {
     }
 
     fun onUiStopped() {
-        uiVisible = false
+        mainUiVisible = false
+    }
+
+    fun onConsentResumed(connectReader: Boolean) {
+        consentVisible = true
+        if (!connectReader || accessState.value == LogAccess.FULL) return
+        // A reader denied while we were backgrounded cannot prompt; replace it now we're on top.
+        reader.stop()
+        onAccessChanged(LogAccess.WAITING)
+        connect()
+    }
+
+    fun onConsentPaused() {
+        consentVisible = false
+        if (!uiVisible) notifyIfPaused()
+    }
+
+    private fun startBackgroundLogs() {
+        val config = store.config.value
+        if (!config.enabled || !config.needsLogAccess || !config.isTaught || !hasLogPermission() ||
+            accessState.value == LogAccess.FULL || uiVisible) return
+        wantLogs()
+        if (!reader.needsForegroundConsent()) {
+            connect()
+            return
+        }
+        val service = SnapAccessibilityService.instance ?: return
+        if (consentAttempted) return
+        consentAttempted = true
+        try {
+            service.startActivity(Intent(service, ConsentActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (_: Exception) {
+            notifyIfPaused()
+        }
     }
 
     fun onServiceConnected() {
         updateListeningSince()
+        startBackgroundLogs()
         if (!uiVisible) notifyIfPaused()
     }
 
@@ -195,6 +245,7 @@ object SnapEngine {
         accessState.value = access
         updateListeningSince()
         if (access == LogAccess.FULL) {
+            consentAttempted = false
             retryDelayMs = 1000L
             Notifications.cancelPaused(app)
         }

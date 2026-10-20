@@ -37,6 +37,8 @@ class LogReader(
         Thread(task, "snapkey-logcat").apply { isDaemon = true }
     }
 
+    fun needsForegroundConsent(): Boolean = tryLocal || !canUseShizuku()
+
     @Synchronized
     fun start() {
         if (session?.active == true) return

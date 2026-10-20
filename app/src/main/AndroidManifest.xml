@@ -45,6 +45,14 @@
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <activity
+            android:name=".ui.ConsentActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:exported="false"
+            android:taskAffinity="" />
+
+        <activity
             android:name=".ui.MainActivity"
             android:exported="true"
             android:launchMode="singleTask">
