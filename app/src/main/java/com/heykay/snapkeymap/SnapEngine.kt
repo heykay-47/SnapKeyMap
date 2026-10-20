@@ -9,9 +9,16 @@ import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.view.KeyEvent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 /** Connects the two ways of noticing the Snap Key (key events and the system log) to the actions. */
 object SnapEngine {
@@ -22,6 +29,7 @@ object SnapEngine {
 
     private lateinit var app: Context
     private val main = Handler(Looper.getMainLooper())
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private lateinit var reader: LogReader
     private lateinit var keyGestures: GestureDetector
     private lateinit var logGestures: GestureDetector
@@ -42,6 +50,12 @@ object SnapEngine {
 
     @Volatile private var learning: MutableList<Observation>? = null
     private var uiVisible = false
+    private var wantsLog = false
+    @Volatile private var logGeneration = 0
+    private var retryDelayMs = 1000L
+    private val reconnect = Runnable {
+        if (wantsLog && store.config.value.enabled && hasLogPermission()) reader.start()
+    }
     private var logKeyDown = false
     private val logKeyUp = Runnable {
         logKeyDown = false
@@ -51,10 +65,20 @@ object SnapEngine {
     fun init(context: Context) {
         app = context.applicationContext
         store = ConfigStore(app)
-        reader = LogReader(onLine = ::onLogLine, onAccess = { access -> main.post { onAccessChanged(access) } })
+        reader = LogReader(
+            onLine = ::onLogLine,
+            onAccess = ::onAccessChanged,
+            dispatchAccess = { task -> main.post { task() }; Unit },
+        )
         keyGestures = gestureDetector(longPressMs = 500)
         logGestures = gestureDetector(longPressMs = 650)
         Notifications.createChannel(app)
+        scope.launch {
+            store.config.map { it.enabled to it.needsLogAccess }.distinctUntilChanged().collect { (enabled, needsLog) ->
+                if (!enabled || !needsLog) stop()
+                else if (uiVisible && accessState.value == LogAccess.OFF) connect()
+            }
+        }
     }
 
     fun now(): Long = SystemClock.elapsedRealtime()
@@ -71,7 +95,19 @@ object SnapEngine {
 
     /** Starts reading the system log. Only works while our screen is showing; Android asks the user. */
     fun connect() {
-        if (hasLogPermission()) reader.start()
+        if (!store.config.value.enabled || !hasLogPermission()) return
+        wantsLog = true
+        main.removeCallbacks(reconnect)
+        reader.start()
+    }
+
+    fun stop() {
+        wantsLog = false
+        logGeneration++
+        main.removeCallbacks(reconnect)
+        reader.stop()
+        onAccessChanged(LogAccess.OFF)
+        resetGestures()
     }
 
     fun onUiResumed() {
@@ -92,12 +128,21 @@ object SnapEngine {
 
     private fun onAccessChanged(access: LogAccess) {
         accessState.value = access
+        if (access == LogAccess.FULL) {
+            retryDelayMs = 1000L
+            Notifications.cancelPaused(app)
+        }
         if (access == LogAccess.OFF || access == LogAccess.LIMITED) {
             main.removeCallbacks(logKeyUp)
             logKeyDown = false
             oplusEdges.reset()
             logGestures.reset()
             if (!uiVisible) notifyIfPaused()
+        }
+        main.removeCallbacks(reconnect)
+        if (access == LogAccess.OFF && wantsLog && store.config.value.enabled && hasLogPermission()) {
+            main.postDelayed(reconnect, retryDelayMs)
+            retryDelayMs = (retryDelayMs * 2).coerceAtMost(60_000L)
         }
     }
 
@@ -110,17 +155,21 @@ object SnapEngine {
 
     // Called on the logcat thread for every line from another process.
     private fun onLogLine(timestamp: String, uid: String, tag: String, message: String) {
+        val generation = logGeneration
         val explicitEdges = isKnownOplusKeyLine(uid, tag, message)
         learning?.let { list ->
             synchronized(list) {
                 if (learning === list) list += Observation(now(), KeyLearning.logKey(uid, tag, message))
             }
-            if (explicitEdges) main.post { oplusEdges.observe(timestamp) }
+            if (explicitEdges) main.post {
+                if (generation == logGeneration) oplusEdges.observe(timestamp)
+            }
             return
         }
         val config = store.config.value
         val isSnapKey = config.enabled && config.needsLogAccess && acceptsKeyLog(config.logSignature, uid, tag, message)
         if (explicitEdges || isSnapKey) main.post {
+            if (generation != logGeneration || !store.config.value.enabled) return@post
             if (learning != null) {
                 if (explicitEdges) oplusEdges.observe(timestamp)
             } else if (isSnapKey) {

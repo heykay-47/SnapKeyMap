@@ -2,6 +2,7 @@ package com.heykay.snapkeymap
 
 import android.util.Log
 import java.io.IOException
+import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 
 enum class LogAccess {
@@ -25,23 +26,31 @@ enum class LogAccess {
 class LogReader(
     private val onLine: (timestamp: String, uid: String, tag: String, message: String) -> Unit,
     private val onAccess: (LogAccess) -> Unit,
+    private val dispatchAccess: (() -> Unit) -> Unit = { it() },
 ) {
     @Volatile private var session: Session? = null
-
-    fun start() {
-        stop()
-        val next = Session()
-        session = next
-        thread(isDaemon = true, name = "snapkey-logcat") { next.run() }
+    // Finish tearing down the old process before starting its replacement.
+    private val worker = Executors.newSingleThreadExecutor { task ->
+        Thread(task, "snapkey-logcat").apply { isDaemon = true }
     }
 
+    @Synchronized
+    fun start() {
+        if (session?.active == true) return
+        val next = Session()
+        session = next
+        worker.execute { next.run() }
+    }
+
+    @Synchronized
     fun stop() {
         session?.close()
         session = null
     }
 
     private inner class Session {
-        @Volatile private var active = true
+        @Volatile var active = true
+            private set
         @Volatile private var process: Process? = null
         @Volatile private var full = false
 
@@ -51,20 +60,25 @@ class LogReader(
         }
 
         private fun report(access: LogAccess) {
-            if (active) onAccess(access)
+            dispatchAccess {
+                if (session === this) onAccess(access)
+            }
         }
 
         fun run() {
+            if (!active) return
             report(LogAccess.WAITING)
             val proc = try {
                 ProcessBuilder("logcat", "-v", "threadtime,uid", "-T", "1").redirectErrorStream(true).start()
             } catch (e: IOException) {
+                active = false
                 report(LogAccess.OFF)
                 return
             }
             process = proc
             if (!active) {
                 proc.destroy()
+                proc.waitFor()
                 return
             }
             startProbe()
@@ -87,7 +101,9 @@ class LogReader(
                             full = true
                             report(LogAccess.FULL)
                         }
-                        onLine(timestamp, uid, tag, message)
+                        synchronized(this@LogReader) {
+                            if (active) onLine(timestamp, uid, tag, message)
+                        }
                     } else if (!full && tag == TAG && message == PROBE && ++ownProbes >= 2) {
                         // Our own probes arrive but nothing from other apps: access was declined.
                         result = LogAccess.LIMITED
@@ -95,11 +111,13 @@ class LogReader(
                     }
                 }
             } catch (_: IOException) {
-                // The process was destroyed.
+                // EOF and I/O failures both end this session; explicit stops suppress the report.
             }
             proc.destroy()
-            report(result)
+            proc.waitFor()
+            val endedOnItsOwn = active
             active = false
+            if (endedOnItsOwn) report(result)
         }
 
         /** Writes marker lines so we can tell "declined" (we see only these) from "still asking" (we see nothing). */
