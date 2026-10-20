@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Check
@@ -61,6 +63,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.heykay.snapkeymap.Gesture
 import com.heykay.snapkeymap.LogAccess
@@ -69,6 +72,7 @@ import com.heykay.snapkeymap.SnapAccessibilityService
 import com.heykay.snapkeymap.SnapAction
 import com.heykay.snapkeymap.SnapEngine
 import com.heykay.snapkeymap.ThemeMode
+import java.util.Date
 import kotlinx.coroutines.delay
 
 private class SetupStep(
@@ -83,7 +87,13 @@ private class SetupStep(
 )
 
 @Composable
-fun HomeScreen(onPick: (Gesture) -> Unit, onLearn: () -> Unit, onLogAccess: () -> Unit, onAbout: () -> Unit) {
+fun HomeScreen(
+    onPick: (Gesture) -> Unit,
+    onLearn: () -> Unit,
+    onLogAccess: () -> Unit,
+    onAbout: () -> Unit,
+    onHelp: () -> Unit,
+) {
     val context = LocalContext.current
     val config by SnapEngine.store.config.collectAsState()
     val access by SnapEngine.logAccess.collectAsState()
@@ -170,6 +180,9 @@ fun HomeScreen(onPick: (Gesture) -> Unit, onLearn: () -> Unit, onLogAccess: () -
                     }
                 }
             }
+            IconButton(onClick = onHelp) {
+                Icon(Icons.AutoMirrored.Rounded.HelpOutline, contentDescription = "Help")
+            }
             IconButton(onClick = onAbout) {
                 Icon(Icons.Rounded.Info, contentDescription = stringResource(R.string.about_title))
             }
@@ -193,8 +206,33 @@ fun HomeScreen(onPick: (Gesture) -> Unit, onLearn: () -> Unit, onLogAccess: () -
             }
 
             if (!setupDone) {
-                item { SectionHeader("Set up") }
-                items(steps.size) { index -> StepCard(index + 1, steps[index]) }
+                val currentStep = steps.indexOfFirst { !it.done }
+                val otherSteps = steps.indices.filter { it != currentStep }
+                item { SectionHeader("Step ${currentStep + 1} of ${steps.size}") }
+                item { StepCard(currentStep + 1, steps[currentStep]) }
+                items(otherSteps.size) { row ->
+                    val index = otherSteps[row]
+                    val step = steps[index]
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Icon(
+                            if (step.done) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                            contentDescription = if (step.done) "Done" else "Not done",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Text(
+                            "${index + 1}. ${step.title}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
 
             item { SectionHeader("What the Snap Key does") }
@@ -287,6 +325,9 @@ private fun StatusCard(
     access: LogAccess,
 ) {
     val last by SnapEngine.lastGesture.collectAsState()
+    val lastKeySeenAt by SnapEngine.lastKeySeenAt.collectAsState()
+    val listeningSince by SnapEngine.listeningSince.collectAsState()
+    val timeFormat = DateFormat.getTimeFormat(LocalContext.current)
     val now by produceState(SnapEngine.now()) {
         while (true) {
             delay(1000)
@@ -324,6 +365,14 @@ private fun StatusCard(
                 Spacer(Modifier.size(12.dp))
                 Switch(checked = enabled, onCheckedChange = onEnabledChange)
             }
+            Text(
+                listOfNotNull(
+                    listeningSince?.let { "Listening since ${timeFormat.format(Date(it))}" },
+                    lastKeySeenAt?.let { "Last key press ${timeFormat.format(Date(it))}" } ?: "No key press yet",
+                ).joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceVariant,
+            )
             if (setupDone && enabled && !listening && access != LogAccess.WAITING) {
                 Button(onClick = { SnapEngine.connect() }) { Text("Connect") }
             }

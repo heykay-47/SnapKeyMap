@@ -32,11 +32,16 @@ enum class DeviceAction(val label: String, val section: Section, val needsServic
     PLAY_PAUSE("Play / pause", Section.MEDIA),
     NEXT_TRACK("Next track", Section.MEDIA),
     PREVIOUS_TRACK("Previous track", Section.MEDIA),
+    MEDIA_VOLUME_UP("Media volume up", Section.MEDIA),
+    MEDIA_VOLUME_DOWN("Media volume down", Section.MEDIA),
     VOLUME_PANEL("Show volume slider", Section.MEDIA),
     CAMERA("Camera", Section.OPEN),
     VIDEO_CAMERA("Video camera", Section.OPEN),
     ASSISTANT("Voice assistant", Section.OPEN),
-    INTERNET_PANEL("Wi-Fi & internet panel", Section.OPEN),
+    WIFI_PANEL("Wi-Fi panel", Section.OPEN),
+    BLUETOOTH_SETTINGS("Bluetooth settings", Section.OPEN),
+    NFC_PANEL("NFC panel", Section.OPEN),
+    INTERNET_PANEL("Internet / mobile data panel", Section.OPEN),
 }
 
 sealed interface SnapAction {
@@ -45,6 +50,7 @@ sealed interface SnapAction {
     /** An app shortcut (direct dial, a Tasker task, a Maps route...) stored as an intent URI. */
     data class OpenShortcut(val intentUri: String, val name: String) : SnapAction
     data class OpenLink(val url: String) : SnapAction
+    data class CallContact(val number: String, val name: String) : SnapAction
     data class Device(val action: DeviceAction) : SnapAction
 
     val label: String
@@ -53,6 +59,7 @@ sealed interface SnapAction {
             is OpenApp -> "Open $appName"
             is OpenShortcut -> name
             is OpenLink -> "Open $url"
+            is CallContact -> "Call $name"
             is Device -> action.label
         }
 
@@ -63,6 +70,7 @@ sealed interface SnapAction {
             is OpenApp -> json.put("type", "app").put("package", packageName).put("name", appName)
             is OpenShortcut -> json.put("type", "shortcut").put("uri", intentUri).put("name", name)
             is OpenLink -> json.put("type", "link").put("url", url)
+            is CallContact -> json.put("type", "contact").put("number", number).put("name", name)
             is Device -> json.put("type", "device").put("action", action.name)
         }
         return json.toString()
@@ -78,6 +86,7 @@ sealed interface SnapAction {
                     "app" -> OpenApp(json.getString("package"), json.getString("name"))
                     "shortcut" -> OpenShortcut(json.getString("uri"), json.getString("name"))
                     "link" -> OpenLink(json.getString("url"))
+                    "contact" -> CallContact(json.getString("number"), json.getString("name"))
                     "device" -> Device(DeviceAction.valueOf(json.getString("action")))
                     else -> null
                 }

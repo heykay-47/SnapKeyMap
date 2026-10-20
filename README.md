@@ -16,6 +16,8 @@ No root or paid tools are required. Download a prebuilt APK or use GitHub Action
 
 ## Install and set up
 
+See the [full help and FAQ](https://heykay-47.github.io/SnapKeyMap/help.html) for setup, troubleshooting, and safety details.
+
 You need an Oppo Find X9 and either a running Shizuku or a USB cable and computer for the one-time permission setup. Other devices and ColorOS versions may behave differently.
 
 ### 1. Install the APK

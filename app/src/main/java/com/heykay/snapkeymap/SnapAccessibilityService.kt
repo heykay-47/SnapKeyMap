@@ -38,6 +38,7 @@ class SnapAccessibilityService : AccessibilityService() {
     private fun clear() {
         instance = null
         runningState.value = false
+        SnapEngine.onServiceDisconnected()
     }
 
     companion object {
