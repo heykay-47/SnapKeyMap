@@ -32,6 +32,8 @@ enum class DeviceAction(val label: String, val section: Section, val needsServic
     PLAY_PAUSE("Play / pause", Section.MEDIA),
     NEXT_TRACK("Next track", Section.MEDIA),
     PREVIOUS_TRACK("Previous track", Section.MEDIA),
+    MEDIA_VOLUME_UP("Media volume up", Section.MEDIA),
+    MEDIA_VOLUME_DOWN("Media volume down", Section.MEDIA),
     VOLUME_PANEL("Show volume slider", Section.MEDIA),
     CAMERA("Camera", Section.OPEN),
     VIDEO_CAMERA("Video camera", Section.OPEN),

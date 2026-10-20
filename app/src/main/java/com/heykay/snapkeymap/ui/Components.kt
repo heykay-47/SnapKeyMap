@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.VolumeDown
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Block
@@ -125,6 +126,8 @@ fun actionIcon(action: SnapAction): ImageVector = when (action) {
         DeviceAction.PLAY_PAUSE -> Icons.Rounded.PlayArrow
         DeviceAction.NEXT_TRACK -> Icons.Rounded.SkipNext
         DeviceAction.PREVIOUS_TRACK -> Icons.Rounded.SkipPrevious
+        DeviceAction.MEDIA_VOLUME_UP -> Icons.AutoMirrored.Rounded.VolumeUp
+        DeviceAction.MEDIA_VOLUME_DOWN -> Icons.AutoMirrored.Rounded.VolumeDown
         DeviceAction.VOLUME_PANEL -> Icons.AutoMirrored.Rounded.VolumeUp
         DeviceAction.CAMERA -> Icons.Rounded.PhotoCamera
         DeviceAction.VIDEO_CAMERA -> Icons.Rounded.Videocam
