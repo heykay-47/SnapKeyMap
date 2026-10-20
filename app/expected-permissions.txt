@@ -4,3 +4,4 @@ android.permission.READ_LOGS
 android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
 android.permission.VIBRATE
 com.heykay.snapkeymap.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+moe.shizuku.manager.permission.API_V23
