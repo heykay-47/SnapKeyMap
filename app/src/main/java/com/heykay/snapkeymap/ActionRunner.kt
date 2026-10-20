@@ -48,6 +48,10 @@ object ActionRunner {
                     context,
                     Intent(Intent.ACTION_VIEW, Uri.parse(action.url)).addCategory(Intent.CATEGORY_BROWSABLE),
                 )
+                is SnapAction.CallContact -> start(
+                    context,
+                    Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(action.number))),
+                )
                 is SnapAction.Device -> runDevice(context, action.action)
             }
         } catch (e: ActivityNotFoundException) {
@@ -74,6 +78,10 @@ object ActionRunner {
             DeviceAction.PLAY_PAUSE -> mediaKey(context, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
             DeviceAction.NEXT_TRACK -> mediaKey(context, KeyEvent.KEYCODE_MEDIA_NEXT)
             DeviceAction.PREVIOUS_TRACK -> mediaKey(context, KeyEvent.KEYCODE_MEDIA_PREVIOUS)
+            DeviceAction.MEDIA_VOLUME_UP -> context.getSystemService(AudioManager::class.java)
+                .adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
+            DeviceAction.MEDIA_VOLUME_DOWN -> context.getSystemService(AudioManager::class.java)
+                .adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
             DeviceAction.VOLUME_PANEL -> context.getSystemService(AudioManager::class.java)
                 .adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_SAME, AudioManager.FLAG_SHOW_UI)
             DeviceAction.CAMERA -> {
@@ -92,6 +100,9 @@ object ActionRunner {
             } catch (e: ActivityNotFoundException) {
                 start(context, Intent(Intent.ACTION_ASSIST))
             }
+            DeviceAction.WIFI_PANEL -> start(context, Intent(Settings.Panel.ACTION_WIFI))
+            DeviceAction.BLUETOOTH_SETTINGS -> start(context, Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+            DeviceAction.NFC_PANEL -> start(context, Intent(Settings.Panel.ACTION_NFC))
             DeviceAction.INTERNET_PANEL -> start(context, Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY))
         }
     }
