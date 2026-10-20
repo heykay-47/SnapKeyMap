@@ -1,0 +1,49 @@
+name: Bug report
+description: Something in SnapKey Map isn't working.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the [troubleshooting steps](https://github.com/heykay-47/SnapKeyMap#troubleshooting) first. Do not paste an unfiltered system log. Device logs can contain sensitive information.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      description: Shown on the About page, such as 1.0.12.
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Phone model and ColorOS version
+      description: Settings → About device → Version, such as Find X9, CPH2797_16.0.10.600.
+    validations:
+      required: true
+  - type: dropdown
+    id: log-access
+    attributes:
+      label: Log-access method
+      options:
+        - Shizuku
+        - Computer (ADB)
+        - Not granted yet
+    validations:
+      required: true
+  - type: textarea
+    id: teach
+    attributes:
+      label: What did the teach step show?
+      description: The matched log line, or that nothing was found.
+  - type: textarea
+    id: actions
+    attributes:
+      label: Assigned actions and the "Last:" text
+      description: Your Press, Double press, and Press & hold actions, and the text under Last after you press the key.
