@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import rikka.shizuku.Shizuku
 
 /** Connects the two ways of noticing the Snap Key (key events and the system log) to the actions. */
 object SnapEngine {
@@ -40,6 +41,8 @@ object SnapEngine {
 
     private val accessState = MutableStateFlow(LogAccess.OFF)
     val logAccess: StateFlow<LogAccess> = accessState.asStateFlow()
+    private val sourceState = MutableStateFlow(LogSource.LOCAL)
+    val logSource: StateFlow<LogSource> = sourceState.asStateFlow()
 
     private val lastDetected = MutableStateFlow<Detected?>(null)
     val lastGesture: StateFlow<Detected?> = lastDetected.asStateFlow()
@@ -57,6 +60,19 @@ object SnapEngine {
     @Volatile private var learning: MutableList<Observation>? = null
     private var uiVisible = false
     private var wantsLog = false
+    private var watchingShizuku = false
+    private val binderReceived = Shizuku.OnBinderReceivedListener { main.post { connectShizukuIfNeeded() } }
+    private val binderDead = Shizuku.OnBinderDeadListener {
+        main.post {
+            if (wantsLog && sourceState.value == LogSource.SHIZUKU) {
+                reader.stop()
+                onAccessChanged(LogAccess.OFF)
+            }
+        }
+    }
+    private val shizukuPermission = Shizuku.OnRequestPermissionResultListener { _, _ ->
+        main.post { connectShizukuIfNeeded() }
+    }
     @Volatile private var logGeneration = 0
     private var retryDelayMs = 1000L
     private val reconnect = Runnable {
@@ -72,8 +88,10 @@ object SnapEngine {
         app = context.applicationContext
         store = ConfigStore(app)
         reader = LogReader(
+            context = app,
             onLine = ::onLogLine,
             onAccess = ::onAccessChanged,
+            onSource = { sourceState.value = it },
             dispatchAccess = { task -> main.post { task() }; Unit },
         )
         keyGestures = gestureDetector(longPressMs = 500)
@@ -100,21 +118,40 @@ object SnapEngine {
     fun hasLogPermission(): Boolean =
         app.checkSelfPermission(Manifest.permission.READ_LOGS) == PackageManager.PERMISSION_GRANTED
 
-    /** Starts reading the system log. Only works while our screen is showing; Android asks the user. */
+    /** Local readers need our screen on top; shell readers do not need foreground consent. */
     fun connect() {
         if (!store.config.value.enabled || !hasLogPermission()) return
         wantsLog = true
+        if (!watchingShizuku) {
+            watchingShizuku = true
+            Shizuku.addBinderReceivedListener(binderReceived)
+            Shizuku.addBinderDeadListener(binderDead)
+            Shizuku.addRequestPermissionResultListener(shizukuPermission)
+        }
         main.removeCallbacks(reconnect)
         reader.start()
     }
 
     fun stop() {
         wantsLog = false
+        if (watchingShizuku) {
+            watchingShizuku = false
+            Shizuku.removeBinderReceivedListener(binderReceived)
+            Shizuku.removeBinderDeadListener(binderDead)
+            Shizuku.removeRequestPermissionResultListener(shizukuPermission)
+        }
         logGeneration++
         main.removeCallbacks(reconnect)
         reader.stop()
         onAccessChanged(LogAccess.OFF)
         resetGestures()
+    }
+
+    private fun connectShizukuIfNeeded() {
+        if (wantsLog && accessState.value != LogAccess.FULL && canUseShizuku()) {
+            reader.stop()
+            connect()
+        }
     }
 
     fun onUiResumed() {

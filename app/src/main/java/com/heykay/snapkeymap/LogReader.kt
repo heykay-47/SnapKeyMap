@@ -1,7 +1,7 @@
 package com.heykay.snapkeymap
 
+import android.content.Context
 import android.util.Log
-import java.io.IOException
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 
@@ -16,19 +16,22 @@ enum class LogAccess {
     FULL,
 }
 
+enum class LogSource { LOCAL, SHIZUKU }
+
 /**
  * Streams `logcat` in a background thread.
  *
- * Android only offers full log access when the app is on screen, and then asks the user. So
- * [start] must be called while our activity is visible. Once allowed, the stream keeps working
- * in the background for as long as the process lives.
+ * Local readers need foreground consent; Shizuku readers run as shell without that prompt.
  */
 class LogReader(
+    private val context: Context,
     private val onLine: (timestamp: String, uid: String, tag: String, message: String) -> Unit,
     private val onAccess: (LogAccess) -> Unit,
+    private val onSource: (LogSource) -> Unit,
     private val dispatchAccess: (() -> Unit) -> Unit = { it() },
 ) {
     @Volatile private var session: Session? = null
+    @Volatile private var tryLocal = false
     // Finish tearing down the old process before starting its replacement.
     private val worker = Executors.newSingleThreadExecutor { task ->
         Thread(task, "snapkey-logcat").apply { isDaemon = true }
@@ -52,11 +55,13 @@ class LogReader(
         @Volatile var active = true
             private set
         @Volatile private var process: Process? = null
+        @Volatile private var shell: ShizukuLogStream? = null
         @Volatile private var full = false
 
         fun close() {
             active = false
             process?.destroy()
+            shell?.close()
         }
 
         private fun report(access: LogAccess) {
@@ -68,56 +73,61 @@ class LogReader(
         fun run() {
             if (!active) return
             report(LogAccess.WAITING)
-            val proc = try {
-                ProcessBuilder("logcat", "-v", "threadtime,uid", "-T", "1").redirectErrorStream(true).start()
-            } catch (e: IOException) {
-                active = false
-                report(LogAccess.OFF)
-                return
-            }
-            process = proc
-            if (!active) {
-                proc.destroy()
-                proc.waitFor()
-                return
-            }
-            startProbe()
-
+            val source = if (!tryLocal && canUseShizuku()) LogSource.SHIZUKU else LogSource.LOCAL
+            tryLocal = false
+            dispatchAccess { if (session === this) onSource(source) }
             val myPid = android.os.Process.myPid()
             var ownProbes = 0
             var result = LogAccess.OFF
             try {
-                val reader = proc.inputStream.bufferedReader()
-                while (active) {
-                    val line = reader.readLine() ?: break
-                    val match = LINE.matchEntire(line) ?: continue
-                    val timestamp = match.groupValues[1]
-                    val uid = match.groupValues[2]
-                    val pid = match.groupValues[3].toIntOrNull() ?: continue
-                    val tag = match.groupValues[4]
-                    val message = match.groupValues[5]
-                    if (pid != myPid) {
-                        if (!full) {
-                            full = true
-                            report(LogAccess.FULL)
+                val input = if (source == LogSource.SHIZUKU) {
+                    val stream = ShizukuLogStream(context)
+                    shell = stream
+                    if (!active) return
+                    stream.open()
+                } else {
+                    val proc = ProcessBuilder("logcat", "-v", "threadtime,uid", "-T", "1")
+                        .redirectErrorStream(true).start()
+                    process = proc
+                    if (!active) return
+                    proc.inputStream
+                }
+                startProbe()
+                input.bufferedReader().use { reader ->
+                    while (active) {
+                        val line = reader.readLine() ?: break
+                        val match = LINE.matchEntire(line) ?: continue
+                        val timestamp = match.groupValues[1]
+                        val uid = match.groupValues[2]
+                        val pid = match.groupValues[3].toIntOrNull() ?: continue
+                        val tag = match.groupValues[4]
+                        val message = match.groupValues[5]
+                        if (pid != myPid) {
+                            if (!full) {
+                                full = true
+                                report(LogAccess.FULL)
+                            }
+                            synchronized(this@LogReader) {
+                                if (active) onLine(timestamp, uid, tag, message)
+                            }
+                        } else if (source == LogSource.LOCAL && !full && tag == TAG && message == PROBE && ++ownProbes >= 2) {
+                            // Our own probes arrive but nothing from other apps: access was declined.
+                            result = LogAccess.LIMITED
+                            break
                         }
-                        synchronized(this@LogReader) {
-                            if (active) onLine(timestamp, uid, tag, message)
-                        }
-                    } else if (!full && tag == TAG && message == PROBE && ++ownProbes >= 2) {
-                        // Our own probes arrive but nothing from other apps: access was declined.
-                        result = LogAccess.LIMITED
-                        break
                     }
                 }
-            } catch (_: IOException) {
+            } catch (_: Exception) {
                 // EOF and I/O failures both end this session; explicit stops suppress the report.
+            } finally {
+                shell?.close()
+                process?.destroy()
+                process?.waitFor()
+                if (active && source == LogSource.SHIZUKU) tryLocal = true
+                val endedOnItsOwn = active
+                active = false
+                if (endedOnItsOwn) report(result)
             }
-            proc.destroy()
-            proc.waitFor()
-            val endedOnItsOwn = active
-            active = false
-            if (endedOnItsOwn) report(result)
         }
 
         /** Writes marker lines so we can tell "declined" (we see only these) from "still asking" (we see nothing). */
