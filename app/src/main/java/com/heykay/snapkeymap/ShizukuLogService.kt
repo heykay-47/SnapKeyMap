@@ -5,7 +5,9 @@ import android.content.Context
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Binder
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.Parcel
 import android.os.ParcelFileDescriptor
 import java.io.Closeable
@@ -73,6 +75,7 @@ internal fun canUseShizuku(): Boolean = runCatching {
 }.getOrDefault(false)
 
 internal class ShizukuLogStream(context: Context) : Closeable {
+    private val main = Handler(Looper.getMainLooper())
     private val args = Shizuku.UserServiceArgs(ComponentName(context, ShizukuLogService::class.java))
         .processNameSuffix("log-reader")
         .daemon(false)
@@ -93,30 +96,44 @@ internal class ShizukuLogStream(context: Context) : Closeable {
     }
 
     fun open(): InputStream {
-        synchronized(this) {
-            check(!closed)
-            Shizuku.bindUserService(args, connection)
+        main.post {
+            synchronized(this) {
+                if (!closed) {
+                    try {
+                        Shizuku.bindUserService(args, connection)
+                    } catch (_: Exception) {
+                        connected.countDown()
+                    }
+                }
+            }
         }
         if (!connected.await(15, TimeUnit.SECONDS)) throw IOException("Shizuku log reader timed out")
-        synchronized(this) {
+        val service = synchronized(this) {
             if (closed) throw IOException("Shizuku disconnected")
-            val service = binder ?: throw IOException("Shizuku log reader unavailable")
-            service.linkToDeath(death, 0)
-            val data = Parcel.obtain()
-            val reply = Parcel.obtain()
-            try {
-                data.writeInterfaceToken(ShizukuLogService.DESCRIPTOR)
-                if (!service.transact(IBinder.FIRST_CALL_TRANSACTION, data, reply, 0)) {
-                    throw IOException("Shizuku couldn't start logcat")
-                }
-                reply.readException()
-                return ParcelFileDescriptor.AutoCloseInputStream(
-                    ParcelFileDescriptor.CREATOR.createFromParcel(reply),
-                ).also { input = it }
-            } finally {
-                data.recycle()
-                reply.recycle()
+            (binder ?: throw IOException("Shizuku log reader unavailable")).also { it.linkToDeath(death, 0) }
+        }
+        val data = Parcel.obtain()
+        val reply = Parcel.obtain()
+        try {
+            data.writeInterfaceToken(ShizukuLogService.DESCRIPTOR)
+            if (!service.transact(IBinder.FIRST_CALL_TRANSACTION, data, reply, 0)) {
+                throw IOException("Shizuku couldn't start logcat")
             }
+            reply.readException()
+            val stream = ParcelFileDescriptor.AutoCloseInputStream(
+                ParcelFileDescriptor.CREATOR.createFromParcel(reply),
+            )
+            synchronized(this) {
+                if (closed) {
+                    stream.close()
+                    throw IOException("Shizuku disconnected")
+                }
+                input = stream
+            }
+            return stream
+        } finally {
+            data.recycle()
+            reply.recycle()
         }
     }
 
@@ -126,7 +143,11 @@ internal class ShizukuLogStream(context: Context) : Closeable {
         closed = true
         connected.countDown()
         runCatching { binder?.unlinkToDeath(death, 0) }
-        runCatching { Shizuku.unbindUserService(args, connection, true) }
+        // Shizuku's connection collection is main-thread-owned, including failed/pending binds.
+        main.post {
+            runCatching { Shizuku.unbindUserService(args, connection, true) }
+            runCatching { Shizuku.unbindUserService(args, connection, false) }
+        }
         runCatching { input?.close() }
         input = null
         binder = null

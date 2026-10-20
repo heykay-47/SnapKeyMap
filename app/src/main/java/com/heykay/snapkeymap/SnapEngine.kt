@@ -131,11 +131,11 @@ object SnapEngine {
         app.checkSelfPermission(Manifest.permission.READ_LOGS) == PackageManager.PERMISSION_GRANTED
 
     /** Local readers need our screen on top; shell readers do not need foreground consent. */
-    fun connect() {
+    fun connect(preferShizuku: Boolean = false) {
         if (!store.config.value.enabled || !hasLogPermission()) return
         wantLogs()
         main.removeCallbacks(reconnect)
-        reader.start()
+        reader.start(preferShizuku)
     }
 
     private fun wantLogs() {
@@ -166,7 +166,7 @@ object SnapEngine {
     private fun connectShizukuIfNeeded() {
         if (wantsLog && accessState.value != LogAccess.FULL && canUseShizuku()) {
             reader.stop()
-            connect()
+            connect(preferShizuku = true)
         }
     }
 
@@ -176,6 +176,7 @@ object SnapEngine {
         Notifications.cancelPaused(app)
         val config = store.config.value
         if (config.needsLogAccess && hasLogPermission() && accessState.value == LogAccess.OFF) connect()
+        else connectShizukuIfNeeded()
     }
 
     fun onUiStopped() {

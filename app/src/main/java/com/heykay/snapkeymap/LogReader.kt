@@ -40,8 +40,9 @@ class LogReader(
     fun needsForegroundConsent(): Boolean = tryLocal || !canUseShizuku()
 
     @Synchronized
-    fun start() {
+    fun start(preferShizuku: Boolean = false) {
         if (session?.active == true) return
+        if (preferShizuku) tryLocal = false
         val next = Session()
         session = next
         worker.execute { next.run() }
@@ -120,7 +121,7 @@ class LogReader(
                     }
                 }
             } catch (_: Exception) {
-                // EOF and I/O failures both end this session; explicit stops suppress the report.
+                // Failed binds and broken streams end the session; explicit stops suppress the report.
             } finally {
                 shell?.close()
                 process?.destroy()
