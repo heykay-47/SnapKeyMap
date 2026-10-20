@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Check
@@ -86,7 +87,13 @@ private class SetupStep(
 )
 
 @Composable
-fun HomeScreen(onPick: (Gesture) -> Unit, onLearn: () -> Unit, onLogAccess: () -> Unit, onAbout: () -> Unit) {
+fun HomeScreen(
+    onPick: (Gesture) -> Unit,
+    onLearn: () -> Unit,
+    onLogAccess: () -> Unit,
+    onAbout: () -> Unit,
+    onHelp: () -> Unit,
+) {
     val context = LocalContext.current
     val config by SnapEngine.store.config.collectAsState()
     val access by SnapEngine.logAccess.collectAsState()
@@ -172,6 +179,9 @@ fun HomeScreen(onPick: (Gesture) -> Unit, onLearn: () -> Unit, onLogAccess: () -
                         )
                     }
                 }
+            }
+            IconButton(onClick = onHelp) {
+                Icon(Icons.AutoMirrored.Rounded.HelpOutline, contentDescription = "Help")
             }
             IconButton(onClick = onAbout) {
                 Icon(Icons.Rounded.Info, contentDescription = stringResource(R.string.about_title))
