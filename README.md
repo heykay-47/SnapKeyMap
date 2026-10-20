@@ -30,15 +30,23 @@ The repository and release downloads are public. You do not need a GitHub accoun
 
 To update, install the new APK over the existing app. Do not uninstall first. An update signed with the same key preserves your mappings and granted log permission.
 
-### 2. Enable the accessibility service
+### 2. Follow the setup wizard
 
-Open SnapKey Map and tap **Open settings** in the first setup step. Find SnapKey Map in the accessibility settings and turn it on.
+Open SnapKey Map. The wizard shows seven steps, saves your progress, and resumes at the first unfinished step:
 
-If Android blocks the switch, open SnapKey Map's **App info**. Tap the three-dot menu, choose **Allow restricted settings**, and try again.
+1. **Choose a method:** Shizuku, without a computer, or Computer (ADB), using a USB cable.
+2. **Give log access:** follow the instructions for your chosen method below.
+3. **Turn on accessibility:** tap **Open accessibility settings**, find SnapKey Map, and turn it on. Even with ADB or Shizuku, this service runs accessibility actions, opens apps and the device-logs prompt from the background, receives supported key events, and helps keep the app running. It cannot read screen content. If Android blocks the switch, open **App info**, tap the three-dot menu, choose **Allow restricted settings**, and retry.
+4. **Background operation (optional):** allow the battery-optimisation exemption to reduce ColorOS interruptions, or tap **Skip**. Background reliability is not guaranteed.
+5. **Notifications (optional):** allow alerts for detection paused, or tap **Skip**. Notifications are not needed to run actions.
+6. **Teach the key:** set Oppo's own Snap Key action to **None** in phone Settings, then follow the teaching prompts: press three times and hold once.
+7. **Choose actions:** tap **Press**, **Double press**, or **Press & hold**. Keep at least one action assigned, then tap **Finish**.
 
-### 3. Grant log access once
+Test each gesture and check **Last:** in the Ready card. You can change actions on the home screen and choose **Run setup again** in Help without clearing your mappings. Existing installations with a taught key and granted log permission go straight to the home screen.
 
-**Without a computer:** install and start [Shizuku](https://shizuku.rikka.app/guide/setup/) using wireless debugging (Android 11+). Open SnapKey Map's log-access screen, tap **Grant with Shizuku**, and allow its permission request. The button appears only while Shizuku is running. You do not need to keep Shizuku running after the grant. If ColorOS blocks it, turn on **Disable permission monitoring** in Developer options, restart the phone (the setting only takes effect after a restart), start Shizuku again and retry. Or use the computer method below.
+### Grant log access once
+
+**Without a computer:** install and start [Shizuku](https://shizuku.rikka.app/guide/setup/) using wireless debugging (Android 11+). In the wizard's log-access step, tap **Grant with Shizuku** and allow its permission request. The button is enabled while Shizuku is running. Keep Shizuku running to read logs without Android's device-logs prompt; it may need starting again after a phone restart. If ColorOS blocks the grant, turn on **Disable permission monitoring** in Developer options, read the warning, restart the phone (the setting only takes effect after a restart), start Shizuku again and retry. Or go Back and choose Computer (ADB).
 
 **With a computer:**
 
@@ -56,17 +64,7 @@ In Windows PowerShell, use `.\adb` in place of `adb` if the command is not on yo
 
 Success normally returns to the command prompt without a message. If you get `GRANT_RUNTIME_PERMISSIONS`, follow the [ColorOS permission fix](#adb-refuses-to-grant-log-access).
 
-Reopen SnapKey Map and choose **Allow** when Android asks for access to device logs. The ADB grant survives restarts and app updates. Android may ask for consent again when the log reader reconnects.
-
-### 4. Choose your actions
-
-1. Open phone Settings, then Snap Key, and set Oppo's own action to **None**. Otherwise both actions may run.
-2. Return to SnapKey Map and start **Teach the app your Snap Key**.
-3. Follow the prompts to press the key three times and hold it once.
-4. Tap **Press**, **Double press**, or **Press & hold** on the home screen and choose an action.
-5. Test each gesture. Check the **Last:** text in the Ready card to see what the app detected.
-
-Allow notifications so the app can tell you when detection pauses. In App info, open Battery and allow background activity to reduce the chance of ColorOS closing the app.
+The ADB grant survives restarts and app updates. While Shizuku runs and SnapKey Map is allowed in it, the app reads logs through Shizuku without the device-logs prompt. Otherwise, Android asks for one-time device-log access after each app or phone restart and may ask again when the reader reconnects. The accessibility service tries to show that prompt automatically; if ColorOS blocks it, reopen SnapKey Map and choose **Allow**.
 
 After updating from v1.0.3 or earlier, run **Teach the Snap Key again** once before testing your mappings. Older calibration can select a message that matches only key-down events and merges double presses. The new learning step prefers the known Oppo press-and-release source when it is present. Your action assignments stay unchanged.
 
@@ -105,7 +103,7 @@ The accessibility service receives supported key events and runs actions such as
 
 On the Find X9, the app reads system logs to detect the Snap Key. The log permission grants access to more than key events. SnapKey Map processes those logs on the phone and does not upload them. The app declares no internet permission. Apps and websites you open through an action have their own privacy policies.
 
-Optional Shizuku access is used only to grant the log permission, not to read logs or run mapped actions.
+If you allow SnapKey Map in Shizuku, the app also uses Shizuku to run `logcat` as the shell user. Shizuku must be running for this; it avoids Android's device-logs prompt. Otherwise, Android asks for one-time access after each app or phone restart and may ask again on reconnect. Lines are still checked in memory and discarded, not saved as a log file. Teaching temporarily keeps observations in memory and saves one learned signature. Shizuku is not used to run mapped actions.
 
 Keep these limits in mind:
 

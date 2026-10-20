@@ -48,19 +48,33 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun SnapKeyMapApp() {
-    // "home", "help", "about", "learn", "log-access" or "pick:<GESTURE>"
+    val config by SnapEngine.store.config.collectAsState()
     var route by rememberSaveable { mutableStateOf("home") }
+    var setupPage by rememberSaveable { mutableStateOf<String?>(null) }
     val goHome = { route = "home" }
     if (route != "home") BackHandler(onBack = goHome)
 
     when {
-        route == "help" -> HelpScreen(onDone = goHome)
+        route == "help" -> HelpScreen(onDone = goHome, onRunSetup = {
+            setupPage = null
+            SnapEngine.store.update {
+                it.copy(setupComplete = false, grantMethod = null, setupSkipped = emptySet())
+            }
+            goHome()
+        })
         route == "about" -> AboutScreen(onDone = goHome)
         route == "learn" -> LearnScreen(onDone = goHome)
         route == "log-access" -> LogAccessScreen(onDone = goHome)
         route.startsWith("pick:") -> ActionPickerScreen(
             gesture = Gesture.valueOf(route.removePrefix("pick:")),
             onDone = goHome,
+        )
+        !config.setupComplete -> SetupScreen(
+            pageName = setupPage,
+            onPageChange = { setupPage = it },
+            onLearn = { route = "learn" },
+            onPick = { route = "pick:${it.name}" },
+            onFinish = goHome,
         )
         else -> HomeScreen(
             onPick = { route = "pick:${it.name}" },

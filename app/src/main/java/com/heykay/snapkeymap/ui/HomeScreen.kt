@@ -1,16 +1,12 @@
 package com.heykay.snapkeymap.ui
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import android.text.format.DateFormat
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,17 +24,14 @@ import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Notifications
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,7 +45,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -63,10 +55,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
 import com.heykay.snapkeymap.Gesture
 import com.heykay.snapkeymap.LogAccess
+import com.heykay.snapkeymap.LogSource
 import com.heykay.snapkeymap.R
 import com.heykay.snapkeymap.SnapAccessibilityService
 import com.heykay.snapkeymap.SnapAction
@@ -74,17 +67,9 @@ import com.heykay.snapkeymap.SnapEngine
 import com.heykay.snapkeymap.ThemeMode
 import java.util.Date
 import kotlinx.coroutines.delay
+import rikka.shizuku.Shizuku
 
-private class SetupStep(
-    val title: String,
-    val body: String,
-    val done: Boolean,
-    val enabled: Boolean,
-    val button: String,
-    val onClick: () -> Unit,
-    val secondButton: String? = null,
-    val onSecondClick: () -> Unit = {},
-)
+private const val SHIZUKU_LOG_REQUEST = 2
 
 @Composable
 fun HomeScreen(
@@ -99,63 +84,26 @@ fun HomeScreen(
     val access by SnapEngine.logAccess.collectAsState()
     val serviceOn by SnapAccessibilityService.running.collectAsState()
     val resumes by SnapEngine.uiResumes.collectAsState()
-    var permissionAnswers by remember { mutableIntStateOf(0) }
     var showThemeMenu by rememberSaveable { mutableStateOf(false) }
-
-    val hasLogPermission = remember(resumes) { SnapEngine.hasLogPermission() }
-    val notificationsAllowed = remember(resumes, permissionAnswers) {
-        context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+    val notificationsAllowed = remember(resumes) {
+        NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
     val backgroundAllowed = remember(resumes) {
         context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName)
     }
-    val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        permissionAnswers++
-    }
 
-    val steps = buildList {
-        add(
-            SetupStep(
-                title = "Turn on the SnapKey Map service",
-                body = "In the list, tap SnapKey Map and switch it on. If it's greyed out, open App info, " +
-                    "tap ⋮ at the top right, choose \"Allow restricted settings\", then try again.",
-                done = serviceOn,
-                enabled = true,
-                button = "Open settings",
-                onClick = { context.openAccessibilitySettings() },
-                secondButton = "App info",
-                onSecondClick = { context.openAppInfo() },
-            ),
-        )
-        if (config.needsLogAccess) {
-            add(
-                SetupStep(
-                    title = "Give one-time log access",
-                    body = "Oppo keeps the Snap Key private, so the app watches the phone's system log for it. " +
-                        "Nothing leaves your phone. Grant access once with Shizuku or a computer.",
-                    done = hasLogPermission,
-                    enabled = true,
-                    button = "Show me how",
-                    onClick = onLogAccess,
-                ),
-            )
+    val hasLogPermission by produceState(SnapEngine.hasLogPermission(), resumes) {
+        while (true) {
+            value = SnapEngine.hasLogPermission()
+            delay(1000)
         }
-        add(
-            SetupStep(
-                title = "Teach the app your Snap Key",
-                body = if (config.logSignature?.isUsable == false) {
-                    "Teach the Snap Key again: this update checks which app wrote the key line."
-                } else {
-                    "Press the key a few times so the app can recognise it. Takes about 20 seconds."
-                },
-                done = config.isTaught,
-                enabled = serviceOn,
-                button = "Start",
-                onClick = onLearn,
-            ),
-        )
     }
-    val setupDone = steps.all { it.done }
+    val warning = when {
+        !serviceOn -> "Accessibility is off. Turn it on to run your actions."
+        config.needsLogAccess && !hasLogPermission -> "Log access is missing. Grant it again to detect the key."
+        !config.isTaught -> "Teach the Snap Key again so it can be detected."
+        else -> null
+    }
 
     SnapScaffold(
         title = "SnapKey Map",
@@ -195,44 +143,19 @@ fun HomeScreen(
         ) {
             item {
                 StatusCard(
-                    setupDone = setupDone,
-                    stepsDone = steps.count { it.done },
-                    stepCount = steps.size,
+                    warning = warning,
+                    onFix = {
+                        when {
+                            !serviceOn -> context.openAccessibilitySettings()
+                            config.needsLogAccess && !hasLogPermission -> onLogAccess()
+                            else -> onLearn()
+                        }
+                    },
                     enabled = config.enabled,
                     onEnabledChange = { on -> SnapEngine.store.update { it.copy(enabled = on) } },
                     listening = !config.needsLogAccess || access == LogAccess.FULL,
                     access = access,
                 )
-            }
-
-            if (!setupDone) {
-                val currentStep = steps.indexOfFirst { !it.done }
-                val otherSteps = steps.indices.filter { it != currentStep }
-                item { SectionHeader("Step ${currentStep + 1} of ${steps.size}") }
-                item { StepCard(currentStep + 1, steps[currentStep]) }
-                items(otherSteps.size) { row ->
-                    val index = otherSteps[row]
-                    val step = steps[index]
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Icon(
-                            if (step.done) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
-                            contentDescription = if (step.done) "Done" else "Not done",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Text(
-                            "${index + 1}. ${step.title}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
             }
 
             item { SectionHeader("What the Snap Key does") }
@@ -272,16 +195,14 @@ fun HomeScreen(
                     TextButton(onClick = { context.openPhoneSettings() }) { Text("Open phone settings") }
                 }
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationsAllowed) {
+            if (!notificationsAllowed) {
                 item {
                     NoteCard(
                         icon = Icons.Rounded.Notifications,
                         title = "Allow notifications",
-                        body = "So the app can tell you when the Snap Key needs turning back on, like after a restart.",
+                        body = "Only to tell you when detection pauses. Your actions work without them.",
                     ) {
-                        TextButton(onClick = { askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS) }) {
-                            Text("Allow")
-                        }
+                        TextButton(onClick = { context.openNotificationSettings() }) { Text("Open settings") }
                     }
                 }
             }
@@ -290,24 +211,20 @@ fun HomeScreen(
                     NoteCard(
                         icon = Icons.Rounded.BatteryChargingFull,
                         title = "Let it run in the background",
-                        body = "Stops ColorOS from closing the app. If it still stops working, open App info › " +
-                            "Battery and allow background activity.",
+                        body = "Reduces the chance of ColorOS closing the app. If it still stops working, " +
+                            "open App info › Battery and allow background activity.",
                     ) {
                         @SuppressLint("BatteryLife")
-                        val request = Intent(
-                            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                            Uri.parse("package:${context.packageName}"),
-                        )
+                        val request = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                            Uri.parse("package:${context.packageName}"))
                         TextButton(onClick = { context.openSafely(request) }) { Text("Allow") }
                         TextButton(onClick = { context.openAppInfo() }) { Text("App info") }
                     }
                 }
             }
-            if (setupDone) {
-                item {
-                    TextButton(onClick = onLearn, modifier = Modifier.fillMaxWidth()) {
-                        Text("Teach the Snap Key again")
-                    }
+            item {
+                TextButton(onClick = onLearn, modifier = Modifier.fillMaxWidth()) {
+                    Text("Teach the Snap Key again")
                 }
             }
         }
@@ -316,9 +233,8 @@ fun HomeScreen(
 
 @Composable
 private fun StatusCard(
-    setupDone: Boolean,
-    stepsDone: Int,
-    stepCount: Int,
+    warning: String?,
+    onFix: () -> Unit,
     enabled: Boolean,
     onEnabledChange: (Boolean) -> Unit,
     listening: Boolean,
@@ -327,6 +243,7 @@ private fun StatusCard(
     val last by SnapEngine.lastGesture.collectAsState()
     val lastKeySeenAt by SnapEngine.lastKeySeenAt.collectAsState()
     val listeningSince by SnapEngine.listeningSince.collectAsState()
+    val logSource by SnapEngine.logSource.collectAsState()
     val timeFormat = DateFormat.getTimeFormat(LocalContext.current)
     val now by produceState(SnapEngine.now()) {
         while (true) {
@@ -335,9 +252,9 @@ private fun StatusCard(
         }
     }
     val colors = MaterialTheme.colorScheme
-    val ready = setupDone && enabled && listening
+    val ready = warning == null && enabled && listening
     val (title, body) = when {
-        !setupDone -> "Finish setup" to "$stepsDone of $stepCount steps done."
+        warning != null -> "Needs attention" to warning
         !enabled -> "Turned off" to "The Snap Key does what Oppo set it to."
         !listening -> "Paused" to when (access) {
             LogAccess.WAITING -> "Tap \"Allow\" on the pop-up."
@@ -367,45 +284,35 @@ private fun StatusCard(
             }
             Text(
                 listOfNotNull(
-                    listeningSince?.let { "Listening since ${timeFormat.format(Date(it))}" },
+                    listeningSince?.let {
+                        "Listening since ${timeFormat.format(Date(it))}" +
+                            if (logSource == LogSource.SHIZUKU && access == LogAccess.FULL) " via Shizuku" else ""
+                    },
                     lastKeySeenAt?.let { "Last key press ${timeFormat.format(Date(it))}" } ?: "No key press yet",
                 ).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
             )
-            if (setupDone && enabled && !listening && access != LogAccess.WAITING) {
+            if (warning != null) {
+                Button(onClick = onFix) { Text("Fix") }
+            } else if (enabled && !listening && access != LogAccess.WAITING) {
                 Button(onClick = { SnapEngine.connect() }) { Text("Connect") }
             }
-        }
-    }
-}
-
-@Composable
-private fun StepCard(number: Int, step: SetupStep) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Icon(
-                if (step.done) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
-                contentDescription = if (step.done) "Done" else "Not done",
-                tint = if (step.done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("$number. ${step.title}", style = MaterialTheme.typography.titleMedium)
-                if (!step.done) {
-                    Text(step.body, style = MaterialTheme.typography.bodyMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilledTonalButton(onClick = step.onClick, enabled = step.enabled) { Text(step.button) }
-                        if (step.secondButton != null) {
-                            OutlinedButton(onClick = step.onSecondClick) { Text(step.secondButton) }
-                        }
-                    }
-                    if (!step.enabled) {
-                        Text(
-                            "Do step 1 first.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+            val resumes by SnapEngine.uiResumes.collectAsState()
+            val canAskShizuku = remember(resumes, logSource) {
+                runCatching {
+                    Shizuku.pingBinder() && !Shizuku.isPreV11() &&
+                        Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED
+                }.getOrDefault(false)
+            }
+            if (warning == null && enabled && canAskShizuku) {
+                Text(
+                    "Shizuku is running. Allow SnapKey Map in Shizuku and you won't be asked for log access after restarts.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant,
+                )
+                OutlinedButton(onClick = { runCatching { Shizuku.requestPermission(SHIZUKU_LOG_REQUEST) } }) {
+                    Text("Use Shizuku")
                 }
             }
         }
@@ -413,7 +320,7 @@ private fun StepCard(number: Int, step: SetupStep) {
 }
 
 @Composable
-private fun GestureRow(gesture: Gesture, action: SnapAction, available: Boolean, onClick: () -> Unit) {
+internal fun GestureRow(gesture: Gesture, action: SnapAction, available: Boolean, onClick: () -> Unit) {
     ListItem(
         modifier = Modifier.clickable(enabled = available, onClick = onClick),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),

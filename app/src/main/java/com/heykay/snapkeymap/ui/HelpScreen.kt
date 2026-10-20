@@ -29,7 +29,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun HelpScreen(onDone: () -> Unit) {
+fun HelpScreen(onDone: () -> Unit, onRunSetup: () -> Unit) {
     val context = LocalContext.current
     SnapScaffold(title = "Help", onBack = onDone) { padding ->
         Column(
@@ -41,16 +41,24 @@ fun HelpScreen(onDone: () -> Unit) {
                 icon = Icons.Rounded.Settings,
                 title = "Getting started",
                 initiallyExpanded = true,
-                body = "1. Enable SnapKey Map in accessibility settings.\n\n" +
-                    "2. Grant log access with Shizuku or a computer. Reopen the app and allow device logs.\n\n" +
-                    "3. Set Oppo's Snap Key action to None. Teach the key: press three times, then hold once.\n\n" +
-                    "4. Choose Press, Double press and Press & hold actions. Test them and check Last:.",
+                body = "The setup wizard saves your progress and resumes at the first unfinished step.\n\n" +
+                    "1. Choose Shizuku or Computer (ADB).\n\n" +
+                    "2. Grant log access. Shizuku must be running and allowed for prompt-free reading; " +
+                    "otherwise allow device logs when Android asks.\n\n" +
+                    "3. Enable accessibility to run actions and open apps from the background. It cannot read screen content.\n\n" +
+                    "4. Optionally allow background operation to reduce ColorOS interruptions.\n\n" +
+                    "5. Optionally allow notifications for detection paused alerts.\n\n" +
+                    "6. Set Oppo's Snap Key action to None. Teach the key: press three times, then hold once.\n\n" +
+                    "7. Choose Press, Double press and Press & hold actions, then tap Finish. Test them and check Last:.",
             )
+            TextButton(onClick = onRunSetup) { Text("Run setup again") }
             HelpSection(
                 icon = Icons.AutoMirrored.Rounded.HelpOutline,
                 title = "Troubleshooting",
                 body = "Paused after a restart? Reopen the app, tap Connect if needed and allow device logs. " +
-                    "The one-time grant does not need repeating.\n\n" +
+                    "The one-time grant does not need repeating. While Shizuku runs and SnapKey Map is " +
+                    "allowed in it, no device-logs prompt is needed. Otherwise Android asks for one-time " +
+                    "access after each app or phone restart and may ask again on reconnect.\n\n" +
                     "Key not detected? Teach the Snap Key again and set Oppo's own action to None.\n\n" +
                     "Double press read as two singles? Update the app, teach the key again and check Last:. " +
                     "If it says double press, check the assigned action.\n\n" +
@@ -69,8 +77,12 @@ fun HelpScreen(onDone: () -> Unit) {
                     "One learned signature is saved: tag, shortened message and source UID, plus hold timing. " +
                     "Key lines must match that source UID, so other apps cannot fake presses by copying a line.\n\n" +
                     "Accessibility cannot read window content. Settings are private to the app; Android backup is off.\n\n" +
+                    "If you allow SnapKey Map in Shizuku, the app also uses Shizuku to run logcat as the " +
+                    "shell user. Shizuku must be running for this. Lines are still checked in memory " +
+                    "and discarded, not saved as a log, with the teaching exception above. " +
+                    "Shizuku is not used to run mapped actions.\n\n" +
                     "Permissions: read device logs; vibrate; show notifications; access Do Not Disturb controls; " +
-                    "ask to ignore battery optimisation; ask Shizuku for the one-time log grant.\n\n" +
+                    "ask to ignore battery optimisation; ask Shizuku for the one-time log grant and shell log reading.\n\n" +
                     "The code is open source. Provided as is, without warranty. READ_LOGS granted over adb is " +
                     "powerful. Give it only to apps you trust.",
                 onSource = {

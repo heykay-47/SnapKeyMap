@@ -130,7 +130,7 @@ private fun Intro(onStart: () -> Unit) {
     NoteCard(
         icon = Icons.Rounded.Settings,
         title = "First: set Oppo's Snap Key action to None",
-        body = "Open Settings › Snap Key and choose None, or something harmless. Then come back here.",
+        body = "Open Settings › Snap Key and choose None. Then come back here.",
     ) {
         TextButton(onClick = { context.openPhoneSettings() }) { Text("Open phone settings") }
     }
@@ -138,9 +138,11 @@ private fun Intro(onStart: () -> Unit) {
         NoteCard(
             icon = Icons.Rounded.Warning,
             title = "Turn on the SnapKey Map service first",
-            body = "It's step 1 on the main screen.",
+            body = "Open accessibility settings and turn on SnapKey Map, then return here.",
             container = MaterialTheme.colorScheme.errorContainer,
-        )
+        ) {
+            TextButton(onClick = { context.openAccessibilitySettings() }) { Text("Open settings") }
+        }
     }
     if (config.needsLogAccess && !hasLogPermission) {
         NoteCard(
