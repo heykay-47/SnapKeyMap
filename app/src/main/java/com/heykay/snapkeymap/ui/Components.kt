@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Nfc
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -127,6 +129,9 @@ fun actionIcon(action: SnapAction): ImageVector = when (action) {
         DeviceAction.CAMERA -> Icons.Rounded.PhotoCamera
         DeviceAction.VIDEO_CAMERA -> Icons.Rounded.Videocam
         DeviceAction.ASSISTANT -> Icons.Rounded.Mic
+        DeviceAction.WIFI_PANEL -> Icons.Rounded.Wifi
+        DeviceAction.BLUETOOTH_SETTINGS -> Icons.Rounded.Bluetooth
+        DeviceAction.NFC_PANEL -> Icons.Rounded.Nfc
         DeviceAction.INTERNET_PANEL -> Icons.Rounded.Wifi
     }
 }

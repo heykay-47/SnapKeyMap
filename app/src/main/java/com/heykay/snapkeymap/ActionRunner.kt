@@ -92,6 +92,9 @@ object ActionRunner {
             } catch (e: ActivityNotFoundException) {
                 start(context, Intent(Intent.ACTION_ASSIST))
             }
+            DeviceAction.WIFI_PANEL -> start(context, Intent(Settings.Panel.ACTION_WIFI))
+            DeviceAction.BLUETOOTH_SETTINGS -> start(context, Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+            DeviceAction.NFC_PANEL -> start(context, Intent(Settings.Panel.ACTION_NFC))
             DeviceAction.INTERNET_PANEL -> start(context, Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY))
         }
     }

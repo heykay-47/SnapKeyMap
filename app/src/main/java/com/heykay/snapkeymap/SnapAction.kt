@@ -36,7 +36,10 @@ enum class DeviceAction(val label: String, val section: Section, val needsServic
     CAMERA("Camera", Section.OPEN),
     VIDEO_CAMERA("Video camera", Section.OPEN),
     ASSISTANT("Voice assistant", Section.OPEN),
-    INTERNET_PANEL("Wi-Fi & internet panel", Section.OPEN),
+    WIFI_PANEL("Wi-Fi panel", Section.OPEN),
+    BLUETOOTH_SETTINGS("Bluetooth settings", Section.OPEN),
+    NFC_PANEL("NFC panel", Section.OPEN),
+    INTERNET_PANEL("Internet / mobile data panel", Section.OPEN),
 }
 
 sealed interface SnapAction {
