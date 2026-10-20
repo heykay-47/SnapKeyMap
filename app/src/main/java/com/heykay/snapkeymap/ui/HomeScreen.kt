@@ -133,7 +133,11 @@ fun HomeScreen(onPick: (Gesture) -> Unit, onLearn: () -> Unit, onLogAccess: () -
         add(
             SetupStep(
                 title = "Teach the app your Snap Key",
-                body = "Press the key a few times so the app can recognise it. Takes about 20 seconds.",
+                body = if (config.logSignature?.isUsable == false) {
+                    "Teach the Snap Key again: this update checks which app wrote the key line."
+                } else {
+                    "Press the key a few times so the app can recognise it. Takes about 20 seconds."
+                },
                 done = config.isTaught,
                 enabled = serviceOn,
                 button = "Start",

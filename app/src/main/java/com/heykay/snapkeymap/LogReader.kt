@@ -23,7 +23,7 @@ enum class LogAccess {
  * in the background for as long as the process lives.
  */
 class LogReader(
-    private val onLine: (timestamp: String, tag: String, message: String) -> Unit,
+    private val onLine: (timestamp: String, uid: String, tag: String, message: String) -> Unit,
     private val onAccess: (LogAccess) -> Unit,
 ) {
     @Volatile private var session: Session? = null
@@ -57,7 +57,7 @@ class LogReader(
         fun run() {
             report(LogAccess.WAITING)
             val proc = try {
-                ProcessBuilder("logcat", "-v", "threadtime", "-T", "1").redirectErrorStream(true).start()
+                ProcessBuilder("logcat", "-v", "threadtime,uid", "-T", "1").redirectErrorStream(true).start()
             } catch (e: IOException) {
                 report(LogAccess.OFF)
                 return
@@ -78,15 +78,16 @@ class LogReader(
                     val line = reader.readLine() ?: break
                     val match = LINE.matchEntire(line) ?: continue
                     val timestamp = match.groupValues[1]
-                    val pid = match.groupValues[2].toIntOrNull() ?: continue
-                    val tag = match.groupValues[3]
-                    val message = match.groupValues[4]
+                    val uid = match.groupValues[2]
+                    val pid = match.groupValues[3].toIntOrNull() ?: continue
+                    val tag = match.groupValues[4]
+                    val message = match.groupValues[5]
                     if (pid != myPid) {
                         if (!full) {
                             full = true
                             report(LogAccess.FULL)
                         }
-                        onLine(timestamp, tag, message)
+                        onLine(timestamp, uid, tag, message)
                     } else if (!full && tag == TAG && message == PROBE && ++ownProbes >= 2) {
                         // Our own probes arrive but nothing from other apps: access was declined.
                         result = LogAccess.LIMITED
@@ -115,7 +116,7 @@ class LogReader(
         const val TAG = "SnapKeyMap"
         const val PROBE = "log access probe"
 
-        // threadtime format: "10-18 04:27:44.123  1234  5678 D Tag     : message"
-        val LINE = Regex("""^(\d\d-\d\d\s+[\d:.]+)\s+(\d+)\s+\d+\s+[VDIWEFA]\s+(.*?)\s*: (.*)$""")
+        // threadtime,uid format: "10-18 04:27:44.123  1000  1234  5678 D Tag     : message"
+        val LINE = Regex("""^(\d\d-\d\d\s+[\d:.]+)\s+(\S+)\s+(\d+)\s+\d+\s+[VDIWEFA]\s+(.*?)\s*: (.*)$""")
     }
 }

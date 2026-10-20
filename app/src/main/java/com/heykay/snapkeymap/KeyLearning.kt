@@ -8,20 +8,28 @@ private val NUMBERS = Regex("""\d+""")
 /** Strips the parts of a log message that change between presses (timestamps, counters, ids). */
 fun normalizeLogMessage(message: String): String = message.trim().replace(NUMBERS, "#").take(160)
 
-/** The log line ColorOS / OxygenOS writes when its side key is pressed (seen on the OnePlus 15). */
-fun isKnownOplusKeyLine(tag: String, message: String): Boolean =
+internal fun normalizeLogUid(uid: String): String = if (uid == "system") "1000" else uid
+
+private fun hasOplusKeyMessage(tag: String, message: String): Boolean =
     tag.contains("OplusKeyEventUtil") && message.contains("restrict listen mode")
 
-/** A system log line that shows up every time the Snap Key is pressed. */
-data class KeySignature(val tag: String, val message: String) {
-    val hasExplicitKeyEdges: Boolean get() = isKnownOplusKeyLine(tag, message)
+/** The log line ColorOS / OxygenOS writes when its side key is pressed (seen on the OnePlus 15). */
+fun isKnownOplusKeyLine(uid: String, tag: String, message: String): Boolean =
+    normalizeLogUid(uid) == "1000" && hasOplusKeyMessage(tag, message)
 
-    fun matches(lineTag: String, lineMessage: String): Boolean =
-        lineTag == tag && normalizeLogMessage(lineMessage) == message
+/** A system log line that shows up every time the Snap Key is pressed. */
+data class KeySignature(val tag: String, val message: String, val uid: String? = null) {
+    val hasExplicitKeyEdges: Boolean get() = isKnownOplusKeyLine(uid ?: "1000", tag, message)
+    val isUsable: Boolean get() = uid != null || hasExplicitKeyEdges
+
+    fun matches(lineUid: String, lineTag: String, lineMessage: String): Boolean =
+        isUsable && normalizeLogUid(lineUid) == normalizeLogUid(uid ?: "1000") &&
+            (!hasOplusKeyMessage(tag, message) || isKnownOplusKeyLine(lineUid, lineTag, lineMessage)) &&
+            lineTag == tag && normalizeLogMessage(lineMessage) == message
 }
 
-internal fun acceptsKeyLog(signature: KeySignature?, tag: String, message: String): Boolean =
-    signature?.matches(tag, message) ?: isKnownOplusKeyLine(tag, message)
+internal fun acceptsKeyLog(signature: KeySignature?, uid: String, tag: String, message: String): Boolean =
+    signature?.matches(uid, tag, message) ?: isKnownOplusKeyLine(uid, tag, message)
 
 /** A real key event that Android passes to accessibility services. */
 data class LearnedKey(val keyCode: Int, val scanCode: Int)
@@ -45,7 +53,8 @@ sealed interface LearnResult {
 object KeyLearning {
     private const val SEP = '\u0001'
 
-    fun logKey(tag: String, message: String) = "log$SEP$tag$SEP${normalizeLogMessage(message)}"
+    fun logKey(uid: String, tag: String, message: String) =
+        "log$SEP$tag$SEP${normalizeLogMessage(message)}$SEP${normalizeLogUid(uid)}"
     fun keyEventKey(keyCode: Int, scanCode: Int) = "key$SEP$keyCode$SEP$scanCode"
 
     /**
@@ -65,6 +74,12 @@ object KeyLearning {
         val minRounds = if (taps.size >= 3) taps.size - 1 else taps.size
         val candidates = tapSets.flatten().toSet()
             .filter { it !in baselineKeys }
+            .filter { key ->
+                if (!key.startsWith("log$SEP")) true else {
+                    val (_, tag, message, uid) = key.split(SEP)
+                    !hasOplusKeyMessage(tag, message) || isKnownOplusKeyLine(uid, tag, message)
+                }
+            }
             .associateWith { key -> tapSets.count { key in it } }
             .filterValues { it >= minRounds }
         if (candidates.isEmpty()) return LearnResult.NothingFound
@@ -79,8 +94,8 @@ object KeyLearning {
 
         val holdKeys = keysIn(hold)
         val explicitEdges = candidates.entries.filter { (key, _) ->
-            val (_, tag, message) = key.split(SEP)
-            KeySignature(tag, message).hasExplicitKeyEdges
+            val (_, tag, message, uid) = key.split(SEP)
+            isKnownOplusKeyLine(uid, tag, message)
         }
         val logCandidates = explicitEdges.ifEmpty { candidates.entries.toList() }
         val best = logCandidates.maxByOrNull { (key, rounds) ->
@@ -91,7 +106,7 @@ object KeyLearning {
             score - minOf(linesPerTap, 30) // chatty lines are usually animations, not the key itself
         }!!.key
 
-        val (_, tag, message) = best.split(SEP)
+        val (_, tag, message, uid) = best.split(SEP)
         val holdTimes = observations.filter { it.key == best && it.timeMs in hold }.map { it.timeMs }.sorted()
         val holdRepeats = holdTimes.size >= 3 && holdTimes.last() - holdTimes.first() >= 700
         val releaseGap = if (holdRepeats) {
@@ -100,6 +115,6 @@ object KeyLearning {
         } else {
             DEFAULT_RELEASE_GAP_MS
         }
-        return LearnResult.LogLineFound(KeySignature(tag, message), holdRepeats, releaseGap)
+        return LearnResult.LogLineFound(KeySignature(tag, message, uid), holdRepeats, releaseGap)
     }
 }

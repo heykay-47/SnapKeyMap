@@ -3,8 +3,8 @@ package com.heykay.snapkeymap
 import kotlin.math.abs
 
 /**
- * Find X9's OplusKeyEventUtil logs each down and up twice, a fraction of a millisecond apart.
- * The two copies can land on either side of a millisecond, so they are matched by time, not by
+ * Find X9's OplusKeyEventUtil logs each down and up two or three times, a fraction of a millisecond apart.
+ * The copies can land on either side of a millisecond, so they are matched by time, not by
  * identical timestamps. Real edges are at least ~60 ms apart.
  * Unlike a repeating-key log, a held key is silent between its down and up.
  * Deduplicate using the source timestamp, not delivery time: logcat can buffer events.

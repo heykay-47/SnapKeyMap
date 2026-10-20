@@ -109,17 +109,17 @@ object SnapEngine {
     }
 
     // Called on the logcat thread for every line from another process.
-    private fun onLogLine(timestamp: String, tag: String, message: String) {
-        val explicitEdges = isKnownOplusKeyLine(tag, message)
+    private fun onLogLine(timestamp: String, uid: String, tag: String, message: String) {
+        val explicitEdges = isKnownOplusKeyLine(uid, tag, message)
         learning?.let { list ->
             synchronized(list) {
-                if (learning === list) list += Observation(now(), KeyLearning.logKey(tag, message))
+                if (learning === list) list += Observation(now(), KeyLearning.logKey(uid, tag, message))
             }
             if (explicitEdges) main.post { oplusEdges.observe(timestamp) }
             return
         }
         val config = store.config.value
-        val isSnapKey = config.enabled && config.needsLogAccess && acceptsKeyLog(config.logSignature, tag, message)
+        val isSnapKey = config.enabled && config.needsLogAccess && acceptsKeyLog(config.logSignature, uid, tag, message)
         if (explicitEdges || isSnapKey) main.post {
             if (learning != null) {
                 if (explicitEdges) oplusEdges.observe(timestamp)

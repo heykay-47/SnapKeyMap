@@ -19,7 +19,7 @@ data class Config(
     val theme: ThemeMode = ThemeMode.SYSTEM,
 ) {
     val needsLogAccess get() = keyEvent == null
-    val isTaught get() = keyEvent != null || logSignature != null
+    val isTaught get() = keyEvent != null || logSignature?.isUsable == true
     /** A hold needs either explicit down/up edges or log lines that repeat while held. */
     val canDetectHold get() = keyEvent != null || logSignature?.hasExplicitKeyEdges == true || holdRepeats
 
@@ -50,7 +50,9 @@ class ConfigStore(context: Context) {
             enabled = prefs.getBoolean("enabled", true),
             actions = actions,
             keyEvent = if (keyCode >= 0) LearnedKey(keyCode, prefs.getInt("scan_code", 0)) else null,
-            logSignature = if (tag != null && message != null) KeySignature(tag, message) else null,
+            logSignature = if (tag != null && message != null) {
+                KeySignature(tag, message, prefs.getString("log_uid", null)?.let(::normalizeLogUid))
+            } else null,
             holdRepeats = prefs.getBoolean("hold_repeats", true),
             releaseGapMs = prefs.getLong("release_gap", DEFAULT_RELEASE_GAP_MS),
             theme = ThemeMode.entries.firstOrNull { it.name == theme } ?: ThemeMode.SYSTEM,
@@ -67,9 +69,11 @@ class ConfigStore(context: Context) {
             if (config.logSignature != null) {
                 putString("log_tag", config.logSignature.tag)
                 putString("log_message", config.logSignature.message)
+                putString("log_uid", config.logSignature.uid?.let(::normalizeLogUid))
             } else {
                 remove("log_tag")
                 remove("log_message")
+                remove("log_uid")
             }
             putBoolean("hold_repeats", config.holdRepeats)
             putLong("release_gap", config.releaseGapMs)
