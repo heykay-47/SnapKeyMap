@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.FlashlightOn
@@ -110,6 +111,7 @@ fun actionIcon(action: SnapAction): ImageVector = when (action) {
     is SnapAction.OpenApp -> Icons.Rounded.Apps
     is SnapAction.OpenShortcut -> Icons.Rounded.Bolt
     is SnapAction.OpenLink -> Icons.Rounded.Link
+    is SnapAction.CallContact -> Icons.Rounded.Call
     is SnapAction.Device -> when (action.action) {
         DeviceAction.FLASHLIGHT -> Icons.Rounded.FlashlightOn
         DeviceAction.RINGER_CYCLE -> Icons.Rounded.Vibration

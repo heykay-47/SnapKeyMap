@@ -48,6 +48,10 @@ object ActionRunner {
                     context,
                     Intent(Intent.ACTION_VIEW, Uri.parse(action.url)).addCategory(Intent.CATEGORY_BROWSABLE),
                 )
+                is SnapAction.CallContact -> start(
+                    context,
+                    Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(action.number))),
+                )
                 is SnapAction.Device -> runDevice(context, action.action)
             }
         } catch (e: ActivityNotFoundException) {

@@ -5,6 +5,7 @@ import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.util.LruCache
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -22,6 +23,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Search
@@ -110,6 +112,26 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
         }
     }
 
+    val contactResult = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
+        val uri = result.data?.data
+        val contact = runCatching {
+            uri?.let {
+                context.contentResolver.query(it, arrayOf(Phone.DISPLAY_NAME, Phone.NUMBER), null, null, null)?.use { cursor ->
+                    if (!cursor.moveToFirst()) return@use null
+                    val number = cursor.getString(cursor.getColumnIndexOrThrow(Phone.NUMBER))?.trim()
+                    val name = cursor.getString(cursor.getColumnIndexOrThrow(Phone.DISPLAY_NAME))?.trim()
+                    if (number.isNullOrBlank()) null else SnapAction.CallContact(number, name?.takeIf { it.isNotBlank() } ?: number)
+                }
+            }
+        }.getOrNull()
+        if (contact == null) {
+            Toast.makeText(context, "Couldn't read that contact's phone number", Toast.LENGTH_LONG).show()
+        } else {
+            choose(contact)
+        }
+    }
+
     val search = query.trim()
     fun matches(text: String) = search.isEmpty() || text.contains(search, ignoreCase = true)
 
@@ -151,6 +173,22 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
 
             if (search.isEmpty()) {
                 item { SectionHeader("More", Modifier.padding(horizontal = 16.dp)) }
+                item {
+                    PickRow(
+                        icon = { VectorIcon(Icons.Rounded.Call) },
+                        title = "Call a contact…",
+                        subtitle = (current as? SnapAction.CallContact)?.label ?: "Open the dialer with their number filled in",
+                        selected = current is SnapAction.CallContact,
+                    ) {
+                        try {
+                            contactResult.launch(Intent(Intent.ACTION_PICK, Phone.CONTENT_URI))
+                        } catch (e: ActivityNotFoundException) {
+                            Toast.makeText(context, "No contact picker is available", Toast.LENGTH_SHORT).show()
+                        } catch (e: SecurityException) {
+                            Toast.makeText(context, "Couldn't open the contact picker", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
                 item {
                     PickRow(
                         icon = { VectorIcon(Icons.Rounded.Link) },

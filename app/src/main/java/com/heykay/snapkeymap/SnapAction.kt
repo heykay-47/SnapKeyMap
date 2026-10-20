@@ -50,6 +50,7 @@ sealed interface SnapAction {
     /** An app shortcut (direct dial, a Tasker task, a Maps route...) stored as an intent URI. */
     data class OpenShortcut(val intentUri: String, val name: String) : SnapAction
     data class OpenLink(val url: String) : SnapAction
+    data class CallContact(val number: String, val name: String) : SnapAction
     data class Device(val action: DeviceAction) : SnapAction
 
     val label: String
@@ -58,6 +59,7 @@ sealed interface SnapAction {
             is OpenApp -> "Open $appName"
             is OpenShortcut -> name
             is OpenLink -> "Open $url"
+            is CallContact -> "Call $name"
             is Device -> action.label
         }
 
@@ -68,6 +70,7 @@ sealed interface SnapAction {
             is OpenApp -> json.put("type", "app").put("package", packageName).put("name", appName)
             is OpenShortcut -> json.put("type", "shortcut").put("uri", intentUri).put("name", name)
             is OpenLink -> json.put("type", "link").put("url", url)
+            is CallContact -> json.put("type", "contact").put("number", number).put("name", name)
             is Device -> json.put("type", "device").put("action", action.name)
         }
         return json.toString()
@@ -83,6 +86,7 @@ sealed interface SnapAction {
                     "app" -> OpenApp(json.getString("package"), json.getString("name"))
                     "shortcut" -> OpenShortcut(json.getString("uri"), json.getString("name"))
                     "link" -> OpenLink(json.getString("url"))
+                    "contact" -> CallContact(json.getString("number"), json.getString("name"))
                     "device" -> Device(DeviceAction.valueOf(json.getString("action")))
                     else -> null
                 }
