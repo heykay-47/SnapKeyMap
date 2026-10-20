@@ -10,7 +10,8 @@ class KeyLearningTest {
     private val taps = listOf(6000L..9000L, 10000L..13000L, 14000L..17000L)
     private val hold = 18000L..21500L
 
-    private fun log(time: Long, tag: String, message: String) = Observation(time, KeyLearning.logKey(tag, message))
+    private fun log(time: Long, tag: String, message: String, uid: String = "1000") =
+        Observation(time, KeyLearning.logKey(uid, tag, message))
 
     /** Background noise that shows up all the time, including while the phone is left alone. */
     private fun noise() = (0L..21000L step 400L).map { log(it, "BatteryService", "level=${it % 97}") }
@@ -42,7 +43,7 @@ class KeyLearningTest {
 
         result as LearnResult.LogLineFound
         assertEquals("KEYLOG_OplusKeyEventUtil", result.signature.tag)
-        assertTrue(result.signature.matches("KEYLOG_OplusKeyEventUtil", "should not notify undefined keys in restrict listen mode, code=1"))
+        assertTrue(result.signature.matches("1000", "KEYLOG_OplusKeyEventUtil", "should not notify undefined keys in restrict listen mode, code=1"))
         assertTrue(result.holdRepeats)
         assertEquals(270L, result.releaseGapMs) // 180 ms between repeats × 1.5
     }
@@ -68,7 +69,7 @@ class KeyLearningTest {
         val result = KeyLearning.analyze(observations, baseline, taps, hold) as LearnResult.LogLineFound
 
         assertEquals(
-            KeySignature("KEYLOG_OplusKeyEventUtil", "should not notify undefined keys in restrict listen mode"),
+            KeySignature("KEYLOG_OplusKeyEventUtil", "should not notify undefined keys in restrict listen mode", "1000"),
             result.signature,
         )
         assertFalse(result.holdRepeats)
@@ -86,7 +87,7 @@ class KeyLearningTest {
 
         assertEquals(
             KeySignature("KEYLOG_KeyCombinationManager",
-                "down true downTime # action # count # isDefaultDisplayInteractive true eventTime # mDownTimes: {}"),
+                "down true downTime # action # count # isDefaultDisplayInteractive true eventTime # mDownTimes: {}", "1000"),
             result.signature,
         )
     }
@@ -121,5 +122,58 @@ class KeyLearningTest {
     @Test
     fun findsNothingWhenNothingHappens() {
         assertEquals(LearnResult.NothingFound, KeyLearning.analyze(noise(), baseline, taps, hold))
+    }
+
+    @Test
+    fun knownOplusLineRequiresSystemUidWithOrWithoutALearnedSignature() {
+        val tag = "KEYLOG_OplusKeyEventUtil"
+        val message = "should not notify undefined keys in restrict listen mode"
+        val signatures = listOf(null, KeySignature(tag, message), KeySignature(tag, message, "1000"))
+        for (signature in signatures) {
+            assertFalse(acceptsKeyLog(signature, "10234", tag, message))
+            assertTrue(acceptsKeyLog(signature, "1000", tag, message))
+            assertTrue(acceptsKeyLog(signature, "system", tag, message))
+        }
+        assertFalse(isKnownOplusKeyLine("10234", tag, message))
+        assertTrue(isKnownOplusKeyLine("1000", tag, message))
+        assertTrue(isKnownOplusKeyLine("system", tag, message))
+        assertFalse(KeySignature(tag, message, "10234").matches("10234", tag, message))
+    }
+
+    @Test
+    fun learningIgnoresSpoofedOplusLinesAndNormalizesSystemUid() {
+        val tag = "KEYLOG_OplusKeyEventUtil"
+        val message = "should not notify undefined keys in restrict listen mode"
+        val times = listOf(7000L, 11000L, 15000L)
+        val spoofed = times.map { log(it, tag, message, "10234") }
+        assertEquals(LearnResult.NothingFound, KeyLearning.analyze(spoofed, baseline, taps, hold))
+
+        val genuine = times.mapIndexed { index, time ->
+            log(time, tag, message, if (index == 0) "1000" else "system")
+        }
+        val result = KeyLearning.analyze(spoofed + genuine, baseline, taps, hold) as LearnResult.LogLineFound
+        assertEquals(KeySignature(tag, message, "1000"), result.signature)
+    }
+
+    @Test
+    fun learnedSignatureRequiresTheSameWriterUid() {
+        val observations = listOf(7000L, 11000L, 15000L).map { log(it, "OtherKey", "pressed", "10050") }
+        val result = KeyLearning.analyze(observations, baseline, taps, hold) as LearnResult.LogLineFound
+        assertEquals("10050", result.signature.uid)
+        assertTrue(result.signature.matches("10050", "OtherKey", "pressed"))
+        assertFalse(result.signature.matches("10051", "OtherKey", "pressed"))
+    }
+
+    @Test
+    fun legacyNonOplusSignatureMatchesNothingAndNeedsTeachingAgain() {
+        val signature = KeySignature("OtherKey", "pressed")
+        assertFalse(signature.matches("1000", "OtherKey", "pressed"))
+        assertFalse(signature.matches("10050", "OtherKey", "pressed"))
+        assertFalse(acceptsKeyLog(signature, "1000", "OtherKey", "pressed"))
+        assertFalse(Config(logSignature = signature).isTaught)
+        assertTrue(Config(logSignature = signature.copy(uid = "10050")).isTaught)
+        assertTrue(Config(logSignature = KeySignature(
+            "KEYLOG_OplusKeyEventUtil", "should not notify undefined keys in restrict listen mode",
+        )).isTaught)
     }
 }

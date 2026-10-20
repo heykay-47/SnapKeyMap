@@ -141,7 +141,7 @@
     <section id="setup" class="setup wrap" aria-labelledby="setup-heading">
       <div class="section-heading">
         <h2 id="setup-heading">Set up once.<br>Make it yours.</h2>
-        <p>Have your Find X9, a USB cable, and a computer ready. Other devices and ColorOS versions may behave differently.</p>
+        <p>Have your Find X9 ready, plus either Shizuku or a USB cable and a computer. Other devices and ColorOS versions may behave differently.</p>
       </div>
       <ol class="steps">
         <li>
@@ -154,7 +154,8 @@
         </li>
         <li>
           <h3>Grant log access once</h3>
-          <p>Download Google’s <a href="https://developer.android.com/tools/releases/platform-tools">SDK Platform-Tools</a> on your computer. Enable Developer options and USB debugging on your phone, connect it, and accept the debugging prompt. From the Platform-Tools folder, run:</p>
+          <p><strong>Without a computer:</strong> start <a href="https://shizuku.rikka.app/guide/setup/">Shizuku</a> with Wireless debugging. Open SnapKey Map’s log-access screen, tap <strong>Grant with Shizuku</strong>, and allow the request. You can close Shizuku afterwards.</p>
+          <p><strong>With a computer:</strong> download Google’s <a href="https://developer.android.com/tools/releases/platform-tools">SDK Platform-Tools</a>. Enable Developer options and USB debugging on your phone, connect it, and accept the debugging prompt. From the Platform-Tools folder, run:</p>
           <div class="command-block">
             <pre><code id="adb-command">adb shell pm grant com.heykay.snapkeymap android.permission.READ_LOGS</code></pre>
             <button id="copy-command" type="button" hidden>Copy command</button>
@@ -189,8 +190,8 @@
         <p>SnapKey Map is built around the Oppo Find X9’s Snap Key. Other devices and ColorOS versions may behave differently. It cannot bypass the lock screen, and screen-off detection and background reliability depend on ColorOS.</p>
       </details>
       <details>
-        <summary>What if the ADB command is refused?</summary>
-        <p>If the error mentions <code>GRANT_RUNTIME_PERMISSIONS</code>, ColorOS may be blocking permission grants. Developer options may have <strong>Disable permission monitoring</strong> or <strong>Disable system optimization</strong>. These settings relax manufacturer restrictions, so read the warning before changing them. Follow the <a href="https://github.com/heykay-47/SnapKeyMap#adb-refuses-to-grant-log-access">full troubleshooting guide</a> for details.</p>
+        <summary>What if the grant is refused?</summary>
+        <p>If the error mentions <code>GRANT_RUNTIME_PERMISSIONS</code>, ColorOS may be blocking permission grants. Developer options may have <strong>Disable permission monitoring</strong> or <strong>Disable system optimization</strong>. These settings relax manufacturer restrictions, so read the warning before changing them. Restart the phone after changing it, because the setting only applies after a restart. This affects both ADB and Shizuku. Follow the <a href="https://github.com/heykay-47/SnapKeyMap#adb-refuses-to-grant-log-access">full troubleshooting guide</a> for details.</p>
       </details>
       <details>
         <summary>Why does a single press have a slight delay?</summary>

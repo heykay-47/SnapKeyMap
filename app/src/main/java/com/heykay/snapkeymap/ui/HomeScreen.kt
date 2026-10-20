@@ -122,7 +122,7 @@ fun HomeScreen(onPick: (Gesture) -> Unit, onLearn: () -> Unit, onLogAccess: () -
                 SetupStep(
                     title = "Give one-time log access",
                     body = "Oppo keeps the Snap Key private, so the app watches the phone's system log for it. " +
-                        "Nothing leaves your phone. You need a computer for this, once.",
+                        "Nothing leaves your phone. Grant access once with Shizuku or a computer.",
                     done = hasLogPermission,
                     enabled = true,
                     button = "Show me how",
@@ -133,7 +133,11 @@ fun HomeScreen(onPick: (Gesture) -> Unit, onLearn: () -> Unit, onLogAccess: () -
         add(
             SetupStep(
                 title = "Teach the app your Snap Key",
-                body = "Press the key a few times so the app can recognise it. Takes about 20 seconds.",
+                body = if (config.logSignature?.isUsable == false) {
+                    "Teach the Snap Key again: this update checks which app wrote the key line."
+                } else {
+                    "Press the key a few times so the app can recognise it. Takes about 20 seconds."
+                },
                 done = config.isTaught,
                 enabled = serviceOn,
                 button = "Start",

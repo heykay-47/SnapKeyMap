@@ -19,10 +19,10 @@ class KeyLearningReplayTest {
             if (down) "{}" else "{780=$downTime}"
 
     private fun press(down: Long, up: Long) = listOf(
-        Observation(down, KeyLearning.logKey(combinationTag, combinationMessage(true, down, down))),
-        Observation(up, KeyLearning.logKey(combinationTag, combinationMessage(false, down, up))),
+        Observation(down, KeyLearning.logKey("1000", combinationTag, combinationMessage(true, down, down))),
+        Observation(up, KeyLearning.logKey("1000", combinationTag, combinationMessage(false, down, up))),
     ) + listOf(down + 1, down + 1, up + 1, up + 1).map {
-        Observation(it, KeyLearning.logKey(oplusTag, oplusMessage))
+        Observation(it, KeyLearning.logKey("1000", oplusTag, oplusMessage))
     }
 
     private fun observations() = listOf(7000L, 11000L, 15000L).flatMap { press(it, it + 100) } +
@@ -62,8 +62,9 @@ class KeyLearningReplayTest {
 
         fun line(time: Long, timestamp: String, tag: String, message: String) {
             clock.advanceTo(time)
-            if (!acceptsKeyLog(result.signature, tag, message)) return
-            if (isKnownOplusKeyLine(tag, message)) {
+            // These recorded system lines predate capturing logcat's UID column.
+            if (!acceptsKeyLog(result.signature, "1000", tag, message)) return
+            if (isKnownOplusKeyLine("1000", tag, message)) {
                 knownAccepted++
                 edges.accept(timestamp)
             } else {
@@ -88,25 +89,25 @@ class KeyLearningReplayTest {
 
     @Test
     fun knownLogsMustStillCoverEnoughTapWindows() {
-        val generic = KeyLearning.logKey("OtherKey", "pressed")
+        val generic = KeyLearning.logKey("1000", "OtherKey", "pressed")
         val observations = listOf(7000L, 11000L, 15000L).map { Observation(it, generic) } +
             press(7000L, 7100L)
 
         val result = KeyLearning.analyze(observations, baseline, taps, hold) as LearnResult.LogLineFound
 
-        assertEquals(KeySignature("OtherKey", "pressed"), result.signature)
+        assertEquals(KeySignature("OtherKey", "pressed", "1000"), result.signature)
         assertFalse(result.holdRepeats)
         assertEquals(DEFAULT_RELEASE_GAP_MS, result.releaseGapMs)
     }
 
     @Test
     fun learnedFilterRemainsExactAndDoesNotOverrideGenericSignatures() {
-        val generic = KeySignature("OtherKey", "pressed #")
+        val generic = KeySignature("OtherKey", "pressed #", "1000")
 
-        assertTrue(acceptsKeyLog(null, oplusTag, oplusMessage))
-        assertFalse(acceptsKeyLog(null, "OtherKey", "pressed 1"))
-        assertTrue(acceptsKeyLog(generic, "OtherKey", "pressed 1"))
-        assertFalse(acceptsKeyLog(generic, oplusTag, oplusMessage))
-        assertFalse(acceptsKeyLog(generic, "OtherKey", "released 1"))
+        assertTrue(acceptsKeyLog(null, "1000", oplusTag, oplusMessage))
+        assertFalse(acceptsKeyLog(null, "1000", "OtherKey", "pressed 1"))
+        assertTrue(acceptsKeyLog(generic, "1000", "OtherKey", "pressed 1"))
+        assertFalse(acceptsKeyLog(generic, "1000", oplusTag, oplusMessage))
+        assertFalse(acceptsKeyLog(generic, "1000", "OtherKey", "released 1"))
     }
 }

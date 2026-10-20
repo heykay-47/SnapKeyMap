@@ -16,7 +16,7 @@ No root or paid tools are required. Download a prebuilt APK or use GitHub Action
 
 ## Install and set up
 
-You need an Oppo Find X9, a USB cable, and a computer for the one-time permission setup. Other devices and ColorOS versions may behave differently.
+You need an Oppo Find X9 and either a running Shizuku or a USB cable and computer for the one-time permission setup. Other devices and ColorOS versions may behave differently.
 
 ### 1. Install the APK
 
@@ -35,6 +35,10 @@ Open SnapKey Map and tap **Open settings** in the first setup step. Find SnapKey
 If Android blocks the switch, open SnapKey Map's **App info**. Tap the three-dot menu, choose **Allow restricted settings**, and try again.
 
 ### 3. Grant log access once
+
+**Without a computer:** install and start [Shizuku](https://shizuku.rikka.app/guide/setup/) using wireless debugging (Android 11+). Open SnapKey Map's log-access screen, tap **Grant with Shizuku**, and allow its permission request. The button appears only while Shizuku is running. You do not need to keep Shizuku running after the grant. If ColorOS blocks it, turn on **Disable permission monitoring** in Developer options, restart the phone (the setting only takes effect after a restart), start Shizuku again and retry. Or use the computer method below.
+
+**With a computer:**
 
 1. Download Google's free [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools) on your computer and unzip them.
 2. On the phone, open Settings, then About device, then Version. Tap the build or version number seven times to enable Developer options.
@@ -74,7 +78,7 @@ An error containing `Neither user 2000` and `GRANT_RUNTIME_PERMISSIONS` means Co
 2. Turn on **Disable permission monitoring**. Newer firmware may call it **Disable system optimization**.
 3. If neither setting appears, temporarily switch the phone's system language to English, United States, and reopen Developer options.
 4. Read the warning before accepting. This setting relaxes manufacturer restrictions and may increase background power use.
-5. Reconnect the USB cable and run the grant command again.
+5. Restart the phone. On ColorOS 16 the setting only takes effect after a restart; reconnecting the cable is not enough. Then run the grant command again.
 
 The name and location depend on your firmware. If the setting is still missing, include your ColorOS version when reporting the problem.
 
@@ -99,12 +103,17 @@ The accessibility service receives supported key events and runs actions such as
 
 On the Find X9, the app reads system logs to detect the Snap Key. The log permission grants access to more than key events. SnapKey Map processes those logs on the phone and does not upload them. The app declares no internet permission. Apps and websites you open through an action have their own privacy policies.
 
+Optional Shizuku access is used only to grant the log permission, not to read logs or run mapped actions.
+
 Keep these limits in mind:
 
 - A double-press assignment adds a 350 ms wait after release before the app runs the single-press action.
 - The known Find X9 log reports duplicated press and release events. Other learned log formats need repeated events while held to support press and hold.
 - Screen-off detection and background reliability depend on ColorOS. They are not guaranteed.
 - The shortcut picker supports apps that provide `ACTION_CREATE_SHORTCUT`. It cannot list every pinned shortcut. A deep link may work instead.
+- Direct-dial contact shortcuts are not supported, because the app has no calling permission. The app shows a message instead.
+- The app accepts a key log line only from the app that wrote it while you taught the key. On the Find X9, that is the system. Other apps can't fake a Snap Key press by writing the same line.
+- Mappings and the learned key are not included in Android backups.
 - Silent mode and Do Not Disturb need notification policy access. Without it, the ringer action cycles between ring and vibrate.
 - System actions depend on Android permissions, the lock-screen state, and device support.
 
@@ -128,11 +137,25 @@ Paths below are relative to [`app/src/main/java/com/heykay/snapkeymap`](app/src/
 
 The [unit tests](app/src/test/java/com/heykay/snapkeymap) cover key learning and gesture detection. They include a replay of recorded Find X9 event timings. Passing tests do not replace testing on a phone.
 
+### Find X9 device notes
+
+These facts were checked on a Find X9 with ColorOS 16 (`CPH2797_16.0.10.600`). They may change with firmware updates.
+
+- The Snap Key writes `KEYLOG_OplusKeyEventUtil: should not notify undefined keys in restrict listen mode` on every press and every release. Each edge appears two or three times within the same millisecond or the next. Real edges are at least 60 ms apart.
+- The line comes from UID 1000 (system). Run `adb logcat -v threadtime,uid -s KEYLOG_OplusKeyEventUtil` to see it.
+- With **Permission monitoring** on, ColorOS blocks `pm grant` and `pm revoke` from the shell, for both ADB and Shizuku. Turning on **Disable permission monitoring** takes effect only after a restart.
+- The shell cannot revoke `READ_LOGS`, so you can't reset the grant to test a first-time grant. Reinstalling the app resets it.
+- To count actions exactly, check `adb shell dumpsys media.camera`. Its event log records each flashlight on and off.
+
 ### Build with GitHub Actions
 
 The [Build APK workflow](.github/workflows/build.yml) runs tests and builds an APK on pushes to `main`, pull requests, version tags, and manual runs.
 
 To start a manual build, open the repository's Actions tab, select Build APK, and choose Run workflow. After a successful run, download the `SnapKeyMap` artifact and extract the APK. The `test-results` artifact contains the unit test reports.
+
+Pull request builds get no signing secrets and use a temporary debug key. Pushes to `main`, tags, and manual runs use the release key.
+
+After the build, the workflow compares the APK's permissions with [`app/expected-permissions.txt`](app/expected-permissions.txt) and fails on any difference. If a change needs a new permission, update that file in the same change and explain why.
 
 The workflow uses JDK 17 and Gradle 8.14.3. It runs:
 

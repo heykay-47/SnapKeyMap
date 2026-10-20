@@ -270,7 +270,7 @@ class OplusKeyEdgesTest {
     @Test
     fun knownEdgeSignatureSupportsHoldEvenWithoutRepeats() {
         val result = LearnResult.LogLineFound(
-            KeySignature("KEYLOG_OplusKeyEventUtil", "should not notify undefined keys in restrict listen mode"),
+            KeySignature("KEYLOG_OplusKeyEventUtil", "should not notify undefined keys in restrict listen mode", "1000"),
             holdRepeats = false,
             releaseGapMs = DEFAULT_RELEASE_GAP_MS,
         )
