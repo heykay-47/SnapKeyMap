@@ -48,8 +48,8 @@ import rikka.shizuku.Shizuku
 
 private const val PLATFORM_TOOLS_URL = "https://developer.android.com/tools/releases/platform-tools"
 private const val SHIZUKU_REQUEST = 1
-private const val GRANT_HINT = "On ColorOS, turn off Permission monitoring in Developer options " +
-    "(or turn on Disable permission monitoring), or use the computer/ADB method below."
+private const val GRANT_HINT = "On ColorOS, turn on Disable permission monitoring in Developer options, " +
+    "restart the phone, start Shizuku again and retry. Or use the computer method below."
 
 @Composable
 fun LogAccessScreen(onDone: () -> Unit) {

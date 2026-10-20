@@ -36,7 +36,7 @@ If Android blocks the switch, open SnapKey Map's **App info**. Tap the three-dot
 
 ### 3. Grant log access once
 
-**Without a computer:** install and start [Shizuku](https://shizuku.rikka.app/guide/setup/) using wireless debugging (Android 11+). Open SnapKey Map's log-access screen, tap **Grant with Shizuku**, and allow its permission request. The button appears only while Shizuku is running. You do not need to keep Shizuku running after the grant. If ColorOS blocks it, turn off Permission monitoring in Developer options (often labelled **Disable permission monitoring**), or use the computer method below.
+**Without a computer:** install and start [Shizuku](https://shizuku.rikka.app/guide/setup/) using wireless debugging (Android 11+). Open SnapKey Map's log-access screen, tap **Grant with Shizuku**, and allow its permission request. The button appears only while Shizuku is running. You do not need to keep Shizuku running after the grant. If ColorOS blocks it, turn on **Disable permission monitoring** in Developer options, restart the phone (the setting only takes effect after a restart), start Shizuku again and retry. Or use the computer method below.
 
 **With a computer:**
 
@@ -78,7 +78,7 @@ An error containing `Neither user 2000` and `GRANT_RUNTIME_PERMISSIONS` means Co
 2. Turn on **Disable permission monitoring**. Newer firmware may call it **Disable system optimization**.
 3. If neither setting appears, temporarily switch the phone's system language to English, United States, and reopen Developer options.
 4. Read the warning before accepting. This setting relaxes manufacturer restrictions and may increase background power use.
-5. Reconnect the USB cable and run the grant command again.
+5. Restart the phone. On ColorOS 16 the setting only takes effect after a restart; reconnecting the cable is not enough. Then run the grant command again.
 
 The name and location depend on your firmware. If the setting is still missing, include your ColorOS version when reporting the problem.
 
