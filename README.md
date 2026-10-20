@@ -111,6 +111,9 @@ Keep these limits in mind:
 - The known Find X9 log reports duplicated press and release events. Other learned log formats need repeated events while held to support press and hold.
 - Screen-off detection and background reliability depend on ColorOS. They are not guaranteed.
 - The shortcut picker supports apps that provide `ACTION_CREATE_SHORTCUT`. It cannot list every pinned shortcut. A deep link may work instead.
+- Direct-dial contact shortcuts are not supported, because the app has no calling permission. The app shows a message instead.
+- The app accepts a key log line only from the app that wrote it while you taught the key. On the Find X9, that is the system. Other apps can't fake a Snap Key press by writing the same line.
+- Mappings and the learned key are not included in Android backups.
 - Silent mode and Do Not Disturb need notification policy access. Without it, the ringer action cycles between ring and vibrate.
 - System actions depend on Android permissions, the lock-screen state, and device support.
 
@@ -134,11 +137,25 @@ Paths below are relative to [`app/src/main/java/com/heykay/snapkeymap`](app/src/
 
 The [unit tests](app/src/test/java/com/heykay/snapkeymap) cover key learning and gesture detection. They include a replay of recorded Find X9 event timings. Passing tests do not replace testing on a phone.
 
+### Find X9 device notes
+
+These facts were checked on a Find X9 with ColorOS 16 (`CPH2797_16.0.10.600`). They may change with firmware updates.
+
+- The Snap Key writes `KEYLOG_OplusKeyEventUtil: should not notify undefined keys in restrict listen mode` on every press and every release. Each edge appears two or three times within the same millisecond or the next. Real edges are at least 60 ms apart.
+- The line comes from UID 1000 (system). Run `adb logcat -v threadtime,uid -s KEYLOG_OplusKeyEventUtil` to see it.
+- With **Permission monitoring** on, ColorOS blocks `pm grant` and `pm revoke` from the shell, for both ADB and Shizuku. Turning on **Disable permission monitoring** takes effect only after a restart.
+- The shell cannot revoke `READ_LOGS`, so you can't reset the grant to test a first-time grant. Reinstalling the app resets it.
+- To count actions exactly, check `adb shell dumpsys media.camera`. Its event log records each flashlight on and off.
+
 ### Build with GitHub Actions
 
 The [Build APK workflow](.github/workflows/build.yml) runs tests and builds an APK on pushes to `main`, pull requests, version tags, and manual runs.
 
 To start a manual build, open the repository's Actions tab, select Build APK, and choose Run workflow. After a successful run, download the `SnapKeyMap` artifact and extract the APK. The `test-results` artifact contains the unit test reports.
+
+Pull request builds get no signing secrets and use a temporary debug key. Pushes to `main`, tags, and manual runs use the release key.
+
+After the build, the workflow compares the APK's permissions with [`app/expected-permissions.txt`](app/expected-permissions.txt) and fails on any difference. If a change needs a new permission, update that file in the same change and explain why.
 
 The workflow uses JDK 17 and Gradle 8.14.3. It runs:
 
