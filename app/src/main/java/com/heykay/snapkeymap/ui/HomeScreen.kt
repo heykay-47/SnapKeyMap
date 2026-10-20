@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import com.heykay.snapkeymap.Gesture
 import com.heykay.snapkeymap.LogAccess
 import com.heykay.snapkeymap.LogSource
+import rikka.shizuku.Shizuku
 import com.heykay.snapkeymap.R
 import com.heykay.snapkeymap.SnapAccessibilityService
 import com.heykay.snapkeymap.SnapAction
@@ -75,6 +76,8 @@ import com.heykay.snapkeymap.SnapEngine
 import com.heykay.snapkeymap.ThemeMode
 import java.util.Date
 import kotlinx.coroutines.delay
+
+private const val SHIZUKU_LOG_REQUEST = 2
 
 private class SetupStep(
     val title: String,
@@ -380,6 +383,23 @@ private fun StatusCard(
             )
             if (setupDone && enabled && !listening && access != LogAccess.WAITING) {
                 Button(onClick = { SnapEngine.connect() }) { Text("Connect") }
+            }
+            val resumes by SnapEngine.uiResumes.collectAsState()
+            val canAskShizuku = remember(resumes, logSource) {
+                runCatching {
+                    Shizuku.pingBinder() && !Shizuku.isPreV11() &&
+                        Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED
+                }.getOrDefault(false)
+            }
+            if (setupDone && enabled && canAskShizuku) {
+                Text(
+                    "Shizuku is running. Allow SnapKey Map in Shizuku and you won't be asked for log access after restarts.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant,
+                )
+                OutlinedButton(onClick = { runCatching { Shizuku.requestPermission(SHIZUKU_LOG_REQUEST) } }) {
+                    Text("Use Shizuku")
+                }
             }
         }
     }

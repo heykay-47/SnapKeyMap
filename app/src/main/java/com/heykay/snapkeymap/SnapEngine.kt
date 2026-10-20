@@ -164,7 +164,7 @@ object SnapEngine {
     }
 
     private fun connectShizukuIfNeeded() {
-        if (wantsLog && accessState.value != LogAccess.FULL && canUseShizuku()) {
+        if (wantsLog && (accessState.value != LogAccess.FULL || sourceState.value == LogSource.LOCAL) && canUseShizuku()) {
             reader.stop()
             connect(preferShizuku = true)
         }
