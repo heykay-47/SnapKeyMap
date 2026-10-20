@@ -44,12 +44,18 @@
     <section id="getting-started" aria-labelledby="getting-started-heading">
       <h2 id="getting-started-heading">Getting started</h2>
       <p>You need a Find X9 and either Shizuku or a USB cable and computer. No root or paid tools are required. Other devices and ColorOS versions may behave differently.</p>
+      <p>First, download <code>SnapKeyMap-*.apk</code> from the <a href="https://github.com/heykay-47/SnapKeyMap/releases/latest">latest release</a> and open it. Allow your browser or file manager to install apps when Android asks. No GitHub account is needed.</p>
+      <p>Open SnapKey Map to start the seven-step wizard. It saves your progress and resumes at the first unfinished step; optional skips are saved too.</p>
       <ol class="steps">
-        <li><h3>Install the app</h3><p>Download <code>SnapKeyMap-*.apk</code> from the <a href="https://github.com/heykay-47/SnapKeyMap/releases/latest">latest release</a> and open it. Allow your browser or file manager to install apps when Android asks. No GitHub account is needed.</p></li>
-        <li><h3>Enable accessibility</h3><p>In SnapKey Map, tap <strong>Open settings</strong> and turn on its accessibility service. If Android blocks the switch, open SnapKey Map's <strong>App info</strong>, tap the three-dot menu, choose <strong>Allow restricted settings</strong>, then try again.</p></li>
-        <li><h3>Grant log access</h3><p>Use <a href="#computer">a computer</a> or <a href="#shizuku">Shizuku</a> below. Reopen SnapKey Map and choose <strong>Allow</strong> when Android asks for access to device logs.</p></li>
-        <li><h3>Teach and assign</h3><p>Set Oppo's own Snap Key action to <strong>None</strong> in phone Settings. Teach the key in SnapKey Map, choose your actions, and test each gesture. Allow notifications and background activity so the app can tell you when detection pauses.</p></li>
+        <li><h3>Choose a method</h3><p>Choose <a href="#shizuku">Shizuku</a> for setup without a computer, or <a href="#computer">Computer (ADB)</a> for one command over USB.</p></li>
+        <li><h3>Give log access</h3><p>Follow the instructions for your chosen method. Keep Shizuku running and allow SnapKey Map in it for prompt-free reading. Otherwise, choose <strong>Allow</strong> when Android asks for device logs.</p></li>
+        <li><h3>Turn on accessibility</h3><p>Tap <strong>Open accessibility settings</strong> and turn on SnapKey Map. Even with ADB or Shizuku, the service runs accessibility actions, opens apps and the device-logs prompt from the background, receives supported key events, and helps keep the app running. It cannot read screen content. If Android blocks the switch, open <strong>App info</strong>, tap the three-dot menu, choose <strong>Allow restricted settings</strong>, then retry.</p></li>
+        <li><h3>Background operation (optional)</h3><p>Allow the battery-optimisation exemption to reduce ColorOS interruptions, or tap <strong>Skip</strong>. This does not guarantee background detection.</p></li>
+        <li><h3>Notifications (optional)</h3><p>Allow alerts when detection pauses, or tap <strong>Skip</strong>. Actions do not need notification permission.</p></li>
+        <li><h3>Teach the key</h3><p>Set Oppo's own Snap Key action to <strong>None</strong> in phone Settings. Start teaching, press three times when asked, then hold once.</p></li>
+        <li><h3>Choose actions</h3><p>Tap <strong>Press</strong>, <strong>Double press</strong>, or <strong>Press &amp; hold</strong> and keep at least one action assigned. Tap <strong>Finish</strong>, test each gesture, and check <strong>Last:</strong> on the home screen.</p></li>
       </ol>
+      <p>Use <strong>Help &gt; Run setup again</strong> to revisit the wizard without clearing mappings. Existing installations with a taught key and granted log permission go straight to the home screen.</p>
     </section>
 
     <section id="computer" aria-labelledby="computer-heading">
@@ -71,7 +77,7 @@
       <h2 id="shizuku-heading">Without a computer</h2>
       <ol>
         <li>Install <a href="https://shizuku.rikka.app/guide/setup/">Shizuku</a> and follow its Wireless debugging pairing and start instructions. Wireless debugging requires Android 11 or later.</li>
-        <li>Once Shizuku is running, open SnapKey Map's log-access screen. Tap <strong>Grant with Shizuku</strong> and allow the Shizuku permission request. The button appears only while Shizuku is running.</li>
+        <li>In the wizard, choose Shizuku and continue to log access. Once Shizuku is running, tap <strong>Grant with Shizuku</strong> and allow the Shizuku permission request. The button is enabled only while Shizuku is running.</li>
         <li>Keep Shizuku running. While SnapKey Map is allowed in it, the app reads logs through Shizuku without Android's device-logs prompt.</li>
       </ol>
       <p>If ColorOS blocks the grant, follow the <a href="#grant-refused">permission monitoring fix</a>, restart the phone, start Shizuku again, and retry.</p>
@@ -86,7 +92,7 @@
       <h2 id="teaching-heading">Teaching the key</h2>
       <p>First set <strong>Settings > Snap Key</strong> to <strong>None</strong>. Otherwise Oppo's action may run as well as yours.</p>
       <p>In SnapKey Map, start <strong>Teach the app your Snap Key</strong>. Follow the hands-off prompt, press the key three times when asked, then hold it once. Keep the app open throughout.</p>
-      <p>To repeat setup, choose <strong>Teach the Snap Key again</strong> on the home screen. Your action assignments stay unchanged. After updating from v1.0.3 or earlier, teach it again before testing. Older calibration can select a message that matches only key-down events and merges double presses. Current learning prefers the known Oppo press-and-release source when present.</p>
+      <p>To repeat teaching, choose <strong>Teach the Snap Key again</strong> on the home screen; to revisit the full wizard, choose <strong>Run setup again</strong> in Help. Your action assignments stay unchanged. After updating from v1.0.3 or earlier, teach it again before testing. Older calibration can select a message that matches only key-down events and merges double presses. Current learning prefers the known Oppo press-and-release source when present.</p>
     </section>
 
     <section id="actions" aria-labelledby="actions-heading">
@@ -119,7 +125,7 @@
       </details>
       <details>
         <summary>ColorOS keeps closing the app</summary>
-        <p>Open <strong>App info > Battery</strong> and allow background activity. Turn off battery optimisation for SnapKey Map, using the home screen's background activity prompt if available. Allow notifications so you can see when detection pauses. These settings reduce interruptions, but do not guarantee background or screen-off detection.</p>
+        <p>Open <strong>App info > Battery</strong> and allow background activity. Turn off battery optimisation for SnapKey Map, or revisit the wizard's background operation step using <strong>Help > Run setup again</strong>. Allow notifications so you can see when detection pauses. These settings reduce interruptions, but do not guarantee background or screen-off detection.</p>
       </details>
       <details id="grant-refused">
         <summary>The grant is refused with GRANT_RUNTIME_PERMISSIONS</summary>

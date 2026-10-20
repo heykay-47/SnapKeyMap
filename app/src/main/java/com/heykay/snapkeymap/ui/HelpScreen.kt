@@ -29,7 +29,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun HelpScreen(onDone: () -> Unit) {
+fun HelpScreen(onDone: () -> Unit, onRunSetup: () -> Unit) {
     val context = LocalContext.current
     SnapScaffold(title = "Help", onBack = onDone) { padding ->
         Column(
@@ -41,12 +41,17 @@ fun HelpScreen(onDone: () -> Unit) {
                 icon = Icons.Rounded.Settings,
                 title = "Getting started",
                 initiallyExpanded = true,
-                body = "1. Enable SnapKey Map in accessibility settings.\n\n" +
-                    "2. Grant log access with Shizuku or a computer. Keep Shizuku running to avoid the " +
-                    "device-logs prompt; otherwise allow device logs when Android asks.\n\n" +
-                    "3. Set Oppo's Snap Key action to None. Teach the key: press three times, then hold once.\n\n" +
-                    "4. Choose Press, Double press and Press & hold actions. Test them and check Last:.",
+                body = "The setup wizard saves your progress and resumes at the first unfinished step.\n\n" +
+                    "1. Choose Shizuku or Computer (ADB).\n\n" +
+                    "2. Grant log access. Shizuku must be running and allowed for prompt-free reading; " +
+                    "otherwise allow device logs when Android asks.\n\n" +
+                    "3. Enable accessibility to run actions and open apps from the background. It cannot read screen content.\n\n" +
+                    "4. Optionally allow background operation to reduce ColorOS interruptions.\n\n" +
+                    "5. Optionally allow notifications for detection paused alerts.\n\n" +
+                    "6. Set Oppo's Snap Key action to None. Teach the key: press three times, then hold once.\n\n" +
+                    "7. Choose Press, Double press and Press & hold actions, then tap Finish. Test them and check Last:.",
             )
+            TextButton(onClick = onRunSetup) { Text("Run setup again") }
             HelpSection(
                 icon = Icons.AutoMirrored.Rounded.HelpOutline,
                 title = "Troubleshooting",
