@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#e6efdf">
+  <meta name="description" content="Set up SnapKey Map, grant log access, teach the Oppo Find X9 Snap Key, and troubleshoot detection. Read how logs and permissions are used.">
+  <link rel="canonical" href="https://heykay-47.github.io/SnapKeyMap/help.html">
+  <link rel="icon" href="snapkeymap-svg/snapkeymap-favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="snapkeymap-svg/apple-touch-icon.png" sizes="180x180">
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+  <title>Help and FAQ | SnapKey Map</title>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header wrap">
+    <a class="brand" href="./" aria-label="SnapKey Map home">
+      <img class="brand-icon" src="snapkeymap-svg/snapkeymap-icon.svg" alt="" width="32" height="32">
+      SnapKey Map
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="./#setup">Set up</a>
+      <a href="./#privacy">Privacy</a>
+      <a href="help.html" aria-current="page">Help</a>
+      <a href="https://github.com/heykay-47/SnapKeyMap">GitHub <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+
+  <main id="main" class="questions wrap help-guide">
+    <h1>Help and FAQ</h1>
+    <p class="intro">Set up the Oppo Find X9 Snap Key, fix detection problems, and understand what access the app needs.</p>
+    <nav class="help-contents" aria-label="On this page">
+      <a href="#getting-started">Getting started</a>
+      <a href="#computer">With a computer</a>
+      <a href="#shizuku">Without a computer</a>
+      <a href="#teaching">Teaching the key</a>
+      <a href="#actions">Choosing actions</a>
+      <a href="#troubleshooting">Troubleshooting</a>
+      <a href="#safety">Is it safe?</a>
+      <a href="#updating">Updating and uninstalling</a>
+    </nav>
+
+    <section id="getting-started" aria-labelledby="getting-started-heading">
+      <h2 id="getting-started-heading">Getting started</h2>
+      <p>You need a Find X9 and either Shizuku or a USB cable and computer. No root or paid tools are required. Other devices and ColorOS versions may behave differently.</p>
+      <ol class="steps">
+        <li><h3>Install the app</h3><p>Download <code>SnapKeyMap-*.apk</code> from the <a href="https://github.com/heykay-47/SnapKeyMap/releases/latest">latest release</a> and open it. Allow your browser or file manager to install apps when Android asks. No GitHub account is needed.</p></li>
+        <li><h3>Enable accessibility</h3><p>In SnapKey Map, tap <strong>Open settings</strong> and turn on its accessibility service. If Android blocks the switch, open SnapKey Map's <strong>App info</strong>, tap the three-dot menu, choose <strong>Allow restricted settings</strong>, then try again.</p></li>
+        <li><h3>Grant log access</h3><p>Use <a href="#computer">a computer</a> or <a href="#shizuku">Shizuku</a> below. Reopen SnapKey Map and choose <strong>Allow</strong> when Android asks for access to device logs.</p></li>
+        <li><h3>Teach and assign</h3><p>Set Oppo's own Snap Key action to <strong>None</strong> in phone Settings. Teach the key in SnapKey Map, choose your actions, and test each gesture. Allow notifications and background activity so the app can tell you when detection pauses.</p></li>
+      </ol>
+    </section>
+
+    <section id="computer" aria-labelledby="computer-heading">
+      <h2 id="computer-heading">With a computer</h2>
+      <p>This grants log access once. Android can still ask for device-log consent when the reader reconnects.</p>
+      <ol>
+        <li>Download Google's free <a href="https://developer.android.com/tools/releases/platform-tools">SDK Platform-Tools</a> and unzip them.</li>
+        <li>On the phone, open <strong>Settings > About device > Version</strong>. Tap the build or version number seven times to enable Developer options.</li>
+        <li>Turn on <strong>USB debugging</strong> in Developer options.</li>
+        <li>Connect the phone with a USB cable. Accept the debugging prompt on the phone.</li>
+        <li>Open a terminal in the unzipped <code>platform-tools</code> folder and run:</li>
+      </ol>
+      <div class="command-block"><pre><code>adb shell pm grant com.heykay.snapkeymap android.permission.READ_LOGS</code></pre></div>
+      <p>In Windows PowerShell, use <code>.\adb</code> instead of <code>adb</code> if it is not on your PATH. Success normally returns to the command prompt without a message.</p>
+      <p>Reopen SnapKey Map and allow device logs. The grant survives restarts and app updates. If the command reports <code>GRANT_RUNTIME_PERMISSIONS</code>, use the <a href="#grant-refused">ColorOS fix</a> below.</p>
+    </section>
+
+    <section id="shizuku" aria-labelledby="shizuku-heading">
+      <h2 id="shizuku-heading">Without a computer</h2>
+      <ol>
+        <li>Install <a href="https://shizuku.rikka.app/guide/setup/">Shizuku</a> and follow its Wireless debugging pairing and start instructions. Wireless debugging requires Android 11 or later.</li>
+        <li>Once Shizuku is running, open SnapKey Map's log-access screen. Tap <strong>Grant with Shizuku</strong> and allow the Shizuku permission request. The button appears only while Shizuku is running.</li>
+        <li>Allow device log access when Android asks. You do not need to keep Shizuku running after the grant.</li>
+      </ol>
+      <p>If ColorOS blocks the grant, follow the <a href="#grant-refused">permission monitoring fix</a>, restart the phone, start Shizuku again, and retry.</p>
+      <h3>Manual fallback with aShell</h3>
+      <p>If needed, open <a href="https://github.com/DP-Hridayan/aShell">aShell</a> while Shizuku is running and allow aShell to use Shizuku. Run the same permission grant directly in its shell, without the <code>adb shell</code> prefix:</p>
+      <div class="command-block"><pre><code>pm grant com.heykay.snapkeymap android.permission.READ_LOGS</code></pre></div>
+      <p>Return to SnapKey Map and allow device logs. aShell cannot bypass ColorOS permission monitoring either.</p>
+    </section>
+
+    <section id="teaching" aria-labelledby="teaching-heading">
+      <h2 id="teaching-heading">Teaching the key</h2>
+      <p>First set <strong>Settings > Snap Key</strong> to <strong>None</strong>. Otherwise Oppo's action may run as well as yours.</p>
+      <p>In SnapKey Map, start <strong>Teach the app your Snap Key</strong>. Follow the hands-off prompt, press the key three times when asked, then hold it once. Keep the app open throughout.</p>
+      <p>To repeat setup, choose <strong>Teach the Snap Key again</strong> on the home screen. Your action assignments stay unchanged. After updating from v1.0.3 or earlier, teach it again before testing. Older calibration can select a message that matches only key-down events and merges double presses. Current learning prefers the known Oppo press-and-release source when present.</p>
+    </section>
+
+    <section id="actions" aria-labelledby="actions-heading">
+      <h2 id="actions-heading">Choosing actions</h2>
+      <p>Tap <strong>Press</strong>, <strong>Double press</strong>, or <strong>Press &amp; hold</strong> on the home screen. Choose an app, supported shortcut, link, or device action. Test it and check the <strong>Last:</strong> text in the Ready card.</p>
+      <ul>
+        <li>A double-press assignment adds a 350 ms wait after release before the single-press action runs.</li>
+        <li>The known Find X9 log reports press and release edges. Other learned log formats need repeated events while held to detect a hold.</li>
+        <li>The shortcut picker supports apps that offer <code>ACTION_CREATE_SHORTCUT</code>, not every pinned shortcut. Try a deep link instead. Direct-dial shortcuts are not supported because the app has no calling permission.</li>
+        <li>Silent mode and Do Not Disturb need notification policy access. Without it, the ringer action cycles between ring and vibrate.</li>
+        <li>Android permissions, device support, and the lock screen still apply. The app cannot bypass the lock screen. Screen-off detection and background reliability depend on ColorOS.</li>
+      </ul>
+    </section>
+
+    <section id="troubleshooting" aria-labelledby="troubleshooting-heading">
+      <h2 id="troubleshooting-heading">Troubleshooting</h2>
+      <details>
+        <summary>Paused after a restart</summary>
+        <p>Reopen SnapKey Map and allow device logs again. If it shows <strong>Paused</strong>, tap <strong>Connect</strong>. You do not need to repeat the ADB grant unless you uninstalled the app or revoked the permission.</p>
+        <p>If you declined the prompt, wait a minute before retrying. Check that accessibility remains enabled and ColorOS allows background activity.</p>
+      </details>
+      <details>
+        <summary>The key is not detected</summary>
+        <p>Set Oppo's own Snap Key action to <strong>None</strong>, then choose <strong>Teach the Snap Key again</strong>. Confirm that the service is enabled and device logs are allowed. Test with the app open and check <strong>Last:</strong>.</p>
+      </details>
+      <details>
+        <summary>A double press is read as two singles</summary>
+        <p>Set Oppo's action to <strong>None</strong>. Update to the latest app and teach the key again. Older learning can miss the release events needed to separate gestures. v1.0.3 and later fix duplicate events in the recorded Find X9 format.</p>
+        <p>Keep SnapKey Map open and check <strong>Last:</strong> after double-pressing. If it says <code>press</code>, detection did not recognise the double press. If it says <code>double press</code>, check the assignment and that the chosen app is still installed.</p>
+      </details>
+      <details>
+        <summary>ColorOS keeps closing the app</summary>
+        <p>Open <strong>App info > Battery</strong> and allow background activity. Turn off battery optimisation for SnapKey Map, using the home screen's background activity prompt if available. Allow notifications so you can see when detection pauses. These settings reduce interruptions, but do not guarantee background or screen-off detection.</p>
+      </details>
+      <details id="grant-refused">
+        <summary>The grant is refused with GRANT_RUNTIME_PERMISSIONS</summary>
+        <p>An error containing <code>Neither user 2000</code> and <code>GRANT_RUNTIME_PERMISSIONS</code> means ColorOS is blocking shell permission grants. This affects both ADB and Shizuku.</p>
+        <ol>
+          <li>Open Developer options and turn on <strong>Disable permission monitoring</strong>. Newer firmware may call it <strong>Disable system optimization</strong>.</li>
+          <li>If neither appears, temporarily change the system language to <strong>English, United States</strong> and reopen Developer options.</li>
+          <li>Read the warning before accepting. This relaxes manufacturer restrictions and may increase background power use.</li>
+          <li><strong>RESTART the phone.</strong> On ColorOS 16 the change only takes effect after a restart. Reconnecting the cable is not enough.</li>
+          <li>Retry the grant command. For Shizuku, start it again first.</li>
+        </ol>
+        <p>Names and locations vary by firmware. These device notes were checked on a Find X9 running ColorOS 16, <code>CPH2797_16.0.10.600</code>. If the setting is missing, include your ColorOS version in a report.</p>
+      </details>
+      <p>Still stuck? <a href="https://github.com/heykay-47/SnapKeyMap/issues">Open an issue</a> with the app version, ColorOS version, assignments, and <strong>Last:</strong> text. Do not share an unfiltered system log. It can contain sensitive information.</p>
+    </section>
+
+    <section id="safety" aria-labelledby="safety-heading">
+      <h2 id="safety-heading">Is it safe?</h2>
+      <p><strong>READ_LOGS granted over adb is a powerful permission. Give it only to apps you trust.</strong> It grants access to the whole live system log, not just the Snap Key.</p>
+      <h3>What stays on the phone</h3>
+      <p>The app declares no <code>INTERNET</code> permission. It does not send logs or settings off the phone. Apps and websites you open through an action handle their own data and have their own privacy policies.</p>
+      <p>The reader checks incoming log lines in memory. It does not save a log file. Outside teaching, matching lines drive key detection and other lines are discarded.</p>
+      <p>During teaching, it temporarily keeps observations in memory: an arrival time, log tag, normalized message, and writer UID. Runs of message digits are replaced with <code>#</code>, and the message is trimmed and limited to 160 characters. This does not remove all sensitive text. Tags and UIDs are retained. Accessibility key-code observations can also be kept during teaching.</p>
+      <p>After learning, the app saves one selected log signature, not the collected log: the tag, normalized message, and writer UID, plus hold detection and release timing settings. If Android supplies a usable key event instead, it saves the key and scan codes rather than a log signature. The observation list is not written to storage and is released after learning finishes or is cancelled.</p>
+      <h3>How key lines are checked</h3>
+      <p>A learned key line must match the writer UID recorded during teaching, as well as the tag and normalized message. The known Oppo key line is accepted only from the system UID, 1000. Other apps cannot fake a Snap Key press just by writing the same line under their own UID.</p>
+      <h3>Accessibility and settings</h3>
+      <p>The accessibility service can receive supported key events and perform device actions. Its configuration sets <code>canRetrieveWindowContent="false"</code>, so it cannot read window content.</p>
+      <p>Settings use private app storage. Android backup is disabled with <code>allowBackup="false"</code>. Mappings and the learned key are not included in Android backups.</p>
+      <h3>Declared permissions</h3>
+      <p>The app's <a href="https://github.com/heykay-47/SnapKeyMap/blob/main/app/expected-permissions.txt">permission list</a> contains:</p>
+      <ul>
+        <li><strong>Read device logs</strong> (<code>READ_LOGS</code>): detect the Snap Key in the live system log.</li>
+        <li><strong>Vibrate</strong> (<code>VIBRATE</code>): give feedback when an assigned action runs.</li>
+        <li><strong>Show notifications</strong> (<code>POST_NOTIFICATIONS</code>): tell you when detection pauses.</li>
+        <li><strong>Access notification policy</strong> (<code>ACCESS_NOTIFICATION_POLICY</code>): use Do Not Disturb and silent-mode controls.</li>
+        <li><strong>Ask to ignore battery optimisation</strong> (<code>REQUEST_IGNORE_BATTERY_OPTIMIZATIONS</code>): request background operation.</li>
+        <li><strong>Shizuku API access</strong> (<code>moe.shizuku.manager.permission.API_V23</code>): lets the app ask Shizuku for the one-time log permission grant. The app uses it only for that grant, not for log reading or mapped actions. Shizuku need not stay running afterwards.</li>
+      </ul>
+      <p>The code is <a href="https://github.com/heykay-47/SnapKeyMap">open source</a>. You can inspect the implementation and build it yourself.</p>
+      <p><strong>Provided as is, without warranty.</strong></p>
+    </section>
+
+    <section id="updating" aria-labelledby="updating-heading">
+      <h2 id="updating-heading">Updates and removal</h2>
+      <p>Install the new APK over the old app. Do not uninstall first. Updates signed with the same key keep settings and the granted log permission. Android may still ask for device-log consent when the reader reconnects.</p>
+      <p>Uninstalling removes the app's settings and log permission. If you reinstall, grant log access and teach the key again.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer wrap">
+    <div><a class="brand" href="./"><img class="brand-icon" src="snapkeymap-svg/snapkeymap-icon.svg" alt="" width="32" height="32">SnapKey Map</a><p>Made by <a href="https://github.com/heykay-47">Krithik</a> for a more useful button.</p></div>
+    <div class="footer-links"><a href="https://github.com/heykay-47/SnapKeyMap">Source code</a><a href="https://github.com/heykay-47/SnapKeyMap/issues">Get help</a><a href="https://github.com/heykay-47/SnapKeyMap#author-and-credits">Credits</a></div>
+  </footer>
+</body>
+</html>
