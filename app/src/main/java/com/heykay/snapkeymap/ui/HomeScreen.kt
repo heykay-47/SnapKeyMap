@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -69,6 +70,7 @@ import com.heykay.snapkeymap.SnapAccessibilityService
 import com.heykay.snapkeymap.SnapAction
 import com.heykay.snapkeymap.SnapEngine
 import com.heykay.snapkeymap.ThemeMode
+import java.util.Date
 import kotlinx.coroutines.delay
 
 private class SetupStep(
@@ -287,6 +289,9 @@ private fun StatusCard(
     access: LogAccess,
 ) {
     val last by SnapEngine.lastGesture.collectAsState()
+    val lastKeySeenAt by SnapEngine.lastKeySeenAt.collectAsState()
+    val listeningSince by SnapEngine.listeningSince.collectAsState()
+    val timeFormat = DateFormat.getTimeFormat(LocalContext.current)
     val now by produceState(SnapEngine.now()) {
         while (true) {
             delay(1000)
@@ -324,6 +329,14 @@ private fun StatusCard(
                 Spacer(Modifier.size(12.dp))
                 Switch(checked = enabled, onCheckedChange = onEnabledChange)
             }
+            Text(
+                listOfNotNull(
+                    listeningSince?.let { "Listening since ${timeFormat.format(Date(it))}" },
+                    lastKeySeenAt?.let { "Last key press ${timeFormat.format(Date(it))}" } ?: "No key press yet",
+                ).joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceVariant,
+            )
             if (setupDone && enabled && !listening && access != LogAccess.WAITING) {
                 Button(onClick = { SnapEngine.connect() }) { Text("Connect") }
             }

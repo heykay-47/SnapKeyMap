@@ -34,8 +34,8 @@ object SnapEngine {
     private lateinit var keyGestures: GestureDetector
     private lateinit var logGestures: GestureDetector
     private val oplusEdges = OplusKeyEdges(
-        onDown = { logGestures.down() },
-        onUp = { logGestures.up() },
+        onDown = { markKeySeen(); logGestures.down() },
+        onUp = { markKeySeen(); logGestures.up() },
     )
 
     private val accessState = MutableStateFlow(LogAccess.OFF)
@@ -43,6 +43,12 @@ object SnapEngine {
 
     private val lastDetected = MutableStateFlow<Detected?>(null)
     val lastGesture: StateFlow<Detected?> = lastDetected.asStateFlow()
+
+    private val lastKeySeenState = MutableStateFlow<Long?>(null)
+    val lastKeySeenAt: StateFlow<Long?> = lastKeySeenState.asStateFlow()
+
+    private val listeningSinceState = MutableStateFlow<Long?>(null)
+    val listeningSince: StateFlow<Long?> = listeningSinceState.asStateFlow()
 
     /** Bumped whenever our screen comes back, so the UI re-checks permissions granted elsewhere. */
     private val resumeCount = MutableStateFlow(0)
@@ -77,6 +83,7 @@ object SnapEngine {
             store.config.map { it.enabled to it.needsLogAccess }.distinctUntilChanged().collect { (enabled, needsLog) ->
                 if (!enabled || !needsLog) stop()
                 else if (uiVisible && accessState.value == LogAccess.OFF) connect()
+                updateListeningSince()
             }
         }
     }
@@ -123,11 +130,33 @@ object SnapEngine {
     }
 
     fun onServiceConnected() {
+        updateListeningSince()
         if (!uiVisible) notifyIfPaused()
+    }
+
+    fun onServiceDisconnected() {
+        keyGestures.reset()
+        updateListeningSince()
+    }
+
+    private fun updateListeningSince() {
+        val config = store.config.value
+        val listening = config.enabled && if (config.needsLogAccess) {
+            accessState.value == LogAccess.FULL
+        } else {
+            SnapAccessibilityService.running.value
+        }
+        if (!listening) listeningSinceState.value = null
+        else if (listeningSinceState.value == null) listeningSinceState.value = System.currentTimeMillis()
+    }
+
+    private fun markKeySeen() {
+        lastKeySeenState.value = System.currentTimeMillis()
     }
 
     private fun onAccessChanged(access: LogAccess) {
         accessState.value = access
+        updateListeningSince()
         if (access == LogAccess.FULL) {
             retryDelayMs = 1000L
             Notifications.cancelPaused(app)
@@ -189,6 +218,7 @@ object SnapEngine {
         }
         if (!logKeyDown) {
             logKeyDown = true
+            markKeySeen()
             logGestures.down()
         }
         main.removeCallbacks(logKeyUp)
@@ -210,13 +240,20 @@ object SnapEngine {
         keyGestures.wantsDouble = config.action(Gesture.DOUBLE) != SnapAction.NoAction
         keyGestures.wantsLong = config.action(Gesture.LONG) != SnapAction.NoAction
         when (event.action) {
-            KeyEvent.ACTION_DOWN -> if (event.repeatCount == 0) keyGestures.down()
-            KeyEvent.ACTION_UP -> keyGestures.up()
+            KeyEvent.ACTION_DOWN -> if (event.repeatCount == 0) {
+                markKeySeen()
+                keyGestures.down()
+            }
+            KeyEvent.ACTION_UP -> {
+                markKeySeen()
+                keyGestures.up()
+            }
         }
         return true
     }
 
     private fun onGesture(gesture: Gesture) {
+        markKeySeen()
         lastDetected.value = Detected(gesture, now())
         val action = store.config.value.action(gesture)
         if (action == SnapAction.NoAction) return
