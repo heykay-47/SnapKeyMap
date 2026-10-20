@@ -34,7 +34,7 @@ class ShizukuLogService : Binder() {
         }
         if (code != IBinder.FIRST_CALL_TRANSACTION) return super.onTransact(code, data, reply, flags)
         data.enforceInterface(DESCRIPTOR)
-        check(process == null)
+        process?.destroy()
         val pipe = ParcelFileDescriptor.createPipe()
         try {
             val proc = ProcessBuilder("logcat", "-v", "threadtime,uid", "-T", "1")
