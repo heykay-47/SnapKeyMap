@@ -9,7 +9,13 @@
     <string name="about_description">Make your Snap Key your own.</string>
     <string name="view_repository">View GitHub repository</string>
     <string name="view_author_profile">View author’s GitHub profile</string>
+    <string name="support_heading">Support development</string>
+    <string name="support_description">SnapKey Map is free and open source. If it helps you, you can support its development.</string>
+    <string name="buy_me_a_tea">Buy Me a Tea</string>
+    <string name="github_sponsors">Sponsor on GitHub</string>
     <string name="repository_url" translatable="false">https://github.com/heykay-47/SnapKeyMap</string>
     <string name="author_profile_url" translatable="false">https://github.com/heykay-47</string>
+    <string name="buy_me_a_tea_url" translatable="false">https://buymeatea.in/heykay47</string>
+    <string name="github_sponsors_url" translatable="false">https://github.com/sponsors/heykay-47</string>
     <string name="service_description">Lets SnapKey Map notice when you press the Snap Key and run the action you picked: open an app, take a screenshot, go home, and so on. It does not read what is on your screen.</string>
 </resources>
