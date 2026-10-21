@@ -10,6 +10,7 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.net.Uri
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
@@ -180,7 +181,8 @@ object ActionRunner {
             AudioManager.RINGER_MODE_SILENT -> RingerMode.SILENT
             else -> null
         }
-        if (canUseShizuku()) {
+        // Before Android 15, `cmd audio` has no set-ringer-mode yet still exits 0, so success can't be trusted.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM && canUseShizuku()) {
             val next = action.nextMode(current)
             val result = try {
                 setRingerWithShizuku(context, next.audioMode)
