@@ -4,8 +4,6 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-// CI sets these. Every GitHub Actions run gets a higher versionCode, so new APKs install over old ones.
-val runNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
 val keystorePath: String? = System.getenv("SIGNING_KEYSTORE_PATH")
 
 android {
@@ -16,8 +14,15 @@ android {
         applicationId = "com.heykay.snapkeymap"
         minSdk = 29
         targetSdk = 36
-        versionCode = runNumber
-        versionName = providers.gradleProperty("appVersion").get()
+        // F-Droid reads both as literals from this file. The check below keeps them in step.
+        versionCode = 10014
+        versionName = "1.0.14"
+    }
+
+    // F-Droid can't inspect the dependency list that Google encrypts into the signing block.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
     }
 
     signingConfigs {
@@ -54,6 +59,15 @@ android {
 
 kotlin {
     jvmToolchain(17)
+}
+
+// Releases up to v1.0.14 used the CI run number (at most 67), so this scheme always installs over them.
+android.defaultConfig.let { config ->
+    val (major, minor, patch) = config.versionName!!.split(".").map(String::toInt)
+    val expected = major * 10000 + minor * 100 + patch
+    check(config.versionCode == expected) {
+        "versionCode for ${config.versionName} must be $expected, not ${config.versionCode}"
+    }
 }
 
 dependencies {
