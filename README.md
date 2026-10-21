@@ -25,6 +25,7 @@
 
 - [Screenshots](#screenshots)
 - [Features](#features)
+- [Roadmap](#roadmap)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Setup wizard](#setup-wizard)
@@ -67,9 +68,22 @@ Assign one action each to **Press**, **Double press**, and **Press & hold**.
 
 The app follows Material 3 with dynamic colour and a System, Light, or Dark theme. It declares no internet permission.
 
+# Roadmap
+
+Planned from feedback on the [launch post](https://www.reddit.com/r/Oppo/comments/1xaze1m/i_built_an_app_to_remap_the_oppo_find_x9s_snap_key/). Each item ships once it has been tested on a Find X9.
+
+- [ ] **Silent mode that works out of the box.** Ring → Vibrate → Silent asks for Do Not Disturb access when you assign it, instead of quietly skipping Silent.
+- [ ] **Choose your ringer modes.** Pick which modes the ringer action cycles through and in what order, such as Ring ↔ Vibrate only.
+- [ ] **Grant Do Not Disturb access with Shizuku.** For phones where Settings won't let you allow it.
+- [ ] **More precise key detection with Shizuku.** Read the key's real press and release while Shizuku runs, so a long hold can never count as a double press.
+- [ ] **Adjustable timing.** Set the double-press window and how long counts as a hold.
+- [ ] **Mute media toggle.** Mute and unmute media with one press.
+
+Have an idea? [Request a feature](https://github.com/heykay-47/SnapKeyMap/issues/new?template=feature_request.yml).
+
 # Requirements
 
-- An Oppo Find X9. Other devices and ColorOS versions may behave differently.
+- An Oppo Find X9. Other devices and ColorOS versions may behave differently. Users have also reported it working on the Find X9 Pro, X9 Ultra, X9s, X9s Pro, and OnePlus 15R.
 - Android 10 or later.
 - One of these, for the one-time log permission:
   - [Shizuku](https://shizuku.rikka.app/guide/setup/), running through wireless debugging. No computer needed.
