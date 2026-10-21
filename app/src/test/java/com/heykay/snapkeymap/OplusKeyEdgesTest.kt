@@ -33,7 +33,7 @@ class OplusKeyEdgesTest {
     private class Harness(enableHold: Boolean = true) {
         val clock = Clock()
         val gestures = mutableListOf<Gesture>()
-        val detector = GestureDetector(clock::schedule, clock::cancel, 650, gestures::add).apply {
+        val detector = GestureDetector(clock::schedule, clock::cancel, { 650L }, gestures::add).apply {
             wantsDouble = true
             wantsLong = enableHold
         }
@@ -141,6 +141,17 @@ class OplusKeyEdgesTest {
         edges.reset()
         edges.accept(stamp(0))
         assertEquals(listOf("down", "down"), edgesSeen)
+    }
+
+    @Test
+    fun rawInputHandoffWhilePressedTreatsNextLogEdgeAsRelease() {
+        val edgesSeen = mutableListOf<String>()
+        val edges = OplusKeyEdges({ edgesSeen += "down" }, { edgesSeen += "up" })
+        edges.reset(pressed = true)
+        edges.accept(stamp(1000))
+        edges.accept(stamp(2000))
+        edges.accept(stamp(2100))
+        assertEquals(listOf("up", "down", "up"), edgesSeen)
     }
 
     @Test

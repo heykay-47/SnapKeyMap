@@ -99,6 +99,8 @@ You do not need a GitHub account to download the APK.
 
 To update, install the new APK over the existing app. Do not uninstall first. An update signed with the same key keeps your mappings and the granted log permission.
 
+With Shizuku running and allowed, run **Teach the Snap Key again** after updating to enable precise press and release detection. Your mappings stay unchanged. Without Shizuku, the app keeps using the system log.
+
 > [!IMPORTANT]
 > After updating from v1.0.3 or earlier, run **Teach the Snap Key again** once before you test your mappings. Older calibration can pick a log line that matches only key-down events and merges double presses. Your action assignments stay unchanged.
 
@@ -184,14 +186,14 @@ When you report a detection problem, include your app version, ColorOS version, 
 
 # Privacy and limits
 
-SnapKey Map reads the system log on the phone to detect the Snap Key. The log permission covers more than key events. Lines are checked in memory and discarded, never saved or uploaded. Teaching keeps observations in memory and saves one learned signature. The app accepts a key line only from the app that wrote it while you taught the key, which on the Find X9 is the system, so other apps can't fake a press.
+SnapKey Map reads the system log on the phone to detect the Snap Key. The log permission covers more than key events. Lines are checked in memory and discarded, never saved or uploaded. Teaching keeps observations in memory and saves a learned log signature and, when available, an input key code. The app accepts a key log line only from the app that wrote it while you taught the key, which on the Find X9 is the system, so other apps can't fake a press.
 
-With Shizuku allowed, the app runs `logcat` as the shell user through Shizuku. Shizuku is not used to run mapped actions. Apps and websites you open through an action have their own privacy policies.
+With Shizuku allowed, the app runs `logcat` and also reads raw key input events using `getevent` as the shell user through Shizuku. Input events are filtered in memory, never stored or uploaded. A learned input key uses explicit press and release events while the input stream is live; otherwise detection falls back to the system log. Shizuku is not used to run mapped actions. Apps and websites you open through an action have their own privacy policies.
 
 Keep these limits in mind:
 
-- A double-press assignment adds a 350 ms wait after release before the single-press action runs.
-- On the Find X9, press and hold uses the known press and release lines. Other learned log formats need the line to repeat while the key is held.
+- A double-press assignment adds a wait after release before the single-press action runs: 350 ms by default, adjustable from 200 to 600 ms in **Timing**. The hold threshold defaults to 650 ms and can be set from 300 to 1200 ms.
+- With a learned input key and a live Shizuku input stream, press and hold uses explicit key edges. Log fallback on the Find X9 infers press and release from known key lines. Other learned log formats need the line to repeat while the key is held.
 - Screen-off detection and background reliability depend on ColorOS and are not guaranteed.
 - The shortcut picker lists apps that provide `ACTION_CREATE_SHORTCUT`. It cannot list every pinned shortcut. A deep link may work instead.
 - Calls are not placed directly, because the app has no calling permission. Call a contact opens the dialer, and direct-dial shortcuts show a message instead.

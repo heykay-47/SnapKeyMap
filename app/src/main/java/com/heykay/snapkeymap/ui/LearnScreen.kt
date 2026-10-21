@@ -214,7 +214,9 @@ private fun Finished(result: LearnResult, finishedAt: Long, onRetry: () -> Unit,
 
     val body = when (result) {
         is LearnResult.KeyEventFound -> "Your Snap Key talks to apps directly, so no log access is needed."
-        is LearnResult.LogLineFound -> if (result.canDetectHold) {
+        is LearnResult.LogLineFound -> if (result.inputKey != null) {
+            "The app will use precise key input while Shizuku runs, with the system log as a fallback."
+        } else if (result.canDetectHold) {
             "The app will spot your Snap Key in the system log."
         } else {
             "The app will spot your Snap Key in the system log. Your phone doesn't report holding the " +
@@ -234,6 +236,9 @@ private fun Finished(result: LearnResult, finishedAt: Long, onRetry: () -> Unit,
         style = MaterialTheme.typography.titleLarge,
     )
     if (result is LearnResult.LogLineFound) {
+        result.inputKey?.let { key ->
+            Text("Matched input key: ${key.code}", style = MaterialTheme.typography.bodySmall)
+        }
         Text(
             "Matched log line: ${result.signature.tag}: ${result.signature.message}",
             style = MaterialTheme.typography.bodySmall,

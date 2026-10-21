@@ -25,6 +25,7 @@ Paths below are relative to [`app/src/main/java/com/heykay/snapkeymap`](app/src/
 - `ui/` contains the screens and shared UI components.
 - `SnapEngine.kt` connects key detection to the configured actions.
 - `LogReader.kt` reads logcat and reports log-access status.
+- `InputReader.kt` reads shell input through Shizuku; `InputKey.kt` parses explicit `getevent -lt` edges.
 - `KeyLearning.kt` identifies the key during setup.
 - `OplusKeyEdges.kt` removes duplicate log events and separates presses from releases.
 - `GestureDetector.kt` recognises single press, double press, and hold.
@@ -40,6 +41,8 @@ These facts were checked on a Find X9 with ColorOS 16 (`CPH2797_16.0.10.600`). T
 
 - The Snap Key writes `KEYLOG_OplusKeyEventUtil: should not notify undefined keys in restrict listen mode` on every press and every release. Each edge appears two or three times within the same millisecond or the next. Real edges are at least 60 ms apart.
 - The line comes from UID 1000 (system). Run `adb logcat -v threadtime,uid -s KEYLOG_OplusKeyEventUtil` to see it.
+- The shell can also read the Snap Key on `/dev/input/event0` as `BTN_TRIGGER_HAPPY32` with `adb shell getevent -lt`. Normal apps cannot read these devices. The app learns the input code alongside the log signature through Shizuku, without pinning the device path. Confirm this on other firmware before relying on it.
+- The home status says **Precise input via Shizuku** only after the input reader has received a valid key edge and a key was learned. **Logs via Shizuku** or **System logs** means log fallback is in use. Stopping Shizuku resets gestures and reconnects the local log reader; Android may require device-log consent again.
 - With **Permission monitoring** on, ColorOS blocks `pm grant` and `pm revoke` from the shell, for both ADB and Shizuku. Turning on **Disable permission monitoring** takes effect only after a restart.
 - The shell cannot revoke `READ_LOGS`, so you can't reset the grant to test a first-time grant. Reinstalling the app resets it.
 - To count actions exactly, check `adb shell dumpsys media.camera`. Its event log records each flashlight on and off.
@@ -97,4 +100,3 @@ git push origin v1.0.8
 ```
 
 The tag starts another build and publishes the APK on GitHub Releases. The workflow rejects a tag that does not match `appVersion`. The release tag, APK filename, and app version share that version. Android's internal `versionCode` uses the workflow run number so updates can install over earlier CI builds.
-

@@ -9,8 +9,9 @@ package com.heykay.snapkeymap
 class GestureDetector(
     private val schedule: (Runnable, Long) -> Unit,
     private val cancel: (Runnable) -> Unit,
-    private val longPressMs: Long,
+    private val holdMs: () -> Long,
     private val onGesture: (Gesture) -> Unit,
+    private val doublePressWindowMs: () -> Long = { 350L },
 ) {
     var wantsDouble = false
     var wantsLong = false
@@ -18,6 +19,7 @@ class GestureDetector(
     private var pressed = false
     private var handled = false
     private var waitingForSecond = false
+    val hasHandledPress: Boolean get() = pressed && handled
 
     private val longPress = Runnable {
         handled = true
@@ -43,7 +45,7 @@ class GestureDetector(
                 handled = true
                 onGesture(Gesture.SINGLE)
             }
-            wantsLong -> schedule(longPress, longPressMs)
+            wantsLong -> schedule(longPress, holdMs())
         }
     }
 
@@ -54,7 +56,7 @@ class GestureDetector(
         if (handled) return
         if (wantsDouble) {
             waitingForSecond = true
-            schedule(singlePress, DOUBLE_PRESS_WINDOW_MS)
+            schedule(singlePress, doublePressWindowMs())
         } else {
             onGesture(Gesture.SINGLE)
         }
@@ -66,9 +68,5 @@ class GestureDetector(
         pressed = false
         handled = false
         waitingForSecond = false
-    }
-
-    private companion object {
-        const val DOUBLE_PRESS_WINDOW_MS = 350L
     }
 }

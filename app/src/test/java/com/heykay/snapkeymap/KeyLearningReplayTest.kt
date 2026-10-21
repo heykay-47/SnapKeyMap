@@ -52,7 +52,7 @@ class KeyLearningReplayTest {
         val result = KeyLearning.analyze(observations(), baseline, taps, hold) as LearnResult.LogLineFound
         val clock = Clock()
         val gestures = mutableListOf<Gesture>()
-        val detector = GestureDetector(clock::schedule, clock::cancel, 650, gestures::add).apply {
+        val detector = GestureDetector(clock::schedule, clock::cancel, { 650L }, gestures::add).apply {
             wantsDouble = true
             wantsLong = result.canDetectHold
         }
@@ -98,6 +98,39 @@ class KeyLearningReplayTest {
         assertEquals(KeySignature("OtherKey", "pressed", "1000"), result.signature)
         assertFalse(result.holdRepeats)
         assertEquals(DEFAULT_RELEASE_GAP_MS, result.releaseGapMs)
+    }
+
+    @Test
+    fun learnedInputReplaysExplicitHoldAndDoubleWithoutTogglingPhase() {
+        val inputKey = KeyLearning.inputKey("BTN_TRIGGER_HAPPY32")
+        val samples = listOf(7000L, 11000L, 15000L, 18200L).map { Observation(it, inputKey) }
+        val result = KeyLearning.analyze(observations() + samples, baseline, taps, hold) as LearnResult.LogLineFound
+        assertEquals(InputKey("BTN_TRIGGER_HAPPY32"), result.inputKey)
+        assertEquals(oplusTag, result.signature.tag)
+
+        val clock = Clock()
+        val gestures = mutableListOf<Gesture>()
+        val detector = GestureDetector(clock::schedule, clock::cancel, { 650L }, gestures::add).apply {
+            wantsDouble = true
+            wantsLong = true
+        }
+        fun line(time: Long, code: String, value: String) {
+            clock.advanceTo(time)
+            val event = parseInputKeyEvent("[ 42.000000] /dev/input/event0: EV_KEY $code $value") ?: return
+            if (event.key != result.inputKey) return
+            if (event.down) detector.down() else detector.up()
+        }
+        line(0, "BTN_TRIGGER_HAPPY32", "DOWN")
+        line(10, "BTN_TRIGGER_HAPPY32", "DOWN")
+        line(500, "BTN_TRIGGER_HAPPY32", "REPEAT")
+        line(800, "KEY_VOLUMEUP", "DOWN")
+        line(1000, "BTN_TRIGGER_HAPPY32", "UP")
+        line(2000, "BTN_TRIGGER_HAPPY32", "DOWN")
+        line(2100, "BTN_TRIGGER_HAPPY32", "UP")
+        line(2200, "BTN_TRIGGER_HAPPY32", "DOWN")
+        line(2300, "BTN_TRIGGER_HAPPY32", "UP")
+        clock.advanceTo(5000)
+        assertEquals(listOf(Gesture.LONG, Gesture.DOUBLE), gestures)
     }
 
     @Test
