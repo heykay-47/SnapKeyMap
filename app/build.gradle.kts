@@ -9,14 +9,15 @@ val keystorePath: String? = System.getenv("SIGNING_KEYSTORE_PATH")
 android {
     namespace = "com.heykay.snapkeymap"
     compileSdk = 36
+    buildToolsVersion = "35.0.0"
 
     defaultConfig {
         applicationId = "com.heykay.snapkeymap"
         minSdk = 29
         targetSdk = 36
         // F-Droid reads both as literals from this file. The check below keeps them in step.
-        versionCode = 10014
-        versionName = "1.0.14"
+        versionCode = 10015
+        versionName = "1.0.15"
     }
 
     // F-Droid can't inspect the dependency list that Google encrypts into the signing block.
@@ -42,8 +43,8 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Without the CI key (e.g. a fork), fall back to the debug key so the build still works.
-            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            val releaseSigning = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            signingConfig = releaseSigning
         }
     }
 

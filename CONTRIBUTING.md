@@ -53,19 +53,21 @@ The [Build APK workflow](.github/workflows/build.yml) runs tests and builds an A
 
 To start a manual build, open the repository's Actions tab, select Build APK, and choose Run workflow. After a successful run, download the `SnapKeyMap` artifact and extract the APK. The `test-results` artifact contains the unit test reports.
 
-Pull request builds get no signing secrets and use a temporary debug key. Pushes to `main`, tags, and manual runs use the release key.
+Pull request builds get no signing secrets and use a temporary debug key. Other builds use the release key when configured. Version-tag builds fail if the keystore secret is missing; non-tag builds may fall back to a temporary debug key.
 
 After the build, the workflow compares the APK's permissions with [`app/expected-permissions.txt`](app/expected-permissions.txt) and fails on any difference. If a change needs a new permission, update that file in the same change and explain why.
 
-The workflow uses JDK 17 and Gradle 8.14.3. It runs:
+The workflow uses JDK 17, Gradle 8.14.3, and Android SDK Build Tools 35.0.0, the default for AGP 8.13.2. It runs:
 
 ```shell
 gradle --no-daemon testReleaseUnitTest assembleRelease
 ```
 
+A separate `reproducibility` job checks out the same source commit in a different directory and rebuilds with a fresh Gradle home and no build cache. Both jobs use the pull request head commit, not GitHub's merge commit. The verifier uses F-Droid's `fdroidserver==2.4.5` signing removal and builds without signing secrets. It copies the original APK's signature with `apksigcopier==1.1.1`, verifies the copied APK with `apksigner`, and requires byte-for-byte equality with `cmp`. The `reproducibility` artifact contains the source commit, literal versions, signing-removal diff, certificate reports, SHA-256 hashes, unsigned APK, and signature-copied APK when those files are available, including on failure. This checks independent GitHub-runner builds, not parity with F-Droid's build environment.
+
 ### Build locally
 
-Install JDK 17, Gradle 8.14.3, and Android SDK Platform 36. Set `ANDROID_HOME` to your SDK directory, or set `sdk.dir` in an untracked `local.properties` file.
+Install JDK 17, Gradle 8.14.3, Android SDK Platform 36, and Android SDK Build Tools 35.0.0. Set `ANDROID_HOME` to your SDK directory, or set `sdk.dir` in an untracked `local.properties` file.
 
 The repository has no `gradlew` script. It keeps only `gradle/wrapper/gradle-wrapper.properties`, which tells F-Droid to build with Gradle 8.14.3. Run the installed `gradle` command from the repository root:
 
@@ -76,6 +78,14 @@ gradle assembleRelease
 
 The APK is written to `app/build/outputs/apk/release/app-release.apk`. Local builds use the debug signing key unless you provide the signing environment variables defined in `app/build.gradle.kts`.
 
+F-Droid builds unsigned APKs by running its own signing removal before Gradle. This removes both `signingConfigs` and the debug-key fallback in `signingConfig`; no extra Gradle property is needed. With `fdroidserver==2.4.5` installed in an isolated environment, run this on a clean disposable checkout before `gradle assembleRelease`:
+
+```shell
+python -c 'from fdroidserver.common import remove_signing_keys; remove_signing_keys(".")'
+```
+
+The unsigned output is `app/build/outputs/apk/release/app-release-unsigned.apk`.
+
 ### Sign builds and publish releases
 
 Configure these repository secrets for a consistent release signing key:
@@ -85,7 +95,9 @@ Configure these repository secrets for a consistent release signing key:
 - `SIGNING_KEY_ALIAS` identifies the signing key.
 - `SIGNING_KEY_PASSWORD` holds the key password.
 
-Back up the keystore and passwords outside Git. Without the signing secrets, CI uses a temporary debug key. That APK may not install over an earlier build. Never commit signing keys or passwords.
+The workflow pins the developer certificate's SHA-256 digest in `RELEASE_CERTIFICATE_SHA256`. Tag verification fails if the APK uses a different certificate. Pull request debug certificates are not compared with this pin. The verifier also runs F-Droid's binary scanner for known non-free classes.
+
+Back up the keystore and passwords outside Git. Non-tag builds without signing secrets use a temporary debug key. That APK may not install over an earlier build. Never commit signing keys or passwords.
 
 To publish a release:
 
@@ -100,6 +112,6 @@ git tag v1.0.15
 git push origin v1.0.15
 ```
 
-The tag starts another build and publishes the APK on GitHub Releases. The workflow rejects a tag that does not match `versionName` or has no changelog file. The release tag, APK filename, and app version share that version.
+The tag starts another build and publishes the APK on GitHub Releases only after both `build` and `reproducibility` pass. The workflow rejects a tag that does not match `versionName` or has no changelog file. The release tag, APK filename, and app version share that version.
 
 F-Droid reads `versionName` and `versionCode` as literals from `app/build.gradle.kts`, and the store listing from [`fastlane/metadata/android/en-US`](fastlane/metadata/android/en-US). Keep both values as plain literals. Releases up to v1.0.14 used the CI run number as `versionCode`, which never went above 67, so the new scheme installs over them.
