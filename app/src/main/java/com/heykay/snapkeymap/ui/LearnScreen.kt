@@ -132,7 +132,7 @@ private fun Intro(onStart: () -> Unit) {
         title = "First: set Oppo's Snap Key action to None",
         body = "Open Settings › Snap Key and choose None. Then come back here.",
     ) {
-        TextButton(onClick = { context.openPhoneSettings() }) { Text("Open phone settings") }
+        CardTextButton("Open phone settings") { context.openPhoneSettings() }
     }
     if (!serviceOn) {
         NoteCard(
@@ -141,7 +141,7 @@ private fun Intro(onStart: () -> Unit) {
             body = "Open accessibility settings and turn on SnapKey Map, then return here.",
             container = MaterialTheme.colorScheme.errorContainer,
         ) {
-            TextButton(onClick = { context.openAccessibilitySettings() }) { Text("Open settings") }
+            CardTextButton("Open settings") { context.openAccessibilitySettings() }
         }
     }
     if (config.needsLogAccess && !hasLogPermission) {
@@ -163,7 +163,7 @@ private fun Intro(onStart: () -> Unit) {
             },
         ) {
             if (access != LogAccess.WAITING) {
-                TextButton(onClick = { SnapEngine.connect() }) { Text("Connect") }
+                CardTextButton("Connect") { SnapEngine.connect() }
             }
         }
     }

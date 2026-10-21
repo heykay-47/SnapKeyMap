@@ -133,15 +133,14 @@ private fun PresetCard(modes: List<RingerMode>, selected: Boolean, onClick: () -
         ),
         border = if (selected) BorderStroke(2.dp, colors.primary) else BorderStroke(1.dp, colors.outlineVariant),
     ) {
-        // Equal 48 dp slots on both sides keep the steps centred on the card.
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 16.dp),
+            Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                if (selected) Icon(Icons.Rounded.CheckCircle, contentDescription = "Selected", tint = colors.primary)
-            }
             ModeSequence(modes, Modifier.weight(1f))
+            if (selected) {
+                Icon(Icons.Rounded.CheckCircle, contentDescription = "Selected", tint = colors.primary)
+            }
             IconButton(onClick = onEdit) {
                 Icon(Icons.Rounded.Edit, contentDescription = "Edit ${SnapAction.Ringer(modes).label}")
             }
@@ -185,7 +184,7 @@ private fun PresetEditor(
             if (modes.isEmpty()) {
                 Text("No modes yet", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
             } else {
-                ModeSequence(modes, Modifier.fillMaxWidth())
+                ModeSequence(modes, Modifier.fillMaxWidth(), Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally))
             }
         }
     }
@@ -222,8 +221,12 @@ private fun SheetTitle(title: String, subtitle: String) {
 
 /** The cycle as icon steps, so the order reads at a glance without wrapping text arrows. */
 @Composable
-private fun ModeSequence(modes: List<RingerMode>, modifier: Modifier = Modifier) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)) {
+private fun ModeSequence(
+    modes: List<RingerMode>,
+    modifier: Modifier = Modifier,
+    arrangement: Arrangement.Horizontal = Arrangement.spacedBy(4.dp),
+) {
+    Row(modifier, horizontalArrangement = arrangement) {
         modes.forEachIndexed { index, mode ->
             if (index > 0) {
                 Icon(

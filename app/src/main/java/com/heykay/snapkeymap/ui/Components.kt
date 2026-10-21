@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeDown
@@ -154,6 +156,12 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier) {
 }
 
 /** A tinted card with an icon, a title and some text, for tips and status messages. */
+/** A text button whose label lines up with the text above it. Material pads text button labels by 12 dp. */
+@Composable
+fun CardTextButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    TextButton(onClick = onClick, modifier = modifier.offset(x = (-12).dp)) { Text(text) }
+}
+
 @Composable
 fun NoteCard(
     icon: ImageVector,

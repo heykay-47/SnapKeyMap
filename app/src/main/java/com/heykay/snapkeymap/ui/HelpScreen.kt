@@ -124,12 +124,12 @@ private fun HelpSection(
         title = title,
         body = if (expanded) body else "Show the essentials.",
     ) {
-        TextButton(
-            onClick = { expanded = !expanded },
+        CardTextButton(
+            if (expanded) "Hide" else "Read",
             modifier = Modifier.semantics { stateDescription = if (expanded) "Expanded" else "Collapsed" },
-        ) { Text(if (expanded) "Hide" else "Read") }
+        ) { expanded = !expanded }
         if (expanded && onSource != null) {
-            TextButton(onClick = onSource) { Text("Source code") }
+            CardTextButton("Source code", onClick = onSource)
         }
     }
 }

@@ -217,7 +217,7 @@ fun HomeScreen(
                     title = "Set Oppo's own Snap Key action to None",
                     body = "Settings › Snap Key. Otherwise Oppo's action runs as well as yours.",
                 ) {
-                    TextButton(onClick = { context.openPhoneSettings() }) { Text("Open phone settings") }
+                    CardTextButton("Open phone settings") { context.openPhoneSettings() }
                 }
             }
             if (!notificationsAllowed) {
@@ -227,7 +227,7 @@ fun HomeScreen(
                         title = "Allow notifications",
                         body = "Only to tell you when detection pauses. Your actions work without them.",
                     ) {
-                        TextButton(onClick = { context.openNotificationSettings() }) { Text("Open settings") }
+                        CardTextButton("Open settings") { context.openNotificationSettings() }
                     }
                 }
             }
@@ -242,8 +242,8 @@ fun HomeScreen(
                         @SuppressLint("BatteryLife")
                         val request = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
                             Uri.parse("package:${context.packageName}"))
-                        TextButton(onClick = { context.openSafely(request) }) { Text("Allow") }
-                        TextButton(onClick = { context.openAppInfo() }) { Text("App info") }
+                        CardTextButton("Allow") { context.openSafely(request) }
+                        CardTextButton("App info") { context.openAppInfo() }
                     }
                 }
             }
