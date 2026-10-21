@@ -70,14 +70,14 @@ The app follows Material 3 with dynamic colour and a System, Light, or Dark them
 
 # Roadmap
 
-Planned from feedback on the [launch post](https://www.reddit.com/r/Oppo/comments/1xaze1m/i_built_an_app_to_remap_the_oppo_find_x9s_snap_key/). Each item ships once it has been tested on a Find X9.
+Delivered in v1.0.14 from feedback on the [launch post](https://www.reddit.com/r/Oppo/comments/1xaze1m/i_built_an_app_to_remap_the_oppo_find_x9s_snap_key/). The release was tested manually on a Find X9. Behaviour on other phones and firmware may differ.
 
-- [ ] **Silent mode that works out of the box.** Ring → Vibrate → Silent asks for Do Not Disturb access when you assign it, instead of quietly skipping Silent.
-- [ ] **Choose your ringer modes.** Pick which modes the ringer action cycles through and in what order, such as Ring ↔ Vibrate only.
-- [ ] **Grant Do Not Disturb access with Shizuku.** For phones where Settings won't let you allow it.
-- [ ] **More precise key detection with Shizuku.** Read the key's real press and release while Shizuku runs, so a long hold can never count as a double press.
-- [ ] **Adjustable timing.** Set the double-press window and how long counts as a hold.
-- [ ] **Mute media toggle.** Mute and unmute media with one press.
+- [x] **Oppo's native Silent mode with Shizuku.** Ringer presets use native Silent on Android 15 or later while Shizuku is running. Without Shizuku, Silent needs Do Not Disturb access and may turn on Do Not Disturb.
+- [x] **Choose your ringer modes.** Create and edit presets with two or three modes in your chosen order. Editing a preset updates the gestures that use it.
+- [x] **Grant Do Not Disturb access with Shizuku.** Request access from the app when your phone's Settings switch is unavailable.
+- [x] **More precise key detection with Shizuku.** Teach the key again to use explicit press and release events instead of inferred log edges. Log detection remains the fallback.
+- [x] **Adjustable timing.** Set the double-press window from 200 to 600 ms and the hold threshold from 300 to 1200 ms.
+- [x] **Mute media toggle.** Mute and unmute media with one press.
 
 Have an idea? [Request a feature](https://github.com/heykay-47/SnapKeyMap/issues/new?template=feature_request.yml).
 

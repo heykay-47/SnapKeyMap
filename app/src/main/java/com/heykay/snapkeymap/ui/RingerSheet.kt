@@ -55,7 +55,6 @@ import com.heykay.snapkeymap.SnapAction
 
 private class Editing(val initial: List<RingerMode>?)
 
-/** Picks, creates and edits ringer presets. The sheet swaps between the list and the editor. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun RingerSheet(
@@ -83,7 +82,6 @@ internal fun RingerSheet(
                 PresetEditor(
                     initial = target.initial,
                     presets = presets,
-                    // Assigned cycles are restored as presets on load, so deleting one would only hide it until restart.
                     canDelete = target.initial != null && presets.size > 1 && target.initial !in assigned,
                     onCancel = { editing = null },
                     onSave = { modes ->
@@ -219,7 +217,6 @@ private fun SheetTitle(title: String, subtitle: String) {
     }
 }
 
-/** The cycle as icon steps, so the order reads at a glance without wrapping text arrows. */
 @Composable
 private fun ModeSequence(
     modes: List<RingerMode>,
@@ -233,7 +230,6 @@ private fun ModeSequence(
                     Icons.AutoMirrored.Rounded.ArrowForward,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    // Centres the arrow on the 40 dp badge rather than on the badge and its label.
                     modifier = Modifier.padding(top = 12.dp).size(16.dp),
                 )
             }

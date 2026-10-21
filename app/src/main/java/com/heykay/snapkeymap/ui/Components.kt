@@ -155,13 +155,13 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** A tinted card with an icon, a title and some text, for tips and status messages. */
 /** A text button whose label lines up with the text above it. Material pads text button labels by 12 dp. */
 @Composable
 fun CardTextButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     TextButton(onClick = onClick, modifier = modifier.offset(x = (-12).dp)) { Text(text) }
 }
 
+/** A tinted card with an icon, a title and some text, for tips and status messages. */
 @Composable
 fun NoteCard(
     icon: ImageVector,

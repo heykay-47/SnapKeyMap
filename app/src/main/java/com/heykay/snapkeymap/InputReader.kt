@@ -19,7 +19,6 @@ class InputReader(
     @Synchronized
     fun start() {
         if (session?.active == true || !canUseShizuku()) return
-        // A reconnect can beat the ended session's queued OFF callback.
         if (session != null) onLive(false)
         val next = Session()
         session = next
@@ -65,7 +64,6 @@ class InputReader(
                     }
                 }
             } catch (_: Exception) {
-                // Missing device access and dead binders both fall back to logs.
             } finally {
                 stream.close()
                 val endedOnItsOwn = active

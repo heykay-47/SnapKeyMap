@@ -64,7 +64,6 @@ fun AboutScreen(onDone: () -> Unit) {
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Bundled GitHub avatar: shows offline, with no network permission or image dependency.
                         Image(
                             painter = painterResource(R.drawable.author_avatar),
                             contentDescription = stringResource(R.string.author_photo_description),

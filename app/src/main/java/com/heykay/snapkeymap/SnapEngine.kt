@@ -287,7 +287,6 @@ object SnapEngine {
             val releasedAfterSwitch = !precise && inputPressed
             logGeneration++
             resetGestures()
-            // Raw input tells us whether the next Oppo log edge will be a release.
             oplusEdges.reset(pressed = releasedAfterSwitch)
             inputPressed = releasedAfterSwitch
             ignoreInputUntilUp = alreadyHandled
@@ -296,9 +295,7 @@ object SnapEngine {
         updateListeningSince()
     }
 
-    // InputReader dispatches events on main and rejects callbacks from old sessions.
     private fun onInputEvent(event: InputKeyEvent, time: Long) {
-        // A learning edge queued before Finish/Cancel must not become a mapped action.
         if (time <= inputLearningBoundary) return
         learning?.let { list ->
             if (event.down) synchronized(list) { list += Observation(time, KeyLearning.inputKey(event.key.code)) }
