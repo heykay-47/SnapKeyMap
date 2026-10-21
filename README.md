@@ -44,8 +44,12 @@
   <img width="32%" alt="Action picker for the Press gesture, with Phone and Screen and navigation actions" src="docs/screenshots/snapkeymap_ss3.jpg" />
 </p>
 <p align="center">
-  <img width="32%" alt="Help screen with Getting started, Troubleshooting, and Is it safe sections" src="docs/screenshots/snapkeymap_ss4.jpg" />
-  <img width="32%" alt="About and Credits screen" src="docs/screenshots/snapkeymap_ss5.jpg" />
+  <img width="32%" alt="Action picker for the Double press gesture, with Screen and navigation and Music and video actions" src="docs/screenshots/snapkeymap_ss4.jpg" />
+  <img width="32%" alt="Action picker with Open actions and More actions such as Call a contact, Open a link, and App shortcut" src="docs/screenshots/snapkeymap_ss5.jpg" />
+  <img width="32%" alt="Action picker listing installed apps to open" src="docs/screenshots/snapkeymap_ss6.jpg" />
+</p>
+<p align="center">
+  <img width="32%" alt="Help screen with Getting started, Troubleshooting, and Is it safe sections" src="docs/screenshots/snapkeymap_ss7.jpg" />
 </p>
 
 # Features
