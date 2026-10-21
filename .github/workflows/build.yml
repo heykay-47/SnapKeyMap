@@ -100,7 +100,6 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     env:
-      GRADLE_USER_HOME: ${{ runner.temp }}/reproducibility-gradle
       RELEASE_CERTIFICATE_SHA256: ba44c0072299525318cab39f3f30725339251bca7a612ab8cc92a95c554531f2
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -136,6 +135,8 @@ jobs:
 
       - name: Rebuild without signing secrets or build caches
         working-directory: rebuild
+        env:
+          GRADLE_USER_HOME: ${{ runner.temp }}/reproducibility-gradle
         run: gradle --no-daemon --no-build-cache --no-configuration-cache assembleRelease
 
       - name: Verify signatures and exact APK bytes

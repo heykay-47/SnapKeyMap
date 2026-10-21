@@ -15,7 +15,7 @@ android {
         applicationId = "com.heykay.snapkeymap"
         minSdk = 29
         targetSdk = 36
-        // F-Droid reads both as literals from this file. The check below keeps them in step.
+        // F-Droid reads both as literals from this file.
         versionCode = 10015
         versionName = "1.0.15"
     }
