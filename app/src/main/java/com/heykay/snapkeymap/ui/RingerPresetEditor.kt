@@ -1,6 +1,8 @@
 package com.heykay.snapkeymap.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -13,6 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.heykay.snapkeymap.RingerMode
 import com.heykay.snapkeymap.SnapAction
 
@@ -22,6 +25,7 @@ internal fun RingerPresetEditor(
     presets: List<List<RingerMode>>,
     onDismiss: () -> Unit,
     onSave: (List<RingerMode>) -> Unit,
+    canDelete: Boolean,
     onDelete: () -> Unit,
 ) {
     var names by rememberSaveable { mutableStateOf(initial?.map { it.name }.orEmpty()) }
@@ -34,22 +38,19 @@ internal fun RingerPresetEditor(
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text("Tap modes in the order you want. Tap again to remove one.")
-                RingerMode.entries.forEach { mode ->
-                    val position = modes.indexOf(mode)
-                    FilterChip(
-                        selected = position >= 0,
-                        onClick = { names = if (position >= 0) names - mode.name else names + mode.name },
-                        label = { Text(if (position >= 0) "${position + 1}. ${mode.label}" else mode.label) },
-                    )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    RingerMode.entries.forEach { mode ->
+                        val position = modes.indexOf(mode)
+                        FilterChip(
+                            selected = position >= 0,
+                            onClick = { names = if (position >= 0) names - mode.name else names + mode.name },
+                            label = { Text(if (position >= 0) "${position + 1}. ${mode.label}" else mode.label) },
+                        )
+                    }
                 }
-                Text(when (modes.size) {
-                    0 -> "Choose at least two modes"
-                    1 -> modes.single().label
-                    else -> SnapAction.Ringer(modes).label
-                })
-                if (modes.size == 1) Text("Choose at least two modes")
+                Text(if (modes.size < 2) "Choose at least two modes" else SnapAction.Ringer(modes).label)
                 if (duplicate) Text("This preset already exists.")
-                if (initial != null && presets.size > 1) {
+                if (initial != null && canDelete) {
                     TextButton(onClick = onDelete) { Text("Delete") }
                 }
             }

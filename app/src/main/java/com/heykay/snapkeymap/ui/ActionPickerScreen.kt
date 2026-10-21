@@ -335,6 +335,8 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
             initial = editingPreset,
             presets = config.ringerPresets,
             onDismiss = { showRingerEditor = false },
+            // Assigned cycles are restored as presets on load, so deleting one would only hide it until restart.
+            canDelete = config.ringerPresets.size > 1 && config.actions.values.none { it is SnapAction.Ringer && it.modes == editingPreset },
             onSave = { modes ->
                 val old = editingPreset
                 SnapEngine.store.update {
