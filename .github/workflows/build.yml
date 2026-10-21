@@ -28,7 +28,7 @@ jobs:
           gradle-version: "8.14.3"
 
       - name: Install pinned Build Tools
-        run: sdkmanager "build-tools;35.0.0"
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"'
 
       - name: Set up signing key
         if: github.event_name != 'pull_request'
@@ -127,7 +127,7 @@ jobs:
           mkdir -p verification
           git -C rebuild rev-parse HEAD > verification/source-commit.txt
           sed -n '/^ *versionName = /p; /^ *versionCode = /p; /^ *buildToolsVersion = /p' rebuild/app/build.gradle.kts > verification/build-versions.txt
-          sdkmanager "build-tools;35.0.0"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"
           python3 -m venv "$RUNNER_TEMP/reproducibility-tools"
           "$RUNNER_TEMP/reproducibility-tools/bin/pip" install fdroidserver==2.4.5 apksigcopier==1.1.1
           "$RUNNER_TEMP/reproducibility-tools/bin/python" -c 'from fdroidserver.common import remove_signing_keys; remove_signing_keys("rebuild")'
