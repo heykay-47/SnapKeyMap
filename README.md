@@ -127,7 +127,7 @@ ColorOS does not pass the Snap Key to apps. SnapKey Map detects it from the syst
 1. Install and start [Shizuku](https://shizuku.rikka.app/guide/setup/) with wireless debugging (Android 11+).
 2. In the wizard's log-access step, tap **Grant with Shizuku** and allow the permission request. The button is enabled while Shizuku is running.
 
-Keep Shizuku running. The app then reads logs through Shizuku and Android's device-logs prompt never appears. Shizuku may need starting again after a phone restart.
+Keep Shizuku running. The app then reads logs through Shizuku and Android's device-logs prompt never appears. Shizuku may need starting again after a phone restart. If Shizuku stops, the app pauses until you allow Android's one-time device-log prompt or start Shizuku again. True Silent in ringer presets also needs Shizuku.
 
 If ColorOS blocks the grant, see [ADB or Shizuku refuses to grant log access](#adb-or-shizuku-refuses-to-grant-log-access). You can also go back and choose Computer (ADB).
 
