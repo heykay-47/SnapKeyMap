@@ -75,7 +75,7 @@ sealed interface SnapAction {
             is OpenLink -> "Open $url"
             is CallContact -> "Call $name"
             is Device -> action.label
-            is Ringer -> modes.joinToString(if (modes.size == 2) " ↔ " else " → ") { it.label }
+            is Ringer -> modes.joinToString(" → ") { it.label }
         }
 
     fun toJson(): String {

@@ -51,7 +51,7 @@ class SnapActionTest {
 
     @Test
     fun labelsUseTheChosenModes() {
-        assertEquals("Ring ↔ Vibrate", SnapAction.Ringer(listOf(RingerMode.RING, RingerMode.VIBRATE)).label)
+        assertEquals("Ring → Vibrate", SnapAction.Ringer(listOf(RingerMode.RING, RingerMode.VIBRATE)).label)
         assertEquals("Ring → Silent → Vibrate", SnapAction.Ringer(
             listOf(RingerMode.RING, RingerMode.SILENT, RingerMode.VIBRATE),
         ).label)

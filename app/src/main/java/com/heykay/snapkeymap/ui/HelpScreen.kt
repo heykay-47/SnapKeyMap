@@ -12,8 +12,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,6 +39,14 @@ fun HelpScreen(onDone: () -> Unit, onRunSetup: () -> Unit) {
                 .verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            NoteCard(
+                icon = Icons.Rounded.RestartAlt,
+                title = "Run setup again",
+                body = "Go through the setup wizard again, for example after reinstalling Shizuku or teaching a new key. Your mappings stay.",
+                container = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Button(onClick = onRunSetup) { Text("Run setup") }
+            }
             HelpSection(
                 icon = Icons.Rounded.Settings,
                 title = "Getting started",
@@ -51,7 +61,6 @@ fun HelpScreen(onDone: () -> Unit, onRunSetup: () -> Unit) {
                     "6. Set Oppo's Snap Key action to None. Teach the key: press three times, then hold once.\n\n" +
                     "7. Choose Press, Double press and Press & hold actions, then tap Finish. Test them and check Last:.",
             )
-            TextButton(onClick = onRunSetup) { Text("Run setup again") }
             HelpSection(
                 icon = Icons.AutoMirrored.Rounded.HelpOutline,
                 title = "Troubleshooting",
@@ -80,7 +89,9 @@ fun HelpScreen(onDone: () -> Unit, onRunSetup: () -> Unit) {
                     "If you allow SnapKey Map in Shizuku, the app also uses Shizuku to run logcat as the " +
                     "shell user. Shizuku must be running for this. Lines are still checked in memory " +
                     "and discarded, not saved as a log, with the teaching exception above. " +
-                    "Shizuku is not used to run mapped actions.\n\n" +
+                    "Through Shizuku the app also reads key input events to detect the Snap Key precisely, " +
+                    "and switches the ringer mode so Silent doesn't turn on Do Not Disturb. " +
+                    "Other mapped actions don't use Shizuku.\n\n" +
                     "Permissions: read device logs; vibrate; show notifications; access Do Not Disturb controls; " +
                     "ask to ignore battery optimisation; ask Shizuku for the one-time log grant and shell log reading.\n\n" +
                     "The code is open source. Provided as is, without warranty. READ_LOGS granted over adb is " +

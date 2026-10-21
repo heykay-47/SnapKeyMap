@@ -12,21 +12,15 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Bolt
@@ -38,9 +32,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -55,7 +47,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -96,8 +87,6 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
     var showShortcuts by rememberSaveable { mutableStateOf(false) }
     var showRingerDialog by rememberSaveable { mutableStateOf(false) }
     var showDndDialog by rememberSaveable { mutableStateOf(false) }
-    var showRingerEditor by remember { mutableStateOf(false) }
-    var editingPreset by remember { mutableStateOf<List<RingerMode>?>(null) }
 
     val apps by produceState<List<AppEntry>?>(null) {
         value = withContext(Dispatchers.IO) {
@@ -300,72 +289,24 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
             },
         )
     }
-    if (showRingerDialog && !showRingerEditor) {
-        AlertDialog(
-            onDismissRequest = { showRingerDialog = false },
-            title = { Text("Ringer mode") },
-            text = {
-                Column(
-                    Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    config.ringerPresets.forEach { modes ->
-                        val action = SnapAction.Ringer(modes)
-                        val selected = current == action
-                        val colors = MaterialTheme.colorScheme
-                        val shape = RoundedCornerShape(16.dp)
-                        ListItem(
-                            modifier = Modifier
-                                .clip(shape)
-                                .border(1.dp, if (selected) colors.primary else colors.outline, shape)
-                                .clickable {
-                                    showRingerDialog = false
-                                    choose(action)
-                                },
-                            colors = ListItemDefaults.colors(
-                                containerColor = if (selected) colors.secondaryContainer else colors.surfaceContainerHighest,
-                            ),
-                            leadingContent = { VectorIcon(actionIcon(action)) },
-                            headlineContent = { Text(action.label) },
-                            supportingContent = if (selected) { { Text("Selected") } } else null,
-                            trailingContent = {
-                                IconButton(onClick = {
-                                    editingPreset = modes
-                                    showRingerEditor = true
-                                }) { Icon(Icons.Rounded.Edit, contentDescription = "Edit ${action.label}") }
-                            },
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    editingPreset = null
-                    showRingerEditor = true
-                }) { Text("New preset") }
-            },
-            dismissButton = { TextButton(onClick = { showRingerDialog = false }) { Text("Cancel") } },
-        )
-    }
-    if (showRingerEditor) {
-        RingerPresetEditor(
-            initial = editingPreset,
+    if (showRingerDialog) {
+        RingerSheet(
             presets = config.ringerPresets,
-            onDismiss = { showRingerEditor = false },
-            // Assigned cycles are restored as presets on load, so deleting one would only hide it until restart.
-            canDelete = config.ringerPresets.size > 1 && config.actions.values.none { it is SnapAction.Ringer && it.modes == editingPreset },
-            onSave = { modes ->
-                val old = editingPreset
+            selected = (current as? SnapAction.Ringer)?.modes,
+            assigned = config.actions.values.filterIsInstance<SnapAction.Ringer>().map { it.modes }.toSet(),
+            onPick = { modes ->
+                showRingerDialog = false
+                choose(SnapAction.Ringer(modes))
+            },
+            onSave = { old, modes ->
                 SnapEngine.store.update {
-                    if (old == null) it.copy(ringerPresets = it.ringerPresets + listOf(modes))
-                    else it.editRingerPreset(old, modes)
+                    if (old == null) it.copy(ringerPresets = it.ringerPresets + listOf(modes)) else it.editRingerPreset(old, modes)
                 }
-                showRingerEditor = false
             },
-            onDelete = {
-                SnapEngine.store.update { it.copy(ringerPresets = it.ringerPresets.filterNot { modes -> modes == editingPreset }) }
-                showRingerEditor = false
+            onDelete = { modes ->
+                SnapEngine.store.update { it.copy(ringerPresets = it.ringerPresets - listOf(modes).toSet()) }
             },
+            onDismiss = { showRingerDialog = false },
         )
     }
     if (showDndDialog) DndAccessDialog(onDone, forSilent = current is SnapAction.Ringer)
