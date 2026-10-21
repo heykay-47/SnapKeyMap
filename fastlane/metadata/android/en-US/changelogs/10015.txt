@@ -1,0 +1,1 @@
+Prepare for F-Droid submission with stable version codes and store metadata. Release publishing now requires an independent unsigned rebuild to match the signed APK after signature copying.

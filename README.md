@@ -73,7 +73,7 @@ The app follows Material 3 with dynamic colour and a System, Light, or Dark them
 
 ### Next: F-Droid
 
-F-Droid will ship the same APK as GitHub Releases, signed with the same key. You can switch between the two without uninstalling, and you keep the log permission.
+The F-Droid submission will request the same developer-signed APK as GitHub Releases. If accepted, you can switch between the two without uninstalling and keep the log permission.
 
 - [x] **Free software license.** SnapKey Map is licensed under GPL-3.0-or-later.
 - [x] **Store listing in the repository.** Title, descriptions, icon, and screenshots live in `fastlane/metadata`, where F-Droid reads them.
@@ -235,6 +235,8 @@ Bug reports, fixes, and device notes from other ColorOS versions are welcome. Re
 # License
 
 SnapKey Map is free software under the [GNU General Public License v3.0 or later](LICENSE).
+
+The third-party GSAP files in [`docs/vendor/gsap`](docs/vendor/gsap/README.md) retain their own license. They are used only by the website and are not part of the Android app.
 
 # Support
 

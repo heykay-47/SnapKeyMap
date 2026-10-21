@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
@@ -25,8 +27,9 @@ jobs:
         with:
           gradle-version: "8.14.3"
 
-      # The signing key lives in repository secrets, so push builds are signed the same way and
-      # new versions install over old ones without losing the one-time log permission.
+      - name: Install pinned Build Tools
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"'
+
       - name: Set up signing key
         if: github.event_name != 'pull_request'
         env:
@@ -35,11 +38,13 @@ jobs:
           if [ -n "$SIGNING_KEYSTORE_BASE64" ]; then
             echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.p12"
             echo "SIGNING_KEYSTORE_PATH=$RUNNER_TEMP/release.p12" >> "$GITHUB_ENV"
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "::error::Release tags require the signing key secret."
+            exit 1
           else
             echo "::warning::No signing key secret. The APK is signed with a throwaway debug key."
           fi
 
-      # Only push builds get the passwords; pull requests build with the debug key.
       - name: Test and build
         env:
           SIGNING_STORE_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.SIGNING_STORE_PASSWORD || '' }}
@@ -54,8 +59,7 @@ jobs:
       - name: Check APK permissions
         shell: bash
         run: |
-          AAPT2=$(find "$ANDROID_HOME/build-tools" -mindepth 2 -maxdepth 2 -type f -name aapt2 | sort -V | tail -n 1)
-          test -n "$AAPT2"
+          AAPT2="$ANDROID_HOME/build-tools/35.0.0/aapt2"
           "$AAPT2" dump permissions app/build/outputs/apk/release/app-release.apk > "$RUNNER_TEMP/apk-permissions.txt"
           sed -n "s/^uses-permission[^:]*: name='\([^']*\)'.*/\1/p" "$RUNNER_TEMP/apk-permissions.txt" | LC_ALL=C sort -u > "$RUNNER_TEMP/actual-permissions.txt"
           if ! diff -u app/expected-permissions.txt "$RUNNER_TEMP/actual-permissions.txt"; then
@@ -92,11 +96,81 @@ jobs:
           name: SnapKeyMap
           path: SnapKeyMap-*.apk
 
-  # Pushing a tag like v1.0.0 publishes the APK on the repository's Releases page,
-  # which is the easiest place to download it from on the phone.
+  reproducibility:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_CERTIFICATE_SHA256: ba44c0072299525318cab39f3f30725339251bca7a612ab8cc92a95c554531f2
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: rebuild
+
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+        with:
+          gradle-version: "8.14.3"
+          cache-disabled: true
+
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: SnapKeyMap
+          path: original
+
+      - name: Prepare independent unsigned build
+        run: |
+          mkdir -p verification
+          git -C rebuild rev-parse HEAD > verification/source-commit.txt
+          sed -n '/^ *versionName = /p; /^ *versionCode = /p; /^ *buildToolsVersion = /p' rebuild/app/build.gradle.kts > verification/build-versions.txt
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"
+          python3 -m venv "$RUNNER_TEMP/reproducibility-tools"
+          "$RUNNER_TEMP/reproducibility-tools/bin/pip" install fdroidserver==2.4.5 apksigcopier==1.1.1
+          "$RUNNER_TEMP/reproducibility-tools/bin/python" -c 'from fdroidserver.common import remove_signing_keys; remove_signing_keys("rebuild")'
+          git -C rebuild diff > verification/signing-removal.patch
+
+      - name: Rebuild without signing secrets or build caches
+        working-directory: rebuild
+        env:
+          GRADLE_USER_HOME: ${{ runner.temp }}/reproducibility-gradle
+        run: gradle --no-daemon --no-build-cache --no-configuration-cache assembleRelease
+
+      - name: Verify signatures and exact APK bytes
+        shell: bash
+        run: |
+          VERSION=$(sed -n 's/^ *versionName = "\(.*\)"$/\1/p' rebuild/app/build.gradle.kts)
+          ORIGINAL="original/SnapKeyMap-$VERSION.apk"
+          UNSIGNED="rebuild/app/build/outputs/apk/release/app-release-unsigned.apk"
+          APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          "$RUNNER_TEMP/reproducibility-tools/bin/fdroid" scanner --exit-code "$ORIGINAL" 2>&1 | tee verification/binary-scan.txt
+          sha256sum "$ORIGINAL" "$UNSIGNED" | tee verification/SHA256SUMS
+          "$APKSIGNER" verify --verbose --print-certs "$ORIGINAL" | tee verification/original-signature.txt
+          if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/tags/v* ]]; then
+            test -n "$RELEASE_CERTIFICATE_SHA256"
+            CERTIFICATE=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' verification/original-signature.txt)
+            test "${CERTIFICATE,,}" = "${RELEASE_CERTIFICATE_SHA256,,}"
+          fi
+          "$RUNNER_TEMP/reproducibility-tools/bin/apksigcopier" copy "$ORIGINAL" "$UNSIGNED" verification/signature-copied.apk
+          sha256sum verification/signature-copied.apk | tee -a verification/SHA256SUMS
+          "$APKSIGNER" verify --verbose --print-certs verification/signature-copied.apk | tee verification/copied-signature.txt
+          cmp "$ORIGINAL" verification/signature-copied.apk
+
+      - name: Upload reproducibility evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: reproducibility
+          path: |
+            verification/
+            rebuild/app/build/outputs/apk/release/*unsigned.apk
+
   release:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [build, reproducibility]
     runs-on: ubuntu-latest
     permissions:
       contents: write
