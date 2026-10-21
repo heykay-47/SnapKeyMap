@@ -65,10 +65,18 @@ jobs:
 
       - name: Rename APK
         run: |
-          VERSION=$(sed -n 's/^appVersion=//p' gradle.properties)
-          if [[ "$GITHUB_REF" == refs/tags/v* && "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
-            echo "::error::Release tag does not match appVersion=$VERSION"
-            exit 1
+          VERSION=$(sed -n 's/^ *versionName = "\(.*\)"$/\1/p' app/build.gradle.kts)
+          CODE=$(sed -n 's/^ *versionCode = \([0-9]*\)$/\1/p' app/build.gradle.kts)
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            if [[ "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
+              echo "::error::Release tag does not match versionName $VERSION"
+              exit 1
+            fi
+            # F-Droid shows this file as the release notes.
+            if [[ ! -s "fastlane/metadata/android/en-US/changelogs/$CODE.txt" ]]; then
+              echo "::error::Add fastlane/metadata/android/en-US/changelogs/$CODE.txt before tagging"
+              exit 1
+            fi
           fi
           cp app/build/outputs/apk/release/app-release.apk "SnapKeyMap-$VERSION.apk"
 

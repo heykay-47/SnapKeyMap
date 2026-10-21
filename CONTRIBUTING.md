@@ -67,7 +67,7 @@ gradle --no-daemon testReleaseUnitTest assembleRelease
 
 Install JDK 17, Gradle 8.14.3, and Android SDK Platform 36. Set `ANDROID_HOME` to your SDK directory, or set `sdk.dir` in an untracked `local.properties` file.
 
-This repository does not include a Gradle wrapper. Run the installed `gradle` command from the repository root:
+The repository has no `gradlew` script. It keeps only `gradle/wrapper/gradle-wrapper.properties`, which tells F-Droid to build with Gradle 8.14.3. Run the installed `gradle` command from the repository root:
 
 ```shell
 gradle testReleaseUnitTest
@@ -89,14 +89,17 @@ Back up the keystore and passwords outside Git. Without the signing secrets, CI 
 
 To publish a release:
 
-1. Set `appVersion` in [`gradle.properties`](gradle.properties) to the version you want to release.
-2. Commit the release changes and push them to `main`.
-3. Check that the tests and build pass.
-4. Create and push a matching version tag. For example, if `appVersion` is `1.0.8`, run:
+1. In [`app/build.gradle.kts`](app/build.gradle.kts), set `versionName` to the new version and `versionCode` to major × 10000 + minor × 100 + patch. For example, `1.0.15` is `10015`. The build fails if the two disagree.
+2. Write the release notes, at most 500 characters, in `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`. F-Droid shows this file.
+3. Commit the release changes and push them to `main`.
+4. Check that the tests and build pass.
+5. Create and push a matching version tag. For example, for `1.0.15`, run:
 
 ```shell
-git tag v1.0.8
-git push origin v1.0.8
+git tag v1.0.15
+git push origin v1.0.15
 ```
 
-The tag starts another build and publishes the APK on GitHub Releases. The workflow rejects a tag that does not match `appVersion`. The release tag, APK filename, and app version share that version. Android's internal `versionCode` uses the workflow run number so updates can install over earlier CI builds.
+The tag starts another build and publishes the APK on GitHub Releases. The workflow rejects a tag that does not match `versionName` or has no changelog file. The release tag, APK filename, and app version share that version.
+
+F-Droid reads `versionName` and `versionCode` as literals from `app/build.gradle.kts`, and the store listing from [`fastlane/metadata/android/en-US`](fastlane/metadata/android/en-US). Keep both values as plain literals. Releases up to v1.0.14 used the CI run number as `versionCode`, which never went above 67, so the new scheme installs over them.

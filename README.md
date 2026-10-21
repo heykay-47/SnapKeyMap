@@ -34,6 +34,7 @@
 - [Troubleshooting](#troubleshooting)
 - [Privacy and limits](#privacy-and-limits)
 - [Contributing](#contributing)
+- [License](#license)
 - [Support](#support)
 - [Full help and FAQ](https://heykay-47.github.io/SnapKeyMap/help.html)
 
@@ -69,6 +70,28 @@ Assign one action each to **Press**, **Double press**, and **Press & hold**.
 The app follows Material 3 with dynamic colour and a System, Light, or Dark theme. It declares no internet permission.
 
 # Roadmap
+
+### Next: F-Droid
+
+F-Droid will ship the same APK as GitHub Releases, signed with the same key. You can switch between the two without uninstalling, and you keep the log permission.
+
+- [x] **Free software license.** SnapKey Map is licensed under GPL-3.0-or-later.
+- [x] **Store listing in the repository.** Title, descriptions, icon, and screenshots live in `fastlane/metadata`, where F-Droid reads them.
+- [x] **Version codes set in the source.** F-Droid builds the same version code as GitHub, instead of one that depends on the CI run number.
+- [ ] **Reproducible builds.** CI checks that an independent build from source matches the signed release byte for byte. F-Droid needs this before it can publish the developer-signed APK.
+- [ ] **Release v1.0.15 with release notes.** The first release built for F-Droid.
+- [ ] **Submit to F-Droid.** Open a merge request in [fdroiddata](https://gitlab.com/fdroid/fdroiddata) with the build recipe. Review can take days or weeks.
+
+### Later: Google Play
+
+- [ ] **Same signing key on Google Play.** Upload the existing key to Play App Signing before the first upload, so Play updates install over GitHub and F-Droid installs.
+- [ ] **Accessibility disclosure.** Explain what the accessibility service does and ask for consent before the setup step, as Google Play requires for apps that are not accessibility tools.
+- [ ] **Battery step through system settings.** Open Android's battery optimisation list instead of requesting the exemption directly, which Google Play restricts.
+- [ ] **App bundle builds.** CI builds the Android App Bundle that Google Play requires.
+- [ ] **Privacy policy and Data safety.** Publish a privacy policy on the website and declare that the app collects no data.
+- [ ] **Closed test.** New personal developer accounts need 12 testers opted in for 14 days before a production release.
+
+### Delivered in v1.0.14
 
 Delivered in v1.0.14 from feedback on the [launch post](https://www.reddit.com/r/Oppo/comments/1xaze1m/i_built_an_app_to_remap_the_oppo_find_x9s_snap_key/). The release was tested manually on a Find X9. Behaviour on other phones and firmware may differ.
 
@@ -208,6 +231,10 @@ Keep these limits in mind:
 </a>
 
 Bug reports, fixes, and device notes from other ColorOS versions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the code layout, Find X9 device notes, and how to build, sign, and release the app.
+
+# License
+
+SnapKey Map is free software under the [GNU General Public License v3.0 or later](LICENSE).
 
 # Support
 

@@ -1,0 +1,25 @@
+<p>SnapKey Map gives the Oppo Find X9's Snap Key a new job. Assign one action each to <b>Press</b>, <b>Double press</b>, and <b>Press &amp; hold</b>. No root needed.</p>
+
+<p><b>Actions</b></p>
+<ul>
+<li>Phone: flashlight, ringer presets you create and edit (ring, vibrate, silent), Do Not Disturb.</li>
+<li>Screen and navigation: screenshot, lock screen, notifications, quick settings, recent apps, home, back, power menu, split screen.</li>
+<li>Music and video: play or pause, next and previous track, media volume up and down, mute media, volume slider.</li>
+<li>Open: camera, video camera, voice assistant, Wi-Fi, Bluetooth, NFC, and internet panels.</li>
+<li>More: call a contact (opens the dialer), open a link, run an app shortcut, or open any installed app.</li>
+</ul>
+
+<p><b>How it works</b></p>
+<p>ColorOS does not pass the Snap Key to apps. SnapKey Map detects it from the system log, so it needs the READ_LOGS permission once. You grant it with <a href="https://shizuku.rikka.app/">Shizuku</a> on the phone, or with ADB from a computer. A setup wizard walks you through each step and then teaches the app your key.</p>
+<p>With Shizuku running, the app reads the log and raw key events through Shizuku. This gives more precise press and release detection, and lets ringer presets use Oppo's own Silent mode on Android 15 or later.</p>
+<p>The accessibility service runs actions such as screenshot and lock, and opens apps from the background. It cannot read screen content.</p>
+
+<p><b>Privacy</b></p>
+<p>The app has no internet permission, no ads, and no tracking. Log lines are checked in memory and discarded, never saved or uploaded.</p>
+
+<p><b>Requirements</b></p>
+<ul>
+<li>An Oppo Find X9. Users report it also works on the Find X9 Pro, X9 Ultra, X9s, X9s Pro, and OnePlus 15R.</li>
+<li>Android 10 or later.</li>
+<li>Shizuku, or a computer with ADB, for the one-time log permission.</li>
+</ul>
