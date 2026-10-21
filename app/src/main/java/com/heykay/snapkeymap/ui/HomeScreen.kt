@@ -29,6 +29,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -199,6 +200,7 @@ fun HomeScreen(
                     modifier = Modifier.clickable { showTiming = true },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     headlineContent = { Text("Timing") },
+                    leadingContent = { Icon(Icons.Rounded.Timer, contentDescription = null) },
                     supportingContent = { Text("Double press ${config.doublePressWindowMs} ms · Hold ${config.holdMs} ms") },
                     trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
                 )

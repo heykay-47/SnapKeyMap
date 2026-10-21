@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.json.JSONArray
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 enum class GrantMethod { SHIZUKU, ADB }
@@ -14,6 +15,7 @@ enum class SetupPage { METHOD, LOG_ACCESS, ACCESSIBILITY, BATTERY, NOTIFICATIONS
 data class Config(
     val enabled: Boolean = true,
     val actions: Map<Gesture, SnapAction> = mapOf(Gesture.SINGLE to SnapAction.Device(DeviceAction.FLASHLIGHT)),
+    val ringerPresets: List<List<RingerMode>> = DEFAULT_RINGER_PRESETS,
     /** Set when Android hands the Snap Key to apps as a normal key. Then no log access is needed. */
     val keyEvent: LearnedKey? = null,
     val inputKey: InputKey? = null,
@@ -35,6 +37,34 @@ data class Config(
     val canDetectHold get() = keyEvent != null || inputKey != null || logSignature?.hasExplicitKeyEdges == true || holdRepeats
 
     fun action(gesture: Gesture): SnapAction = actions[gesture] ?: SnapAction.NoAction
+}
+
+internal val DEFAULT_RINGER_PRESETS = listOf(RingerMode.entries.toList())
+
+internal fun ringerPresetsToJson(presets: List<List<RingerMode>>): String =
+    JSONArray(presets.map { modes -> JSONArray(modes.map { it.name }) }).toString()
+
+internal fun loadRingerPresets(text: String?, actions: Collection<SnapAction>): List<List<RingerMode>> {
+    val array = runCatching { JSONArray(text ?: "[]") }.getOrNull()
+    val presets = (0 until (array?.length() ?: 0)).mapNotNull { index ->
+        runCatching {
+            val modes = array!!.getJSONArray(index)
+            SnapAction.Ringer(List(modes.length()) { RingerMode.valueOf(modes.getString(it)) }).modes
+        }.getOrNull()
+    }.distinct().ifEmpty { DEFAULT_RINGER_PRESETS }
+    return (presets + actions.filterIsInstance<SnapAction.Ringer>().map { it.modes }).distinct()
+}
+
+internal fun Config.editRingerPreset(oldModes: List<RingerMode>, newModes: List<RingerMode>): Config {
+    val replacement = SnapAction.Ringer(newModes)
+    require(newModes == oldModes || newModes !in ringerPresets)
+    require(oldModes in ringerPresets)
+    return copy(
+        ringerPresets = ringerPresets.map { if (it == oldModes) newModes else it },
+        actions = actions.mapValues { (_, action) ->
+            if (action == SnapAction.Ringer(oldModes)) replacement else action
+        },
+    )
 }
 
 class ConfigStore(private val context: Context) {
@@ -64,6 +94,7 @@ class ConfigStore(private val context: Context) {
         val config = Config(
             enabled = prefs.getBoolean("enabled", true),
             actions = actions,
+            ringerPresets = loadRingerPresets(prefs.getString("ringer_presets", null), actions.values),
             keyEvent = if (keyCode >= 0) LearnedKey(keyCode, prefs.getInt("scan_code", 0)) else null,
             inputKey = prefs.getString("input_code", null)?.let(::InputKey),
             logSignature = if (tag != null && message != null) {
@@ -99,6 +130,7 @@ class ConfigStore(private val context: Context) {
             putString("grant_method", config.grantMethod?.name)
             putStringSet("setup_skipped", config.setupSkipped.map { it.name }.toSet())
             Gesture.entries.forEach { putString("action_${it.name}", config.action(it).toJson()) }
+            putString("ringer_presets", ringerPresetsToJson(config.ringerPresets))
             putInt("key_code", config.keyEvent?.keyCode ?: -1)
             putInt("scan_code", config.keyEvent?.scanCode ?: 0)
             putString("input_code", config.inputKey?.code)
