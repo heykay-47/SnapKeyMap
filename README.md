@@ -59,7 +59,7 @@ Assign one action each to **Press**, **Double press**, and **Press & hold**.
 
 | Category | Actions |
 | --- | --- |
-| Phone | Flashlight, configurable ringer cycles (ring, vibrate, silent), Do Not Disturb |
+| Phone | Flashlight, ringer presets you can create and edit (ring, vibrate, silent), Do Not Disturb |
 | Screen & navigation | Screenshot, lock screen, notifications, quick settings, recent apps, home, back, power menu, split screen |
 | Music & video | Play / pause, next and previous track, media volume up and down, mute / unmute media, volume slider |
 | Open | Camera, video camera, voice assistant, Wi-Fi panel, Bluetooth settings, NFC panel, internet and mobile data panel |
@@ -188,7 +188,7 @@ When you report a detection problem, include your app version, ColorOS version, 
 
 SnapKey Map reads the system log on the phone to detect the Snap Key. The log permission covers more than key events. Lines are checked in memory and discarded, never saved or uploaded. Teaching keeps observations in memory and saves a learned log signature and, when available, an input key code. The app accepts a key log line only from the app that wrote it while you taught the key, which on the Find X9 is the system, so other apps can't fake a press.
 
-With Shizuku allowed, the app runs `logcat` and also reads raw key input events using `getevent` as the shell user through Shizuku. Input events are filtered in memory, never stored or uploaded. A learned input key uses explicit press and release events while the input stream is live; otherwise detection falls back to the system log. Shizuku is not used to run mapped actions. You can also use it once to allow Do Not Disturb access when assigning Silent or Do Not Disturb. Apps and websites you open through an action have their own privacy policies.
+With Shizuku allowed, the app runs `logcat` and also reads raw key input events using `getevent` as the shell user through Shizuku. Input events are filtered in memory, never stored or uploaded. A learned input key uses explicit press and release events while the input stream is live; otherwise detection falls back to the system log. Ringer actions also use Shizuku to switch modes with `cmd audio set-ringer-mode`, including true Silent on Android 15 or later. You can also use it to allow Do Not Disturb access. Other mapped actions do not use Shizuku. Apps and websites you open through an action have their own privacy policies.
 
 Keep these limits in mind:
 
@@ -197,7 +197,7 @@ Keep these limits in mind:
 - Screen-off detection and background reliability depend on ColorOS and are not guaranteed.
 - The shortcut picker lists apps that provide `ACTION_CREATE_SHORTCUT`. It cannot list every pinned shortcut. A deep link may work instead.
 - Calls are not placed directly, because the app has no calling permission. Call a contact opens the dialer, and direct-dial shortcuts show a message instead.
-- Silent mode and Do Not Disturb need notification policy access. The app asks when you assign them, with Settings and, when available, Shizuku options. Without access, a ringer cycle skips Silent, stays within your chosen modes, and shows a reminder. Some phones also turn on Do Not Disturb when entering Silent.
+- With Shizuku running and allowed on Android 15 or later, ringer presets use true Silent without turning on Do Not Disturb. Otherwise, or if the shell command fails, Silent uses the public Android API, needs Do Not Disturb access, and may turn on Do Not Disturb. Without that access, the fallback skips Silent and shows a reminder. The Do Not Disturb toggle always needs notification policy access; the app asks when you assign it, or when assigning Silent without Shizuku.
 - Mappings and the learned key are not included in Android backups.
 - The app cannot bypass the lock screen or control every function in every app.
 

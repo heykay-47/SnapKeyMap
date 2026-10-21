@@ -16,12 +16,21 @@ import android.provider.MediaStore
 import android.provider.Settings
 import android.view.KeyEvent
 import android.widget.Toast
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** Runs a [SnapAction]. Called on the main thread. */
 object ActionRunner {
     private var torchCameraId: String? = null
     private var torchOn = false
     private var torchWatched = false
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val ringerMutex = Mutex()
 
     fun run(context: Context, action: SnapAction) {
         try {
@@ -149,23 +158,55 @@ object ActionRunner {
     }
 
     private fun cycleRinger(context: Context, action: SnapAction.Ringer) {
+        val app = context.applicationContext
+        scope.launch {
+            ringerMutex.withLock {
+                try {
+                    changeRinger(app, action)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    toast(app, "Couldn't change ringer mode: ${e.message ?: e.javaClass.simpleName}")
+                }
+            }
+        }
+    }
+
+    private suspend fun changeRinger(context: Context, action: SnapAction.Ringer) {
         val audio = context.getSystemService(AudioManager::class.java)
-        val canSilence = context.getSystemService(NotificationManager::class.java).isNotificationPolicyAccessGranted
         val current = when (audio.ringerMode) {
             AudioManager.RINGER_MODE_NORMAL -> RingerMode.RING
             AudioManager.RINGER_MODE_VIBRATE -> RingerMode.VIBRATE
             AudioManager.RINGER_MODE_SILENT -> RingerMode.SILENT
             else -> null
         }
+        if (canUseShizuku()) {
+            val next = action.nextMode(current)
+            val result = try {
+                setRingerWithShizuku(context, next.audioMode)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+            if (result?.exitCode == 0) {
+                toast(context, next.label)
+                return
+            }
+        }
+        val canSilence = context.getSystemService(NotificationManager::class.java).isNotificationPolicyAccessGranted
         val skippedSilent = action.nextMode(current) == RingerMode.SILENT && !canSilence
         val next = action.nextMode(current, allowSilent = canSilence)
-        audio.ringerMode = when (next) {
+        audio.ringerMode = next.audioMode
+        toast(context, if (skippedSilent) "Allow Do Not Disturb access to use Silent" else next.label)
+    }
+
+    private val RingerMode.audioMode: Int
+        get() = when (this) {
             RingerMode.RING -> AudioManager.RINGER_MODE_NORMAL
             RingerMode.VIBRATE -> AudioManager.RINGER_MODE_VIBRATE
             RingerMode.SILENT -> AudioManager.RINGER_MODE_SILENT
         }
-        toast(context, if (skippedSilent) "Allow Do Not Disturb access to use Silent" else next.label)
-    }
 
     private fun toggleDoNotDisturb(context: Context) {
         val notifications = context.getSystemService(NotificationManager::class.java)

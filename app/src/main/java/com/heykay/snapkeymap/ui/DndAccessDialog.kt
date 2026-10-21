@@ -27,7 +27,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-internal fun DndAccessDialog(onDone: () -> Unit) {
+internal fun DndAccessDialog(onDone: () -> Unit, forSilent: Boolean = false) {
     val context = LocalContext.current
     val notifications = context.getSystemService(NotificationManager::class.java)
     val scope = rememberCoroutineScope()
@@ -54,8 +54,13 @@ internal fun DndAccessDialog(onDone: () -> Unit) {
                 Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("Your action is saved. Silent and Do Not Disturb need Do Not Disturb access. " +
-                    "Allow it in Settings, or use Shizuku if your phone blocks the switch.")
+                Text(if (forSilent) {
+                    "Your action is saved. Silent works best with Shizuku running on Android 15 or later. " +
+                        "Otherwise it needs Do Not Disturb access and may turn on Do Not Disturb."
+                } else {
+                    "Your action is saved. Do Not Disturb needs Do Not Disturb access. " +
+                        "Allow it in Settings, or use Shizuku if your phone blocks the switch."
+                })
                 if (granted) {
                     Text("Do Not Disturb access granted.")
                 } else {
