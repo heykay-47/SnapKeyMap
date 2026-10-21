@@ -25,16 +25,16 @@ import kotlinx.coroutines.withTimeoutOrNull
 import rikka.shizuku.Shizuku
 
 class ShizukuLogService : Binder() {
-    @Volatile private var process: Process? = null
+    private val processes = java.util.concurrent.ConcurrentHashMap<Int, Process>()
 
     init {
-        Runtime.getRuntime().addShutdownHook(Thread { process?.destroy() })
+        Runtime.getRuntime().addShutdownHook(Thread { processes.values.forEach { it.destroy() } })
     }
 
     @Synchronized
     override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
         if (code == 16777115) {
-            process?.destroy()
+            processes.values.forEach { it.destroy() }
             exitProcess(0)
         }
         if (code == GRANT_DND_TRANSACTION) {
@@ -55,15 +55,17 @@ class ShizukuLogService : Binder() {
             reply?.writeString(result.output)
             return true
         }
-        if (code != IBinder.FIRST_CALL_TRANSACTION) return super.onTransact(code, data, reply, flags)
+        if (code != LOGCAT && code != INPUT) return super.onTransact(code, data, reply, flags)
         data.enforceInterface(DESCRIPTOR)
-        process?.destroy()
+        processes.remove(code)?.destroy()
         val pipe = ParcelFileDescriptor.createPipe()
         try {
-            val proc = ProcessBuilder("logcat", "-v", "threadtime,uid", "-T", "1")
+            val command = if (code == INPUT) listOf("getevent", "-lt")
+                else listOf("logcat", "-v", "threadtime,uid", "-T", "1")
+            val proc = ProcessBuilder(command)
                 .redirectErrorStream(true).start()
-            process = proc
-            thread(isDaemon = true, name = "snapkey-shell-logcat") {
+            processes[code] = proc
+            thread(isDaemon = true, name = "snapkey-shell-$code") {
                 try {
                     ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use { output ->
                         proc.inputStream.use { it.copyTo(output) }
@@ -73,12 +75,13 @@ class ShizukuLogService : Binder() {
                 } finally {
                     proc.destroy()
                     proc.waitFor()
+                    processes.remove(code, proc)
                 }
             }
             reply?.writeNoException()
             pipe[0].writeToParcel(reply ?: error("Missing reply"), 0)
         } catch (e: Exception) {
-            process?.destroy()
+            processes.remove(code)?.destroy()
             pipe[1].close()
             throw e
         } finally {
@@ -89,7 +92,9 @@ class ShizukuLogService : Binder() {
 
     companion object {
         const val DESCRIPTOR = "com.heykay.snapkeymap.ShizukuLogService"
-        const val GRANT_DND_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION + 1
+        const val LOGCAT = IBinder.FIRST_CALL_TRANSACTION
+        const val INPUT = IBinder.FIRST_CALL_TRANSACTION + 1
+        const val GRANT_DND_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION + 2
     }
 }
 
@@ -144,10 +149,16 @@ internal suspend fun grantDndAccessWithShizuku(context: Context): ShizukuGrantRe
     }
 }
 
-internal class ShizukuLogStream(context: Context) : Closeable {
+internal class ShizukuLogStream(
+    context: Context,
+    private val transaction: Int = ShizukuLogService.LOGCAT,
+) : Closeable {
     private val main = Handler(Looper.getMainLooper())
     private val args = Shizuku.UserServiceArgs(ComponentName(context, ShizukuLogService::class.java))
-        .processNameSuffix("log-reader")
+        // Removing one user service must not kill the other reader.
+        .tag(if (transaction == ShizukuLogService.INPUT) "input-reader" else "log-reader")
+        .processNameSuffix(if (transaction == ShizukuLogService.INPUT) "input-reader" else "log-reader")
+        .version(2)
         .daemon(false)
     private val connected = CountDownLatch(1)
     @Volatile private var closed = false
@@ -186,8 +197,8 @@ internal class ShizukuLogStream(context: Context) : Closeable {
         val reply = Parcel.obtain()
         try {
             data.writeInterfaceToken(ShizukuLogService.DESCRIPTOR)
-            if (!service.transact(IBinder.FIRST_CALL_TRANSACTION, data, reply, 0)) {
-                throw IOException("Shizuku couldn't start logcat")
+            if (!service.transact(transaction, data, reply, 0)) {
+                throw IOException("Shizuku couldn't start reader")
             }
             reply.readException()
             val stream = ParcelFileDescriptor.AutoCloseInputStream(

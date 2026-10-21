@@ -125,6 +125,38 @@ class KeyLearningTest {
     }
 
     @Test
+    fun learnsInputAlongsideLogFallbackOnlyWhenItMatchesTapsAndHold() {
+        val input = KeyLearning.inputKey("BTN_TRIGGER_HAPPY32")
+        val other = KeyLearning.inputKey("KEY_VOLUMEUP")
+        val times = listOf(7000L, 11000L, 15000L, 18200L)
+        val observations = times.map(::snapKeyPress) + times.map { Observation(it, input) } +
+            listOf(1000L, 7000L, 11000L, 15000L, 18200L).map { Observation(it, other) }
+
+        val result = KeyLearning.analyze(observations, baseline, taps, hold) as LearnResult.LogLineFound
+        assertEquals(InputKey("BTN_TRIGGER_HAPPY32"), result.inputKey)
+        assertEquals("KEYLOG_OplusKeyEventUtil", result.signature.tag)
+        assertTrue(result.canDetectHold)
+
+        val withoutHold = observations.filterNot { it.key == input && it.timeMs in hold }
+        val fallback = KeyLearning.analyze(withoutHold, baseline, taps, hold) as LearnResult.LogLineFound
+        assertEquals(null, fallback.inputKey)
+    }
+
+    @Test
+    fun inputOnlyOrUnmatchedInputDoesNotReplaceLogLearning() {
+        val input = KeyLearning.inputKey("BTN_TRIGGER_HAPPY32")
+        val times = listOf(7000L, 11000L, 15000L, 18200L)
+        assertEquals(LearnResult.NothingFound, KeyLearning.analyze(
+            times.map { Observation(it, input) }, baseline, taps, hold,
+        ))
+        val result = KeyLearning.analyze(
+            times.map(::snapKeyPress) + listOf(Observation(7000L, input), Observation(18200L, input)),
+            baseline, taps, hold,
+        ) as LearnResult.LogLineFound
+        assertEquals(null, result.inputKey)
+    }
+
+    @Test
     fun knownOplusLineRequiresSystemUidWithOrWithoutALearnedSignature() {
         val tag = "KEYLOG_OplusKeyEventUtil"
         val message = "should not notify undefined keys in restrict listen mode"

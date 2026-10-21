@@ -31,9 +31,9 @@ class OplusKeyEdges(private val onDown: () -> Unit, private val onUp: () -> Unit
         return true
     }
 
-    fun reset() {
+    fun reset(pressed: Boolean = false) {
         lastEdgeMs = null
-        pressed = false
+        this.pressed = pressed
     }
 
     private companion object {
