@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeDown
+import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Block
@@ -112,9 +113,9 @@ fun actionIcon(action: SnapAction): ImageVector = when (action) {
     is SnapAction.OpenShortcut -> Icons.Rounded.Bolt
     is SnapAction.OpenLink -> Icons.Rounded.Link
     is SnapAction.CallContact -> Icons.Rounded.Call
+    is SnapAction.Ringer -> Icons.Rounded.Vibration
     is SnapAction.Device -> when (action.action) {
         DeviceAction.FLASHLIGHT -> Icons.Rounded.FlashlightOn
-        DeviceAction.RINGER_CYCLE -> Icons.Rounded.Vibration
         DeviceAction.DO_NOT_DISTURB -> Icons.Rounded.DoNotDisturbOn
         DeviceAction.SCREENSHOT -> Icons.Rounded.Screenshot
         DeviceAction.LOCK_SCREEN -> Icons.Rounded.Lock
@@ -130,6 +131,7 @@ fun actionIcon(action: SnapAction): ImageVector = when (action) {
         DeviceAction.PREVIOUS_TRACK -> Icons.Rounded.SkipPrevious
         DeviceAction.MEDIA_VOLUME_UP -> Icons.AutoMirrored.Rounded.VolumeUp
         DeviceAction.MEDIA_VOLUME_DOWN -> Icons.AutoMirrored.Rounded.VolumeDown
+        DeviceAction.MEDIA_MUTE -> Icons.AutoMirrored.Rounded.VolumeOff
         DeviceAction.VOLUME_PANEL -> Icons.AutoMirrored.Rounded.VolumeUp
         DeviceAction.CAMERA -> Icons.Rounded.PhotoCamera
         DeviceAction.VIDEO_CAMERA -> Icons.Rounded.Videocam

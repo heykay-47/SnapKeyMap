@@ -59,9 +59,9 @@ Assign one action each to **Press**, **Double press**, and **Press & hold**.
 
 | Category | Actions |
 | --- | --- |
-| Phone | Flashlight, ring → vibrate → silent, Do Not Disturb |
+| Phone | Flashlight, configurable ringer cycles (ring, vibrate, silent), Do Not Disturb |
 | Screen & navigation | Screenshot, lock screen, notifications, quick settings, recent apps, home, back, power menu, split screen |
-| Music & video | Play / pause, next and previous track, media volume up and down, volume slider |
+| Music & video | Play / pause, next and previous track, media volume up and down, mute / unmute media, volume slider |
 | Open | Camera, video camera, voice assistant, Wi-Fi panel, Bluetooth settings, NFC panel, internet and mobile data panel |
 | More | Call a contact (opens the dialer with their number), open a link, run a supported app shortcut |
 | Open an app | Any installed app |
@@ -186,7 +186,7 @@ When you report a detection problem, include your app version, ColorOS version, 
 
 SnapKey Map reads the system log on the phone to detect the Snap Key. The log permission covers more than key events. Lines are checked in memory and discarded, never saved or uploaded. Teaching keeps observations in memory and saves one learned signature. The app accepts a key line only from the app that wrote it while you taught the key, which on the Find X9 is the system, so other apps can't fake a press.
 
-With Shizuku allowed, the app runs `logcat` as the shell user through Shizuku. Shizuku is not used to run mapped actions. Apps and websites you open through an action have their own privacy policies.
+With Shizuku allowed, the app runs `logcat` as the shell user through Shizuku. Shizuku is not used to run mapped actions. You can also use it once to allow Do Not Disturb access when assigning Silent or Do Not Disturb. Apps and websites you open through an action have their own privacy policies.
 
 Keep these limits in mind:
 
@@ -195,7 +195,7 @@ Keep these limits in mind:
 - Screen-off detection and background reliability depend on ColorOS and are not guaranteed.
 - The shortcut picker lists apps that provide `ACTION_CREATE_SHORTCUT`. It cannot list every pinned shortcut. A deep link may work instead.
 - Calls are not placed directly, because the app has no calling permission. Call a contact opens the dialer, and direct-dial shortcuts show a message instead.
-- Silent mode and Do Not Disturb need notification policy access. Without it, the ringer action cycles between ring and vibrate.
+- Silent mode and Do Not Disturb need notification policy access. The app asks when you assign them, with Settings and, when available, Shizuku options. Without access, a ringer cycle skips Silent, stays within your chosen modes, and shows a reminder. Some phones also turn on Do Not Disturb when entering Silent.
 - Mappings and the learned key are not included in Android backups.
 - The app cannot bypass the lock screen or control every function in every app.
 

@@ -1,6 +1,7 @@
 package com.heykay.snapkeymap.ui
 
 import android.app.Activity
+import android.app.NotificationManager
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
@@ -13,13 +14,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Bolt
@@ -55,6 +59,7 @@ import androidx.core.content.IntentCompat
 import androidx.core.graphics.drawable.toBitmap
 import com.heykay.snapkeymap.DeviceAction
 import com.heykay.snapkeymap.Gesture
+import com.heykay.snapkeymap.RingerMode
 import com.heykay.snapkeymap.Section
 import com.heykay.snapkeymap.SnapAction
 import com.heykay.snapkeymap.SnapEngine
@@ -80,6 +85,8 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     var showLinkDialog by rememberSaveable { mutableStateOf(false) }
     var showShortcuts by rememberSaveable { mutableStateOf(false) }
+    var showRingerDialog by rememberSaveable { mutableStateOf(false) }
+    var showDndDialog by rememberSaveable { mutableStateOf(false) }
 
     val apps by produceState<List<AppEntry>?>(null) {
         value = withContext(Dispatchers.IO) {
@@ -95,7 +102,11 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
 
     fun choose(action: SnapAction) {
         SnapEngine.store.update { it.copy(actions = it.actions + (gesture to action)) }
-        onDone()
+        val needsDnd = action is SnapAction.Ringer && RingerMode.SILENT in action.modes ||
+            action == SnapAction.Device(DeviceAction.DO_NOT_DISTURB)
+        if (needsDnd && !context.getSystemService(NotificationManager::class.java).isNotificationPolicyAccessGranted) {
+            showDndDialog = true
+        } else onDone()
     }
 
     val shortcutResult = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -158,8 +169,17 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
             }
             Section.entries.forEach { section ->
                 val actions = DeviceAction.entries.filter { it.section == section && matches(it.label) }
-                if (actions.isNotEmpty()) {
+                val showRinger = section == Section.PHONE && matches("Ringer mode, Ring, Vibrate, Silent")
+                if (actions.isNotEmpty() || showRinger) {
                     item { SectionHeader(section.title, Modifier.padding(horizontal = 16.dp)) }
+                    if (showRinger) item {
+                        PickRow(
+                            icon = { VectorIcon(actionIcon(SnapAction.Ringer(RingerMode.entries.toList()))) },
+                            title = "Ringer mode",
+                            subtitle = (current as? SnapAction.Ringer)?.label ?: "Choose which modes to cycle through",
+                            selected = current is SnapAction.Ringer,
+                        ) { showRingerDialog = true }
+                    }
                     items(actions) { device ->
                         val action = SnapAction.Device(device)
                         PickRow(
@@ -269,7 +289,38 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
             },
         )
     }
+    if (showRingerDialog) {
+        AlertDialog(
+            onDismissRequest = { showRingerDialog = false },
+            title = { Text("Ringer mode") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    ringerPresets.forEach { action ->
+                        PickRow(
+                            icon = { VectorIcon(actionIcon(action)) },
+                            title = action.label,
+                            selected = current == action,
+                        ) {
+                            showRingerDialog = false
+                            choose(action)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { showRingerDialog = false }) { Text("Cancel") } },
+        )
+    }
+    if (showDndDialog) DndAccessDialog(onDone)
 }
+
+private val ringerPresets = listOf(
+    listOf(RingerMode.RING, RingerMode.VIBRATE, RingerMode.SILENT),
+    listOf(RingerMode.RING, RingerMode.VIBRATE),
+    listOf(RingerMode.RING, RingerMode.SILENT),
+    listOf(RingerMode.VIBRATE, RingerMode.SILENT),
+    listOf(RingerMode.RING, RingerMode.SILENT, RingerMode.VIBRATE),
+).map { SnapAction.Ringer(it) }
 
 @Composable
 private fun PickRow(

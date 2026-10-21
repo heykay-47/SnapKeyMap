@@ -17,6 +17,11 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import rikka.shizuku.Shizuku
 
 class ShizukuLogService : Binder() {
@@ -31,6 +36,24 @@ class ShizukuLogService : Binder() {
         if (code == 16777115) {
             process?.destroy()
             exitProcess(0)
+        }
+        if (code == GRANT_DND_TRANSACTION) {
+            data.enforceInterface(DESCRIPTOR)
+            val result = runCatching {
+                val proc = ProcessBuilder("cmd", "notification", "allow_dnd", "com.heykay.snapkeymap")
+                    .redirectErrorStream(true).start()
+                try {
+                    if (!proc.waitFor(10, TimeUnit.SECONDS)) throw IOException("Do Not Disturb grant timed out")
+                    val output = proc.inputStream.bufferedReader().use { it.readText().take(16_384) }
+                    ShizukuGrantResult(proc.exitValue(), output)
+                } finally {
+                    proc.destroy()
+                }
+            }.getOrElse { ShizukuGrantResult(-1, it.message ?: "Couldn't allow Do Not Disturb access") }
+            reply?.writeNoException()
+            reply?.writeInt(result.exitCode)
+            reply?.writeString(result.output)
+            return true
         }
         if (code != IBinder.FIRST_CALL_TRANSACTION) return super.onTransact(code, data, reply, flags)
         data.enforceInterface(DESCRIPTOR)
@@ -66,6 +89,7 @@ class ShizukuLogService : Binder() {
 
     companion object {
         const val DESCRIPTOR = "com.heykay.snapkeymap.ShizukuLogService"
+        const val GRANT_DND_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION + 1
     }
 }
 
@@ -73,6 +97,52 @@ internal fun canUseShizuku(): Boolean = runCatching {
     Shizuku.pingBinder() && !Shizuku.isPreV11() &&
         Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
 }.getOrDefault(false)
+
+internal data class ShizukuGrantResult(val exitCode: Int, val output: String)
+
+internal suspend fun grantDndAccessWithShizuku(context: Context): ShizukuGrantResult = withContext(Dispatchers.Main) {
+    check(canUseShizuku()) { "Shizuku isn't running or SnapKey Map isn't allowed in it" }
+    // A distinct tag, not just a process name, keeps unbinding from stopping the log reader.
+    val args = Shizuku.UserServiceArgs(ComponentName(context, ShizukuLogService::class.java))
+        .tag("dnd-grant")
+        .processNameSuffix("dnd-grant")
+        .daemon(false)
+    val connected = CompletableDeferred<IBinder>()
+    val connection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            connected.complete(service)
+        }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+            connected.completeExceptionally(IOException("Shizuku disconnected"))
+        }
+    }
+    try {
+        Shizuku.bindUserService(args, connection)
+        val service = withTimeoutOrNull(15_000) { connected.await() }
+            ?: throw IOException("Shizuku connection timed out")
+        withContext(Dispatchers.IO) {
+            val data = Parcel.obtain()
+            val reply = Parcel.obtain()
+            try {
+                data.writeInterfaceToken(ShizukuLogService.DESCRIPTOR)
+                if (!service.transact(ShizukuLogService.GRANT_DND_TRANSACTION, data, reply, 0)) {
+                    throw IOException("Shizuku couldn't allow Do Not Disturb access")
+                }
+                reply.readException()
+                ShizukuGrantResult(reply.readInt(), reply.readString().orEmpty())
+            } finally {
+                data.recycle()
+                reply.recycle()
+            }
+        }
+    } finally {
+        withContext(NonCancellable + Dispatchers.Main) {
+            runCatching { Shizuku.unbindUserService(args, connection, true) }
+            runCatching { Shizuku.unbindUserService(args, connection, false) }
+        }
+    }
+}
 
 internal class ShizukuLogStream(context: Context) : Closeable {
     private val main = Handler(Looper.getMainLooper())
