@@ -15,6 +15,8 @@
   <a href="https://github.com/heykay-47/SnapKeyMap/issues/new?template=bug_report.yml"><img alt="Report a bug" src="https://img.shields.io/github/issues/heykay-47/SnapKeyMap/bug?style=for-the-badge&logo=openbugbounty&logoColor=%23fff&label=bugs&labelColor=%23d73a4a&color=%23d73a4a"></a>
   <a href="https://github.com/heykay-47/SnapKeyMap/issues/new?template=feature_request.yml"><img alt="Request a feature" src="https://img.shields.io/github/issues/heykay-47/SnapKeyMap/enhancement?style=for-the-badge&logo=apachespark&logoColor=%23fff&label=feature%20requests&labelColor=%231499F8&color=%231499F8"></a>
   <a href="https://heykay-47.github.io/SnapKeyMap/"><img alt="Website" src="https://img.shields.io/badge/Website-38BCFB?style=for-the-badge&logo=googlechrome&logoColor=%23072C86"></a>
+  <a href="https://github.com/sponsors/heykay-47"><img alt="Sponsor on GitHub" src="https://img.shields.io/badge/Sponsor-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=%23fff&labelColor=%23EA4AAA&color=%23EA4AAA"></a>
+  <a href="https://buymeatea.in/heykay47"><img alt="Buy Me a Tea" src="https://img.shields.io/badge/Buy%20Me%20a%20Tea-C8811E?style=for-the-badge&logo=buymeacoffee&logoColor=%23fff&labelColor=%23C8811E&color=%23C8811E"></a>
 </p>
 
 ---
@@ -31,6 +33,7 @@
 - [Troubleshooting](#troubleshooting)
 - [Privacy and limits](#privacy-and-limits)
 - [Contributing](#contributing)
+- [Support](#support)
 - [Full help and FAQ](https://heykay-47.github.io/SnapKeyMap/help.html)
 
 # Screenshots
@@ -185,6 +188,15 @@ Keep these limits in mind:
 </a>
 
 Bug reports, fixes, and device notes from other ColorOS versions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the code layout, Find X9 device notes, and how to build, sign, and release the app.
+
+# Support
+
+SnapKey Map is free and has no ads. If it saves you a few taps, you can support its development.
+
+<p align="center">
+  <a href="https://github.com/sponsors/heykay-47"><img alt="Sponsor on GitHub" src="https://img.shields.io/badge/Sponsor-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=%23fff&labelColor=%23EA4AAA&color=%23EA4AAA"></a>
+  <a href="https://buymeatea.in/heykay47"><img alt="Buy Me a Tea" src="https://img.shields.io/badge/Buy%20Me%20a%20Tea-C8811E?style=for-the-badge&logo=buymeacoffee&logoColor=%23fff&labelColor=%23C8811E&color=%23C8811E"></a>
+</p>
 
 # Thanks
 

@@ -11,12 +11,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.EmojiFoodBeverage
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -42,6 +46,8 @@ fun AboutScreen(onDone: () -> Unit) {
     }
     val repoUrl = stringResource(R.string.repository_url)
     val profileUrl = stringResource(R.string.author_profile_url)
+    val teaUrl = stringResource(R.string.buy_me_a_tea_url)
+    val sponsorsUrl = stringResource(R.string.github_sponsors_url)
 
     SnapScaffold(title = stringResource(R.string.about_title), onBack = onDone) { padding ->
         Column(
@@ -87,6 +93,32 @@ fun AboutScreen(onDone: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.view_author_profile), modifier = Modifier.weight(1f))
+                Icon(Icons.AutoMirrored.Rounded.OpenInNew, contentDescription = null, modifier = Modifier.size(20.dp))
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(stringResource(R.string.support_heading), style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(R.string.support_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            FilledTonalButton(
+                onClick = { context.openSafely(Intent(Intent.ACTION_VIEW, Uri.parse(teaUrl))) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Rounded.EmojiFoodBeverage, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.buy_me_a_tea), modifier = Modifier.weight(1f))
+                Icon(Icons.AutoMirrored.Rounded.OpenInNew, contentDescription = null, modifier = Modifier.size(20.dp))
+            }
+            FilledTonalButton(
+                onClick = { context.openSafely(Intent(Intent.ACTION_VIEW, Uri.parse(sponsorsUrl))) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Rounded.Favorite, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.github_sponsors), modifier = Modifier.weight(1f))
                 Icon(Icons.AutoMirrored.Rounded.OpenInNew, contentDescription = null, modifier = Modifier.size(20.dp))
             }
         }
