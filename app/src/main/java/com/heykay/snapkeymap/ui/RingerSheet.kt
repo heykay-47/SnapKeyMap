@@ -133,14 +133,15 @@ private fun PresetCard(modes: List<RingerMode>, selected: Boolean, onClick: () -
         ),
         border = if (selected) BorderStroke(2.dp, colors.primary) else BorderStroke(1.dp, colors.outlineVariant),
     ) {
+        // Equal 48 dp slots on both sides keep the steps centred on the card.
         Row(
-            Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 4.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ModeSequence(modes, Modifier.weight(1f))
-            if (selected) {
-                Icon(Icons.Rounded.CheckCircle, contentDescription = "Selected", tint = colors.primary)
+            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                if (selected) Icon(Icons.Rounded.CheckCircle, contentDescription = "Selected", tint = colors.primary)
             }
+            ModeSequence(modes, Modifier.weight(1f))
             IconButton(onClick = onEdit) {
                 Icon(Icons.Rounded.Edit, contentDescription = "Edit ${SnapAction.Ringer(modes).label}")
             }
@@ -175,12 +176,16 @@ private fun PresetEditor(
         }
     }
     Surface(shape = RoundedCornerShape(16.dp), color = colors.surfaceContainerHighest, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             Text("Preview", style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant)
             if (modes.isEmpty()) {
                 Text("No modes yet", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
             } else {
-                ModeSequence(modes)
+                ModeSequence(modes, Modifier.fillMaxWidth())
             }
         }
     }
@@ -218,7 +223,7 @@ private fun SheetTitle(title: String, subtitle: String) {
 /** The cycle as icon steps, so the order reads at a glance without wrapping text arrows. */
 @Composable
 private fun ModeSequence(modes: List<RingerMode>, modifier: Modifier = Modifier) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)) {
         modes.forEachIndexed { index, mode ->
             if (index > 0) {
                 Icon(
@@ -229,7 +234,7 @@ private fun ModeSequence(modes: List<RingerMode>, modifier: Modifier = Modifier)
                     modifier = Modifier.padding(top = 12.dp).size(16.dp),
                 )
             }
-            Column(Modifier.width(56.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.width(52.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 ModeBadge(mode)
                 Spacer(Modifier.height(4.dp))
                 Text(mode.label, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, maxLines = 1)

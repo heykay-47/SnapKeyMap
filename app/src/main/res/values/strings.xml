@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SnapKey Map</string>
-    <string name="about_title">About / Credits</string>
+    <string name="about_title">About</string>
     <string name="back">Back</string>
-    <string name="author_credit">Author: Krithik (heykay-47)</string>
+    <string name="author_credit">By Krithik (heykay-47)</string>
     <string name="author_photo_description">Krithik’s GitHub profile photo</string>
     <string name="app_version">Version %1$s</string>
     <string name="about_description">Make your Snap Key your own.</string>
-    <string name="view_repository">View GitHub repository</string>
-    <string name="view_author_profile">View author’s GitHub profile</string>
+    <string name="view_repository">Source code</string>
+    <string name="view_author_profile">Author’s GitHub</string>
     <string name="support_heading">Support development</string>
     <string name="support_description">SnapKey Map is free and open source. If it helps you, you can support its development.</string>
     <string name="buy_me_a_tea">Buy Me a Tea</string>
