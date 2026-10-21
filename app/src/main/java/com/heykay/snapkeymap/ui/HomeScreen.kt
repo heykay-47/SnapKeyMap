@@ -29,7 +29,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.AvTimer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -196,14 +196,19 @@ fun HomeScreen(
             }
 
             item {
-                ListItem(
-                    modifier = Modifier.clickable { showTiming = true },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("Timing") },
-                    leadingContent = { Icon(Icons.Rounded.Timer, contentDescription = null) },
-                    supportingContent = { Text("Double press ${config.doublePressWindowMs} ms · Hold ${config.holdMs} ms") },
-                    trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
-                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                ) {
+                    ListItem(
+                        modifier = Modifier.clickable { showTiming = true },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        headlineContent = { Text("Timing") },
+                        leadingContent = { Icon(Icons.Rounded.AvTimer, contentDescription = null) },
+                        supportingContent = { Text("Double ${config.doublePressWindowMs} ms · Hold ${config.holdMs} ms", maxLines = 1) },
+                        trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
+                    )
+                }
             }
             item { SectionHeader("Tips") }
             item {
