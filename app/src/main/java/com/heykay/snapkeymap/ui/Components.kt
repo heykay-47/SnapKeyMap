@@ -16,9 +16,12 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeDown
+import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Block
@@ -112,9 +115,9 @@ fun actionIcon(action: SnapAction): ImageVector = when (action) {
     is SnapAction.OpenShortcut -> Icons.Rounded.Bolt
     is SnapAction.OpenLink -> Icons.Rounded.Link
     is SnapAction.CallContact -> Icons.Rounded.Call
+    is SnapAction.Ringer -> Icons.Rounded.Vibration
     is SnapAction.Device -> when (action.action) {
         DeviceAction.FLASHLIGHT -> Icons.Rounded.FlashlightOn
-        DeviceAction.RINGER_CYCLE -> Icons.Rounded.Vibration
         DeviceAction.DO_NOT_DISTURB -> Icons.Rounded.DoNotDisturbOn
         DeviceAction.SCREENSHOT -> Icons.Rounded.Screenshot
         DeviceAction.LOCK_SCREEN -> Icons.Rounded.Lock
@@ -130,6 +133,7 @@ fun actionIcon(action: SnapAction): ImageVector = when (action) {
         DeviceAction.PREVIOUS_TRACK -> Icons.Rounded.SkipPrevious
         DeviceAction.MEDIA_VOLUME_UP -> Icons.AutoMirrored.Rounded.VolumeUp
         DeviceAction.MEDIA_VOLUME_DOWN -> Icons.AutoMirrored.Rounded.VolumeDown
+        DeviceAction.MEDIA_MUTE -> Icons.AutoMirrored.Rounded.VolumeOff
         DeviceAction.VOLUME_PANEL -> Icons.AutoMirrored.Rounded.VolumeUp
         DeviceAction.CAMERA -> Icons.Rounded.PhotoCamera
         DeviceAction.VIDEO_CAMERA -> Icons.Rounded.Videocam
@@ -149,6 +153,12 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier) {
         color = MaterialTheme.colorScheme.primary,
         modifier = modifier.padding(top = 12.dp, bottom = 4.dp),
     )
+}
+
+/** A text button whose label lines up with the text above it. Material pads text button labels by 12 dp. */
+@Composable
+fun CardTextButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    TextButton(onClick = onClick, modifier = modifier.offset(x = (-12).dp)) { Text(text) }
 }
 
 /** A tinted card with an icon, a title and some text, for tips and status messages. */

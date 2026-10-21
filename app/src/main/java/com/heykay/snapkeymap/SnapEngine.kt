@@ -34,8 +34,14 @@ object SnapEngine {
     private val main = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private lateinit var reader: LogReader
+    private lateinit var inputReader: InputReader
     private lateinit var keyGestures: GestureDetector
     private lateinit var logGestures: GestureDetector
+    private lateinit var inputGestures: GestureDetector
+    private val inputLiveState = MutableStateFlow(false)
+    val inputLive: StateFlow<Boolean> = inputLiveState.asStateFlow()
+    private val preciseState = MutableStateFlow(false)
+    val preciseDetection: StateFlow<Boolean> = preciseState.asStateFlow()
     private val oplusEdges = OplusKeyEdges(
         onDown = { markKeySeen(); logGestures.down() },
         onUp = { markKeySeen(); logGestures.up() },
@@ -60,6 +66,9 @@ object SnapEngine {
     val uiResumes: StateFlow<Int> = resumeCount.asStateFlow()
 
     @Volatile private var learning: MutableList<Observation>? = null
+    private var inputLearningBoundary = Long.MIN_VALUE
+    private var inputPressed = false
+    private var ignoreInputUntilUp = false
     private var mainUiVisible = false
     private var consentVisible = false
     private val uiVisible get() = mainUiVisible || consentVisible
@@ -69,6 +78,7 @@ object SnapEngine {
     private val binderReceived = Shizuku.OnBinderReceivedListener { main.post { connectShizukuIfNeeded() } }
     private val binderDead = Shizuku.OnBinderDeadListener {
         main.post {
+            inputReader.stop()
             if (wantsLog && sourceState.value == LogSource.SHIZUKU) {
                 reader.stop()
                 onAccessChanged(LogAccess.OFF)
@@ -80,6 +90,10 @@ object SnapEngine {
     }
     @Volatile private var logGeneration = 0
     private var retryDelayMs = 1000L
+    private var inputRetryDelayMs = 1000L
+    private val reconnectInput = Runnable {
+        if (wantsLog && store.config.value.enabled && canUseShizuku()) inputReader.start()
+    }
     private val reconnect = Runnable {
         if (wantsLog && store.config.value.enabled && hasLogPermission()) {
             if (uiVisible || !reader.needsForegroundConsent()) reader.start()
@@ -102,9 +116,16 @@ object SnapEngine {
             onSource = { sourceState.value = it },
             dispatchAccess = { task -> main.post { task() }; Unit },
         )
-        keyGestures = gestureDetector(longPressMs = 500)
-        logGestures = gestureDetector(longPressMs = 650)
+        keyGestures = gestureDetector()
+        logGestures = gestureDetector()
+        inputGestures = gestureDetector()
+        inputReader = InputReader(app, ::onInputEvent, ::onInputLiveChanged) { task ->
+            main.post { task() }; Unit
+        }
         Notifications.createChannel(app)
+        scope.launch {
+            store.config.collect { updateInputSource() }
+        }
         scope.launch {
             store.config.map { Triple(it.enabled, it.needsLogAccess, it.isTaught) }
                 .distinctUntilChanged().collect { (enabled, needsLog, _) ->
@@ -120,10 +141,11 @@ object SnapEngine {
 
     fun now(): Long = SystemClock.elapsedRealtime()
 
-    private fun gestureDetector(longPressMs: Long) = GestureDetector(
+    private fun gestureDetector() = GestureDetector(
         schedule = { task, delay -> main.postDelayed(task, delay); Unit },
         cancel = { task -> main.removeCallbacks(task) },
-        longPressMs = longPressMs,
+        holdMs = { store.config.value.holdMs },
+        doublePressWindowMs = { store.config.value.doublePressWindowMs },
         onGesture = ::onGesture,
     )
 
@@ -140,6 +162,7 @@ object SnapEngine {
 
     private fun wantLogs() {
         wantsLog = true
+        inputReader.start()
         if (!watchingShizuku) {
             watchingShizuku = true
             Shizuku.addBinderReceivedListener(binderReceived)
@@ -158,12 +181,15 @@ object SnapEngine {
         }
         logGeneration++
         main.removeCallbacks(reconnect)
+        main.removeCallbacks(reconnectInput)
+        inputReader.stop()
         reader.stop()
         onAccessChanged(LogAccess.OFF)
         resetGestures()
     }
 
     private fun connectShizukuIfNeeded() {
+        if (wantsLog && canUseShizuku()) inputReader.start()
         if (wantsLog && (accessState.value != LogAccess.FULL || sourceState.value == LogSource.LOCAL) && canUseShizuku()) {
             reader.stop()
             connect(preferShizuku = true)
@@ -230,7 +256,7 @@ object SnapEngine {
     private fun updateListeningSince() {
         val config = store.config.value
         val listening = config.enabled && if (config.needsLogAccess) {
-            accessState.value == LogAccess.FULL
+            preciseState.value || accessState.value == LogAccess.FULL
         } else {
             SnapAccessibilityService.running.value
         }
@@ -240,6 +266,52 @@ object SnapEngine {
 
     private fun markKeySeen() {
         lastKeySeenState.value = System.currentTimeMillis()
+    }
+
+    private fun onInputLiveChanged(live: Boolean) {
+        inputLiveState.value = live
+        updateInputSource()
+        main.removeCallbacks(reconnectInput)
+        if (live) inputRetryDelayMs = 1000L
+        else if (wantsLog && store.config.value.enabled && canUseShizuku()) {
+            main.postDelayed(reconnectInput, inputRetryDelayMs)
+            inputRetryDelayMs = (inputRetryDelayMs * 2).coerceAtMost(60_000L)
+        }
+    }
+
+    private fun updateInputSource() {
+        val config = store.config.value
+        val precise = config.enabled && config.needsLogAccess && config.inputKey != null && inputLiveState.value
+        if (precise != preciseState.value) {
+            val alreadyHandled = precise && logGestures.hasHandledPress
+            val releasedAfterSwitch = !precise && inputPressed
+            logGeneration++
+            resetGestures()
+            oplusEdges.reset(pressed = releasedAfterSwitch)
+            inputPressed = releasedAfterSwitch
+            ignoreInputUntilUp = alreadyHandled
+            preciseState.value = precise
+        }
+        updateListeningSince()
+    }
+
+    private fun onInputEvent(event: InputKeyEvent, time: Long) {
+        if (time <= inputLearningBoundary) return
+        learning?.let { list ->
+            if (event.down) synchronized(list) { list += Observation(time, KeyLearning.inputKey(event.key.code)) }
+            return
+        }
+        val config = store.config.value
+        if (!preciseState.value || event.key != config.inputKey) return
+        inputPressed = event.down
+        if (ignoreInputUntilUp) {
+            if (!event.down) ignoreInputUntilUp = false
+            return
+        }
+        inputGestures.wantsDouble = config.action(Gesture.DOUBLE) != SnapAction.NoAction
+        inputGestures.wantsLong = config.action(Gesture.LONG) != SnapAction.NoAction
+        markKeySeen()
+        if (event.down) inputGestures.down() else inputGestures.up()
     }
 
     private fun onAccessChanged(access: LogAccess) {
@@ -253,7 +325,7 @@ object SnapEngine {
         if (access == LogAccess.OFF || access == LogAccess.LIMITED) {
             main.removeCallbacks(logKeyUp)
             logKeyDown = false
-            oplusEdges.reset()
+            oplusEdges.reset(pressed = inputPressed)
             logGestures.reset()
             if (!uiVisible) notifyIfPaused()
         }
@@ -267,7 +339,7 @@ object SnapEngine {
     private fun notifyIfPaused() {
         val config = store.config.value
         val paused = config.enabled && config.isTaught && config.needsLogAccess &&
-            hasLogPermission() && accessState.value != LogAccess.FULL
+            hasLogPermission() && !preciseState.value && accessState.value != LogAccess.FULL
         if (paused) Notifications.showPaused(app)
     }
 
@@ -285,9 +357,10 @@ object SnapEngine {
             return
         }
         val config = store.config.value
+        if (preciseState.value) return
         val isSnapKey = config.enabled && config.needsLogAccess && acceptsKeyLog(config.logSignature, uid, tag, message)
         if (explicitEdges || isSnapKey) main.post {
-            if (generation != logGeneration || !store.config.value.enabled) return@post
+            if (generation != logGeneration || !store.config.value.enabled || preciseState.value) return@post
             if (learning != null) {
                 if (explicitEdges) oplusEdges.observe(timestamp)
             } else if (isSnapKey) {
@@ -302,6 +375,7 @@ object SnapEngine {
         logGestures.wantsDouble = config.action(Gesture.DOUBLE) != SnapAction.NoAction
         logGestures.wantsLong = (explicitEdges || config.holdRepeats) && config.action(Gesture.LONG) != SnapAction.NoAction
         if (explicitEdges) {
+            inputPressed = false
             oplusEdges.accept(timestamp)
             return
         }
@@ -356,6 +430,7 @@ object SnapEngine {
     }
 
     fun startLearning() {
+        inputLearningBoundary = now()
         resetGestures()
         learning = mutableListOf()
     }
@@ -368,18 +443,23 @@ object SnapEngine {
     private fun resetGestures() {
         main.removeCallbacks(logKeyUp)
         logKeyDown = false
+        inputPressed = false
+        ignoreInputUntilUp = false
         keyGestures.reset()
         logGestures.reset()
+        inputGestures.reset()
     }
 
     fun cancelLearning() {
         if (learning == null) return
+        inputLearningBoundary = now()
         resetGestures()
         learning = null
     }
 
     fun finishLearning(baseline: LongRange, taps: List<LongRange>, hold: LongRange): LearnResult {
         val list = learning ?: return LearnResult.NothingFound
+        inputLearningBoundary = now()
         resetGestures()
         val observations = synchronized(list) {
             learning = null
@@ -387,17 +467,21 @@ object SnapEngine {
         }
         val result = KeyLearning.analyze(observations, baseline, taps, hold)
         when (result) {
-            is LearnResult.KeyEventFound -> store.update { it.copy(keyEvent = result.key, logSignature = null) }
+            is LearnResult.KeyEventFound -> store.update {
+                it.copy(keyEvent = result.key, logSignature = null, inputKey = result.inputKey)
+            }
             is LearnResult.LogLineFound -> store.update {
                 it.copy(
                     keyEvent = null,
                     logSignature = result.signature,
+                    inputKey = result.inputKey,
                     holdRepeats = result.holdRepeats,
                     releaseGapMs = result.releaseGapMs,
                 )
             }
             LearnResult.NothingFound -> Unit
         }
+        updateInputSource()
         return result
     }
 

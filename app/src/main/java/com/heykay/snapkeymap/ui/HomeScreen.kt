@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
@@ -27,6 +29,8 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.AvTimer
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -39,6 +43,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -55,6 +60,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import com.heykay.snapkeymap.Gesture
@@ -66,6 +73,7 @@ import com.heykay.snapkeymap.SnapAction
 import com.heykay.snapkeymap.SnapEngine
 import com.heykay.snapkeymap.ThemeMode
 import java.util.Date
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import rikka.shizuku.Shizuku
 
@@ -82,9 +90,11 @@ fun HomeScreen(
     val context = LocalContext.current
     val config by SnapEngine.store.config.collectAsState()
     val access by SnapEngine.logAccess.collectAsState()
+    val precise by SnapEngine.preciseDetection.collectAsState()
     val serviceOn by SnapAccessibilityService.running.collectAsState()
     val resumes by SnapEngine.uiResumes.collectAsState()
     var showThemeMenu by rememberSaveable { mutableStateOf(false) }
+    var showTiming by rememberSaveable { mutableStateOf(false) }
     val notificationsAllowed = remember(resumes) {
         NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
@@ -153,7 +163,7 @@ fun HomeScreen(
                     },
                     enabled = config.enabled,
                     onEnabledChange = { on -> SnapEngine.store.update { it.copy(enabled = on) } },
-                    listening = !config.needsLogAccess || access == LogAccess.FULL,
+                    listening = !config.needsLogAccess || precise || access == LogAccess.FULL,
                     access = access,
                 )
             }
@@ -185,6 +195,21 @@ fun HomeScreen(
                 }
             }
 
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                ) {
+                    ListItem(
+                        modifier = Modifier.clickable { showTiming = true },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        headlineContent = { Text("Timing") },
+                        leadingContent = { Icon(Icons.Rounded.AvTimer, contentDescription = null) },
+                        supportingContent = { Text("Double ${config.doublePressWindowMs} ms · Hold ${config.holdMs} ms", maxLines = 1) },
+                        trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
+                    )
+                }
+            }
             item { SectionHeader("Tips") }
             item {
                 NoteCard(
@@ -192,7 +217,7 @@ fun HomeScreen(
                     title = "Set Oppo's own Snap Key action to None",
                     body = "Settings › Snap Key. Otherwise Oppo's action runs as well as yours.",
                 ) {
-                    TextButton(onClick = { context.openPhoneSettings() }) { Text("Open phone settings") }
+                    CardTextButton("Open phone settings") { context.openPhoneSettings() }
                 }
             }
             if (!notificationsAllowed) {
@@ -202,7 +227,7 @@ fun HomeScreen(
                         title = "Allow notifications",
                         body = "Only to tell you when detection pauses. Your actions work without them.",
                     ) {
-                        TextButton(onClick = { context.openNotificationSettings() }) { Text("Open settings") }
+                        CardTextButton("Open settings") { context.openNotificationSettings() }
                     }
                 }
             }
@@ -217,8 +242,8 @@ fun HomeScreen(
                         @SuppressLint("BatteryLife")
                         val request = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
                             Uri.parse("package:${context.packageName}"))
-                        TextButton(onClick = { context.openSafely(request) }) { Text("Allow") }
-                        TextButton(onClick = { context.openAppInfo() }) { Text("App info") }
+                        CardTextButton("Allow") { context.openSafely(request) }
+                        CardTextButton("App info") { context.openAppInfo() }
                     }
                 }
             }
@@ -229,6 +254,49 @@ fun HomeScreen(
             }
         }
     }
+    if (showTiming) TimingDialog(onDismiss = { showTiming = false })
+}
+
+@Composable
+private fun TimingDialog(onDismiss: () -> Unit) {
+    val config by SnapEngine.store.config.collectAsState()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Timing") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text("Double-press window: ${config.doublePressWindowMs} ms")
+                Slider(
+                    value = config.doublePressWindowMs.toFloat(),
+                    onValueChange = { value ->
+                        SnapEngine.store.update { it.copy(doublePressWindowMs = (value / 25).roundToInt() * 25L) }
+                    },
+                    valueRange = 200f..600f,
+                    steps = 15,
+                    modifier = Modifier.semantics { contentDescription = "Double-press window in milliseconds" },
+                )
+                Text("How long a single press waits after release for another press.", style = MaterialTheme.typography.bodySmall)
+                Text("Press & hold: ${config.holdMs} ms")
+                Slider(
+                    value = config.holdMs.toFloat(),
+                    onValueChange = { value ->
+                        SnapEngine.store.update { it.copy(holdMs = (value / 25).roundToInt() * 25L) }
+                    },
+                    valueRange = 300f..1200f,
+                    steps = 35,
+                    modifier = Modifier.semantics { contentDescription = "Hold time in milliseconds" },
+                )
+                Text("How long to keep the key down for a hold.", style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = {
+                    SnapEngine.store.update { it.copy(doublePressWindowMs = 350L, holdMs = 650L) }
+                }) { Text("Reset to defaults") }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
+    )
 }
 
 @Composable
@@ -244,6 +312,9 @@ private fun StatusCard(
     val lastKeySeenAt by SnapEngine.lastKeySeenAt.collectAsState()
     val listeningSince by SnapEngine.listeningSince.collectAsState()
     val logSource by SnapEngine.logSource.collectAsState()
+    val precise by SnapEngine.preciseDetection.collectAsState()
+    val inputLive by SnapEngine.inputLive.collectAsState()
+    val config by SnapEngine.store.config.collectAsState()
     val timeFormat = DateFormat.getTimeFormat(LocalContext.current)
     val now by produceState(SnapEngine.now()) {
         while (true) {
@@ -286,13 +357,26 @@ private fun StatusCard(
                 listOfNotNull(
                     listeningSince?.let {
                         "Listening since ${timeFormat.format(Date(it))}" +
-                            if (logSource == LogSource.SHIZUKU && access == LogAccess.FULL) " via Shizuku" else ""
+                            when {
+                                precise -> " · Precise input via Shizuku"
+                                logSource == LogSource.SHIZUKU && access == LogAccess.FULL -> " · Logs via Shizuku"
+                                config.needsLogAccess -> " · System logs"
+                                else -> ""
+                            }
                     },
                     lastKeySeenAt?.let { "Last key press ${timeFormat.format(Date(it))}" } ?: "No key press yet",
                 ).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
             )
+            if (config.needsLogAccess && config.inputKey == null &&
+                (inputLive || (logSource == LogSource.SHIZUKU && access == LogAccess.FULL))) {
+                Text(
+                    "Teach the Snap Key again for more precise detection.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant,
+                )
+            }
             if (warning != null) {
                 Button(onClick = onFix) { Text("Fix") }
             } else if (enabled && !listening && access != LogAccess.WAITING) {

@@ -1,6 +1,7 @@
 package com.heykay.snapkeymap.ui
 
 import android.app.Activity
+import android.app.NotificationManager
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
@@ -55,9 +57,12 @@ import androidx.core.content.IntentCompat
 import androidx.core.graphics.drawable.toBitmap
 import com.heykay.snapkeymap.DeviceAction
 import com.heykay.snapkeymap.Gesture
+import com.heykay.snapkeymap.RingerMode
 import com.heykay.snapkeymap.Section
 import com.heykay.snapkeymap.SnapAction
 import com.heykay.snapkeymap.SnapEngine
+import com.heykay.snapkeymap.canUseShizuku
+import com.heykay.snapkeymap.editRingerPreset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -80,6 +85,8 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     var showLinkDialog by rememberSaveable { mutableStateOf(false) }
     var showShortcuts by rememberSaveable { mutableStateOf(false) }
+    var showRingerDialog by rememberSaveable { mutableStateOf(false) }
+    var showDndDialog by rememberSaveable { mutableStateOf(false) }
 
     val apps by produceState<List<AppEntry>?>(null) {
         value = withContext(Dispatchers.IO) {
@@ -95,7 +102,11 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
 
     fun choose(action: SnapAction) {
         SnapEngine.store.update { it.copy(actions = it.actions + (gesture to action)) }
-        onDone()
+        val needsDnd = action is SnapAction.Ringer && RingerMode.SILENT in action.modes && !canUseShizuku() ||
+            action == SnapAction.Device(DeviceAction.DO_NOT_DISTURB)
+        if (needsDnd && !context.getSystemService(NotificationManager::class.java).isNotificationPolicyAccessGranted) {
+            showDndDialog = true
+        } else onDone()
     }
 
     val shortcutResult = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -158,8 +169,17 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
             }
             Section.entries.forEach { section ->
                 val actions = DeviceAction.entries.filter { it.section == section && matches(it.label) }
-                if (actions.isNotEmpty()) {
+                val showRinger = section == Section.PHONE && matches("Ringer mode, Ring, Vibrate, Silent")
+                if (actions.isNotEmpty() || showRinger) {
                     item { SectionHeader(section.title, Modifier.padding(horizontal = 16.dp)) }
+                    if (showRinger) item {
+                        PickRow(
+                            icon = { VectorIcon(actionIcon(SnapAction.Ringer(RingerMode.entries.toList()))) },
+                            title = "Ringer mode",
+                            subtitle = (current as? SnapAction.Ringer)?.label ?: "Choose which modes to cycle through",
+                            selected = current is SnapAction.Ringer,
+                        ) { showRingerDialog = true }
+                    }
                     items(actions) { device ->
                         val action = SnapAction.Device(device)
                         PickRow(
@@ -269,6 +289,27 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
             },
         )
     }
+    if (showRingerDialog) {
+        RingerSheet(
+            presets = config.ringerPresets,
+            selected = (current as? SnapAction.Ringer)?.modes,
+            assigned = config.actions.values.filterIsInstance<SnapAction.Ringer>().map { it.modes }.toSet(),
+            onPick = { modes ->
+                showRingerDialog = false
+                choose(SnapAction.Ringer(modes))
+            },
+            onSave = { old, modes ->
+                SnapEngine.store.update {
+                    if (old == null) it.copy(ringerPresets = it.ringerPresets + listOf(modes)) else it.editRingerPreset(old, modes)
+                }
+            },
+            onDelete = { modes ->
+                SnapEngine.store.update { it.copy(ringerPresets = it.ringerPresets - listOf(modes).toSet()) }
+            },
+            onDismiss = { showRingerDialog = false },
+        )
+    }
+    if (showDndDialog) DndAccessDialog(onDone, forSilent = current is SnapAction.Ringer)
 }
 
 @Composable

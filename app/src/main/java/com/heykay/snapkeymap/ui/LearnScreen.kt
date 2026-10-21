@@ -132,7 +132,7 @@ private fun Intro(onStart: () -> Unit) {
         title = "First: set Oppo's Snap Key action to None",
         body = "Open Settings › Snap Key and choose None. Then come back here.",
     ) {
-        TextButton(onClick = { context.openPhoneSettings() }) { Text("Open phone settings") }
+        CardTextButton("Open phone settings") { context.openPhoneSettings() }
     }
     if (!serviceOn) {
         NoteCard(
@@ -141,7 +141,7 @@ private fun Intro(onStart: () -> Unit) {
             body = "Open accessibility settings and turn on SnapKey Map, then return here.",
             container = MaterialTheme.colorScheme.errorContainer,
         ) {
-            TextButton(onClick = { context.openAccessibilitySettings() }) { Text("Open settings") }
+            CardTextButton("Open settings") { context.openAccessibilitySettings() }
         }
     }
     if (config.needsLogAccess && !hasLogPermission) {
@@ -163,7 +163,7 @@ private fun Intro(onStart: () -> Unit) {
             },
         ) {
             if (access != LogAccess.WAITING) {
-                TextButton(onClick = { SnapEngine.connect() }) { Text("Connect") }
+                CardTextButton("Connect") { SnapEngine.connect() }
             }
         }
     }
@@ -214,7 +214,9 @@ private fun Finished(result: LearnResult, finishedAt: Long, onRetry: () -> Unit,
 
     val body = when (result) {
         is LearnResult.KeyEventFound -> "Your Snap Key talks to apps directly, so no log access is needed."
-        is LearnResult.LogLineFound -> if (result.canDetectHold) {
+        is LearnResult.LogLineFound -> if (result.inputKey != null) {
+            "The app will use precise key input while Shizuku runs, with the system log as a fallback."
+        } else if (result.canDetectHold) {
             "The app will spot your Snap Key in the system log."
         } else {
             "The app will spot your Snap Key in the system log. Your phone doesn't report holding the " +
@@ -234,6 +236,9 @@ private fun Finished(result: LearnResult, finishedAt: Long, onRetry: () -> Unit,
         style = MaterialTheme.typography.titleLarge,
     )
     if (result is LearnResult.LogLineFound) {
+        result.inputKey?.let { key ->
+            Text("Matched input key: ${key.code}", style = MaterialTheme.typography.bodySmall)
+        }
         Text(
             "Matched log line: ${result.signature.tag}: ${result.signature.message}",
             style = MaterialTheme.typography.bodySmall,

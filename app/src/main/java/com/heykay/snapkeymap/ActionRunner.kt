@@ -10,18 +10,28 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.net.Uri
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.provider.Settings
 import android.view.KeyEvent
 import android.widget.Toast
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** Runs a [SnapAction]. Called on the main thread. */
 object ActionRunner {
     private var torchCameraId: String? = null
     private var torchOn = false
     private var torchWatched = false
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val ringerMutex = Mutex()
 
     fun run(context: Context, action: SnapAction) {
         try {
@@ -53,6 +63,7 @@ object ActionRunner {
                     Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(action.number))),
                 )
                 is SnapAction.Device -> runDevice(context, action.action)
+                is SnapAction.Ringer -> cycleRinger(context, action)
             }
         } catch (e: ActivityNotFoundException) {
             toast(context, "No app can do that: ${action.label}")
@@ -64,7 +75,6 @@ object ActionRunner {
     private fun runDevice(context: Context, action: DeviceAction) {
         when (action) {
             DeviceAction.FLASHLIGHT -> toggleTorch(context)
-            DeviceAction.RINGER_CYCLE -> cycleRinger(context)
             DeviceAction.DO_NOT_DISTURB -> toggleDoNotDisturb(context)
             DeviceAction.SCREENSHOT -> global(context, AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT)
             DeviceAction.LOCK_SCREEN -> global(context, AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN)
@@ -82,6 +92,8 @@ object ActionRunner {
                 .adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
             DeviceAction.MEDIA_VOLUME_DOWN -> context.getSystemService(AudioManager::class.java)
                 .adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
+            DeviceAction.MEDIA_MUTE -> context.getSystemService(AudioManager::class.java)
+                .adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_TOGGLE_MUTE, AudioManager.FLAG_SHOW_UI)
             DeviceAction.VOLUME_PANEL -> context.getSystemService(AudioManager::class.java)
                 .adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_SAME, AudioManager.FLAG_SHOW_UI)
             DeviceAction.CAMERA -> {
@@ -146,24 +158,57 @@ object ActionRunner {
         cameras.setTorchMode(id, torchOn)
     }
 
-    private fun cycleRinger(context: Context) {
-        val audio = context.getSystemService(AudioManager::class.java)
-        val canSilence = context.getSystemService(NotificationManager::class.java).isNotificationPolicyAccessGranted
-        val next = when (audio.ringerMode) {
-            AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE
-            AudioManager.RINGER_MODE_VIBRATE -> if (canSilence) AudioManager.RINGER_MODE_SILENT else AudioManager.RINGER_MODE_NORMAL
-            else -> AudioManager.RINGER_MODE_NORMAL
+    private fun cycleRinger(context: Context, action: SnapAction.Ringer) {
+        val app = context.applicationContext
+        scope.launch {
+            ringerMutex.withLock {
+                try {
+                    changeRinger(app, action)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    toast(app, "Couldn't change ringer mode: ${e.message ?: e.javaClass.simpleName}")
+                }
+            }
         }
-        audio.ringerMode = next
-        toast(
-            context,
-            when (next) {
-                AudioManager.RINGER_MODE_VIBRATE -> "Vibrate"
-                AudioManager.RINGER_MODE_SILENT -> "Silent"
-                else -> "Ring"
-            },
-        )
     }
+
+    private suspend fun changeRinger(context: Context, action: SnapAction.Ringer) {
+        val audio = context.getSystemService(AudioManager::class.java)
+        val current = when (audio.ringerMode) {
+            AudioManager.RINGER_MODE_NORMAL -> RingerMode.RING
+            AudioManager.RINGER_MODE_VIBRATE -> RingerMode.VIBRATE
+            AudioManager.RINGER_MODE_SILENT -> RingerMode.SILENT
+            else -> null
+        }
+        // Before Android 15, `cmd audio` has no set-ringer-mode yet still exits 0, so success can't be trusted.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM && canUseShizuku()) {
+            val next = action.nextMode(current)
+            val result = try {
+                setRingerWithShizuku(context, next.audioMode)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+            if (result?.exitCode == 0) {
+                toast(context, next.label)
+                return
+            }
+        }
+        val canSilence = context.getSystemService(NotificationManager::class.java).isNotificationPolicyAccessGranted
+        val skippedSilent = action.nextMode(current) == RingerMode.SILENT && !canSilence
+        val next = action.nextMode(current, allowSilent = canSilence)
+        audio.ringerMode = next.audioMode
+        toast(context, if (skippedSilent) "Allow Do Not Disturb access to use Silent" else next.label)
+    }
+
+    private val RingerMode.audioMode: Int
+        get() = when (this) {
+            RingerMode.RING -> AudioManager.RINGER_MODE_NORMAL
+            RingerMode.VIBRATE -> AudioManager.RINGER_MODE_VIBRATE
+            RingerMode.SILENT -> AudioManager.RINGER_MODE_SILENT
+        }
 
     private fun toggleDoNotDisturb(context: Context) {
         val notifications = context.getSystemService(NotificationManager::class.java)
