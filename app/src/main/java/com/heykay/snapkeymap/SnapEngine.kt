@@ -420,7 +420,7 @@ object SnapEngine {
         lastDetected.value = Detected(gesture, now())
         val action = store.config.value.action(gesture)
         if (action == SnapAction.NoAction) return
-        buzz()
+        if (action !is SnapAction.Ringer) buzz()
         ActionRunner.run(SnapAccessibilityService.instance ?: app, action)
     }
 

@@ -13,6 +13,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.provider.MediaStore
 import android.provider.Settings
 import android.view.KeyEvent
@@ -192,6 +194,7 @@ object ActionRunner {
                 null
             }
             if (result?.exitCode == 0) {
+                vibrateRinger(context, next)
                 confirm(context, next.label)
                 return
             }
@@ -200,9 +203,22 @@ object ActionRunner {
         val skippedSilent = action.nextMode(current) == RingerMode.SILENT && !canSilence
         val next = action.nextMode(current, allowSilent = canSilence)
         audio.ringerMode = next.audioMode
+        vibrateRinger(context, next)
         if (skippedSilent) toast(context, "Allow Do Not Disturb access to use Silent")
         else confirm(context, next.label)
     }
+
+    private fun vibrateRinger(context: Context, mode: RingerMode) {
+        val vibrator = context.getSystemService(Vibrator::class.java) ?: return
+        vibrator.vibrate(mode.vibrationEffect)
+    }
+
+    private val RingerMode.vibrationEffect: VibrationEffect
+        get() = when (this) {
+            RingerMode.RING -> VibrationEffect.createOneShot(350L, VibrationEffect.DEFAULT_AMPLITUDE)
+            RingerMode.VIBRATE -> VibrationEffect.createWaveform(longArrayOf(0, 40, 90, 40, 90, 40), -1)
+            RingerMode.SILENT -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK)
+        }
 
     private val RingerMode.audioMode: Int
         get() = when (this) {
