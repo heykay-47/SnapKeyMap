@@ -1,0 +1,1 @@
+Hide ringer and Do Not Disturb confirmation pop-ups. Confirmation messages are consistent in the background. Feel distinct vibrations for Ring, Vibrate, and Silent. Pause mappings in chosen apps. The paused-app picker has app icons and Clear all. Fix the Settings button to open phone Settings as a fresh task on ColorOS.

@@ -93,11 +93,15 @@ The F-Droid submission will request the same developer-signed APK as GitHub Rele
 - [ ] **Privacy policy and Data safety.** Publish a privacy policy on the website and declare that the app collects no data.
 - [ ] **Closed test.** New personal developer accounts need 12 testers opted in for 14 days before a production release.
 
-### From Reddit feedback (next release)
+### Delivered in v1.0.16
+
+This release was tested on a Find X9. Behaviour on other firmware may differ.
 
 - [x] **Hide confirmation pop-ups.** Turn off Show confirmations to hide ringer and Do Not Disturb messages. Errors and permission reminders still show.
+- [x] **Consistent background messages.** Confirmation messages also appear while SnapKey Map is in the background.
 - [x] **Feel the ringer mode.** Ring uses one long buzz, Vibrate uses three short pulses, and Silent uses a tick.
-- [x] **Pause in chosen apps.** Keep the key's normal behaviour in apps such as the camera.
+- [x] **Pause in chosen apps.** Pause mapped actions while a chosen app, such as the camera, is in front.
+- [x] **App icons and Clear all.** The paused-app picker shows app icons and has a **Clear all** button to remove all selections.
 - [x] **Settings and link tips.** Open phone Settings as a fresh task on ColorOS. The link dialog shows how to fill in a message with an `sms:` link.
 
 ### Delivered in v1.0.14
