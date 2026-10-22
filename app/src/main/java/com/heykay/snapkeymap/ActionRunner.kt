@@ -246,6 +246,8 @@ object ActionRunner {
     }
 
     private fun toast(context: Context, text: String) {
-        Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+        val service = SnapAccessibilityService.instance
+        if (service != null) service.showMessage(text)
+        else Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
     }
 }

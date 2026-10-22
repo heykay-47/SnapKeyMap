@@ -2,9 +2,18 @@ package com.heykay.snapkeymap
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.PixelFormat
+import android.graphics.drawable.GradientDrawable
+import android.os.Handler
+import android.os.Looper
+import android.view.Gravity
 import android.view.KeyEvent
+import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.inputmethod.InputMethodManager
+import android.widget.TextView
+import android.widget.Toast
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,6 +23,10 @@ import kotlinx.coroutines.flow.asStateFlow
  * actions (screenshot, home, ...) and receives the Snap Key directly on phones that share it.
  */
 class SnapAccessibilityService : AccessibilityService() {
+    private val messageHandler = Handler(Looper.getMainLooper())
+    private var messageView: TextView? = null
+    private val hideMessage = Runnable { removeMessage() }
+
     override fun onServiceConnected() {
         instance = this
         runningState.value = true
@@ -31,6 +44,58 @@ class SnapAccessibilityService : AccessibilityService() {
 
     override fun onInterrupt() = Unit
 
+    fun showMessage(text: CharSequence) {
+        messageHandler.removeCallbacks(hideMessage)
+        val current = messageView
+        if (current != null) {
+            current.text = text
+        } else {
+            val metrics = resources.displayMetrics
+            val density = metrics.density
+            val view = TextView(this).apply {
+                this.text = text
+                setTextColor(Color.WHITE)
+                textSize = 14f
+                gravity = Gravity.CENTER
+                maxWidth = (metrics.widthPixels * 0.8f).toInt()
+                setPadding(
+                    (16 * density).toInt(), (10 * density).toInt(),
+                    (16 * density).toInt(), (10 * density).toInt(),
+                )
+                background = GradientDrawable().apply {
+                    cornerRadius = 24 * density
+                    setColor(Color.parseColor("#E6303030"))
+                }
+            }
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT,
+            ).apply {
+                gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                y = (metrics.heightPixels * 0.12f).toInt()
+            }
+            if (runCatching { getSystemService(WindowManager::class.java).addView(view, params) }.isFailure) {
+                Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
+                return
+            }
+            messageView = view
+        }
+        messageHandler.postDelayed(hideMessage, 2000L)
+    }
+
+    private fun removeMessage() {
+        messageHandler.removeCallbacks(hideMessage)
+        messageView?.let { view ->
+            runCatching { getSystemService(WindowManager::class.java).removeView(view) }
+        }
+        messageView = null
+    }
+
     override fun onUnbind(intent: Intent?): Boolean {
         clear()
         return super.onUnbind(intent)
@@ -42,6 +107,7 @@ class SnapAccessibilityService : AccessibilityService() {
     }
 
     private fun clear() {
+        removeMessage()
         instance = null
         runningState.value = false
         SnapEngine.onServiceDisconnected()
