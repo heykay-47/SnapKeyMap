@@ -70,6 +70,7 @@ object SnapEngine {
     private var inputPressed = false
     private var ignoreInputUntilUp = false
     private var mainUiVisible = false
+    private var foregroundApp: String? = null
     private var consentVisible = false
     private val uiVisible get() = mainUiVisible || consentVisible
     private var consentAttempted = false
@@ -249,6 +250,7 @@ object SnapEngine {
     }
 
     fun onServiceDisconnected() {
+        foregroundApp = null
         keyGestures.reset()
         updateListeningSince()
     }
@@ -412,13 +414,19 @@ object SnapEngine {
                 keyGestures.up()
             }
         }
-        return true
+        return foregroundApp !in config.pausedApps
+    }
+
+    fun onForegroundApp(packageName: String) {
+        foregroundApp = packageName
     }
 
     private fun onGesture(gesture: Gesture) {
         markKeySeen()
         lastDetected.value = Detected(gesture, now())
-        val action = store.config.value.action(gesture)
+        val config = store.config.value
+        if (foregroundApp in config.pausedApps) return
+        val action = config.action(gesture)
         if (action == SnapAction.NoAction) return
         if (action !is SnapAction.Ringer) buzz()
         ActionRunner.run(SnapAccessibilityService.instance ?: app, action)

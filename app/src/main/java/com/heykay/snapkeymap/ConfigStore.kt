@@ -15,6 +15,7 @@ enum class SetupPage { METHOD, LOG_ACCESS, ACCESSIBILITY, BATTERY, NOTIFICATIONS
 data class Config(
     val enabled: Boolean = true,
     val showConfirmations: Boolean = true,
+    val pausedApps: Set<String> = emptySet(),
     val actions: Map<Gesture, SnapAction> = mapOf(Gesture.SINGLE to SnapAction.Device(DeviceAction.FLASHLIGHT)),
     val ringerPresets: List<List<RingerMode>> = DEFAULT_RINGER_PRESETS,
     /** Set when Android hands the Snap Key to apps as a normal key. Then no log access is needed. */
@@ -95,6 +96,7 @@ class ConfigStore(private val context: Context) {
         val config = Config(
             enabled = prefs.getBoolean("enabled", true),
             showConfirmations = prefs.getBoolean("show_confirmations", true),
+            pausedApps = prefs.getStringSet("paused_apps", emptySet()).orEmpty().toSet(),
             actions = actions,
             ringerPresets = loadRingerPresets(prefs.getString("ringer_presets", null), actions.values),
             keyEvent = if (keyCode >= 0) LearnedKey(keyCode, prefs.getInt("scan_code", 0)) else null,
@@ -128,6 +130,7 @@ class ConfigStore(private val context: Context) {
         prefs.edit().apply {
             putBoolean("enabled", config.enabled)
             putBoolean("show_confirmations", config.showConfirmations)
+            putStringSet("paused_apps", config.pausedApps)
             putString("theme", config.theme.name)
             putBoolean("setup_complete", config.setupComplete)
             putString("grant_method", config.grantMethod?.name)

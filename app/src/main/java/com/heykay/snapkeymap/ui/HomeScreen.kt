@@ -16,9 +16,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -30,10 +32,13 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.AvTimer
+import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -63,6 +68,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.app.NotificationManagerCompat
 import com.heykay.snapkeymap.Gesture
 import com.heykay.snapkeymap.LogAccess
@@ -75,6 +81,8 @@ import com.heykay.snapkeymap.ThemeMode
 import java.util.Date
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 
 private const val SHIZUKU_LOG_REQUEST = 2
@@ -95,6 +103,16 @@ fun HomeScreen(
     val resumes by SnapEngine.uiResumes.collectAsState()
     var showThemeMenu by rememberSaveable { mutableStateOf(false) }
     var showTiming by rememberSaveable { mutableStateOf(false) }
+    var showPausedApps by rememberSaveable { mutableStateOf(false) }
+    val pausedSummary = remember(config.pausedApps, resumes) {
+        if (config.pausedApps.isEmpty()) "None" else {
+            val pm = context.packageManager
+            config.pausedApps.mapNotNull { packageName ->
+                runCatching { pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString() }.getOrNull()
+            }.sortedBy { it.lowercase() }.joinToString(", ")
+                .takeIf { it.isNotEmpty() } ?: "${config.pausedApps.size} apps"
+        }
+    }
     val notificationsAllowed = remember(resumes) {
         NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
@@ -218,6 +236,15 @@ fun HomeScreen(
                         supportingContent = { Text("Pop-ups such as Vibrate or Do Not Disturb on. Errors always show.") },
                         trailingContent = { Switch(checked = config.showConfirmations, onCheckedChange = null) },
                     )
+                    HorizontalDivider()
+                    ListItem(
+                        modifier = Modifier.clickable { showPausedApps = true },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        headlineContent = { Text("Pause in apps") },
+                        leadingContent = { Icon(Icons.Rounded.Apps, contentDescription = null) },
+                        supportingContent = { Text(pausedSummary, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
+                    )
                 }
             }
             item { SectionHeader("Tips") }
@@ -265,6 +292,53 @@ fun HomeScreen(
         }
     }
     if (showTiming) TimingDialog(onDismiss = { showTiming = false })
+    if (showPausedApps) PausedAppsDialog(onDismiss = { showPausedApps = false })
+}
+
+@Composable
+private fun PausedAppsDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val apps by produceState<List<AppEntry>?>(null) {
+        value = withContext(Dispatchers.IO) { loadLauncherApps(context.packageManager, context.packageName) }
+    }
+    val config by SnapEngine.store.config.collectAsState()
+    val initiallyPaused = remember { config.pausedApps }
+    val sortedApps = remember(apps, initiallyPaused) {
+        apps?.sortedWith(compareBy<AppEntry> { it.packageName !in initiallyPaused }.thenBy { it.label.lowercase() })
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Pause in apps") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("SnapKey Map does nothing while these apps are open, so the key keeps its normal behaviour there.")
+                if (sortedApps == null) {
+                    CircularProgressIndicator()
+                } else if (sortedApps.isEmpty()) {
+                    Text("No launcher apps found.")
+                } else {
+                    LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                        items(sortedApps, key = { it.packageName }) { entry ->
+                            ListItem(
+                                modifier = Modifier.clickable {
+                                    SnapEngine.store.update {
+                                        it.copy(pausedApps = if (entry.packageName in it.pausedApps) {
+                                            it.pausedApps - entry.packageName
+                                        } else it.pausedApps + entry.packageName)
+                                    }
+                                },
+                                headlineContent = { Text(entry.label) },
+                                trailingContent = {
+                                    Checkbox(checked = entry.packageName in config.pausedApps, onCheckedChange = null)
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
+    )
 }
 
 @Composable
