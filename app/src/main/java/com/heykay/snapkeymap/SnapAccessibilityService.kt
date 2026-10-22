@@ -1,6 +1,7 @@
 package com.heykay.snapkeymap
 
 import android.accessibilityservice.AccessibilityService
+import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
@@ -11,7 +12,6 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
-import android.view.inputmethod.InputMethodManager
 import android.widget.TextView
 import android.widget.Toast
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,8 +38,11 @@ class SnapAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val packageName = event.packageName?.toString() ?: return
-        val keyboards = getSystemService(InputMethodManager::class.java).enabledInputMethodList
-        if (keyboards.none { it.packageName == packageName }) SnapEngine.onForegroundApp(packageName)
+        val className = event.className?.toString() ?: return
+        val activity = runCatching {
+            packageManager.getActivityInfo(ComponentName(packageName, className), 0)
+        }.getOrNull() ?: return
+        SnapEngine.onForegroundApp(activity.packageName)
     }
 
     override fun onInterrupt() = Unit
