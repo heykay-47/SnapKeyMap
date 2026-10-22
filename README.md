@@ -60,12 +60,14 @@ Assign one action each to **Press**, **Double press**, and **Press & hold**.
 
 | Category | Actions |
 | --- | --- |
-| Phone | Flashlight, ringer presets you can create and edit (ring, vibrate, silent), Do Not Disturb |
+| Phone | Flashlight, ringer presets you can create and edit (ring, vibrate, silent), a distinct vibration for each ringer mode, Do Not Disturb |
 | Screen & navigation | Screenshot, lock screen, notifications, quick settings, recent apps, home, back, power menu, split screen |
 | Music & video | Play / pause, next and previous track, media volume up and down, mute / unmute media, volume slider |
 | Open | Camera, video camera, voice assistant, Wi-Fi panel, Bluetooth settings, NFC panel, internet and mobile data panel |
-| More | Call a contact (opens the dialer with their number), open a link, run a supported app shortcut |
+| More | Call a contact (opens the dialer with their number), open a link (including `sms:` and `wa.me` links with a message filled in), run a supported app shortcut |
 | Open an app | Any installed app |
+
+On the home screen you can pause the key in chosen apps, such as the camera, and hide confirmation pop-ups. Errors still show.
 
 The app follows Material 3 with dynamic colour and a System, Light, or Dark theme. It declares no internet permission.
 
@@ -90,6 +92,13 @@ The F-Droid submission will request the same developer-signed APK as GitHub Rele
 - [ ] **App bundle builds.** CI builds the Android App Bundle that Google Play requires.
 - [ ] **Privacy policy and Data safety.** Publish a privacy policy on the website and declare that the app collects no data.
 - [ ] **Closed test.** New personal developer accounts need 12 testers opted in for 14 days before a production release.
+
+### From Reddit feedback (next release)
+
+- [x] **Hide confirmation pop-ups.** Turn off Show confirmations to hide ringer and Do Not Disturb messages. Errors and permission reminders still show.
+- [x] **Feel the ringer mode.** Ring uses one long buzz, Vibrate uses three short pulses, and Silent uses a tick.
+- [x] **Pause in chosen apps.** Keep the key's normal behaviour in apps such as the camera.
+- [x] **Settings and link tips.** Open phone Settings as a fresh task on ColorOS. The link dialog shows how to fill in a message with an `sms:` link.
 
 ### Delivered in v1.0.14
 
@@ -176,7 +185,7 @@ The ADB grant survives restarts and app updates. Without Shizuku, Android asks f
 2. Find **SnapKey Map** and turn it on.
 3. If Android blocks the switch, open **App info** for SnapKey Map, tap the three-dot menu, choose **Allow restricted settings**, and try again.
 
-The service runs accessibility actions such as screenshot and lock, opens apps and the device-logs prompt from the background, receives supported key events, and helps keep the app running. It cannot read screen content.
+The service runs accessibility actions such as screenshot and lock, opens apps and the device-logs prompt from the background, receives supported key events, and helps keep the app running. It also sees which app is in front by package name only. The latest package name stays in memory and is used only to pause in the apps you choose. It cannot read screen content.
 
 # Troubleshooting
 
@@ -212,6 +221,8 @@ When you report a detection problem, include your app version, ColorOS version, 
 SnapKey Map reads the system log on the phone to detect the Snap Key. The log permission covers more than key events. Lines are checked in memory and discarded, never saved or uploaded. Teaching keeps observations in memory and saves a learned log signature and, when available, an input key code. The app accepts a key log line only from the app that wrote it while you taught the key, which on the Find X9 is the system, so other apps can't fake a press.
 
 With Shizuku allowed, the app runs `logcat` and also reads raw key input events using `getevent` as the shell user through Shizuku. Input events are filtered in memory, never stored or uploaded. A learned input key uses explicit press and release events while the input stream is live; otherwise detection falls back to the system log. Ringer actions also use Shizuku to switch modes with `cmd audio set-ringer-mode`, including true Silent on Android 15 or later. You can also use it to allow Do Not Disturb access. Other mapped actions do not use Shizuku. Apps and websites you open through an action have their own privacy policies.
+
+The accessibility service sees the foreground app's package name only. It keeps only the latest name in memory and uses it only to pause in the apps you choose. It cannot read screen content. Your chosen paused-app package names are saved in settings.
 
 Keep these limits in mind:
 
