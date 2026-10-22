@@ -2,21 +2,26 @@ package com.heykay.snapkeymap.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.ClearAll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -60,10 +65,32 @@ internal fun PausedAppsSheet(onDismiss: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                SheetTitle(
-                    "Pause in apps",
-                    "SnapKey Map does nothing while these apps are open, so the key keeps its normal behaviour there.",
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SheetTitle(
+                        "Pause in apps",
+                        "SnapKey Map does nothing while these apps are open, so the key keeps its normal behaviour there.",
+                    )
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            when (val count = config.pausedApps.size) {
+                                0 -> "No apps paused"
+                                1 -> "1 app paused"
+                                else -> "$count apps paused"
+                            },
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        TextButton(
+                            onClick = { SnapEngine.store.update { it.copy(pausedApps = emptySet()) } },
+                            enabled = config.pausedApps.isNotEmpty(),
+                        ) {
+                            Icon(Icons.Rounded.ClearAll, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Clear all")
+                        }
+                    }
+                }
             }
             val appList = sortedApps
             if (appList == null) {
