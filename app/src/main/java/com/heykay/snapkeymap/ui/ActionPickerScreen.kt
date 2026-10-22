@@ -383,7 +383,7 @@ private fun LinkDialog(initial: String, onDismiss: () -> Unit, onConfirm: (Strin
                 value = text,
                 onValueChange = { text = it },
                 label = { Text("Link") },
-                supportingText = { Text("For example https://maps.google.com or spotify:") },
+                supportingText = { Text("For example spotify: or\nsms:+15551234567?body=On my way") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             )
