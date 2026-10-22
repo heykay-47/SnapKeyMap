@@ -192,7 +192,7 @@ object ActionRunner {
                 null
             }
             if (result?.exitCode == 0) {
-                toast(context, next.label)
+                confirm(context, next.label)
                 return
             }
         }
@@ -200,7 +200,8 @@ object ActionRunner {
         val skippedSilent = action.nextMode(current) == RingerMode.SILENT && !canSilence
         val next = action.nextMode(current, allowSilent = canSilence)
         audio.ringerMode = next.audioMode
-        toast(context, if (skippedSilent) "Allow Do Not Disturb access to use Silent" else next.label)
+        if (skippedSilent) toast(context, "Allow Do Not Disturb access to use Silent")
+        else confirm(context, next.label)
     }
 
     private val RingerMode.audioMode: Int
@@ -221,7 +222,11 @@ object ActionRunner {
         notifications.setInterruptionFilter(
             if (turnOn) NotificationManager.INTERRUPTION_FILTER_PRIORITY else NotificationManager.INTERRUPTION_FILTER_ALL,
         )
-        toast(context, if (turnOn) "Do Not Disturb on" else "Do Not Disturb off")
+        confirm(context, if (turnOn) "Do Not Disturb on" else "Do Not Disturb off")
+    }
+
+    private fun confirm(context: Context, text: String) {
+        if (SnapEngine.store.config.value.showConfirmations) toast(context, text)
     }
 
     private fun toast(context: Context, text: String) {

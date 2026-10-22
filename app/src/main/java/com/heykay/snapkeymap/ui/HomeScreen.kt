@@ -208,6 +208,16 @@ fun HomeScreen(
                         supportingContent = { Text("Double ${config.doublePressWindowMs} ms · Hold ${config.holdMs} ms", maxLines = 1) },
                         trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
                     )
+                    HorizontalDivider()
+                    ListItem(
+                        modifier = Modifier.clickable {
+                            SnapEngine.store.update { it.copy(showConfirmations = !it.showConfirmations) }
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        headlineContent = { Text("Show confirmations") },
+                        supportingContent = { Text("Pop-ups such as Vibrate or Do Not Disturb on. Errors always show.") },
+                        trailingContent = { Switch(checked = config.showConfirmations, onCheckedChange = null) },
+                    )
                 }
             }
             item { SectionHeader("Tips") }
