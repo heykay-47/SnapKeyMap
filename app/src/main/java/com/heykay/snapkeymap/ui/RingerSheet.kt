@@ -5,7 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -122,9 +124,29 @@ private fun PresetList(
 @Composable
 private fun PresetCard(modes: List<RingerMode>, selected: Boolean, onClick: () -> Unit, onEdit: () -> Unit) {
     val colors = MaterialTheme.colorScheme
+    SelectableCard(selected = selected, onClick = onClick) {
+        ModeSequence(modes, Modifier.weight(1f))
+        if (selected) {
+            Icon(Icons.Rounded.CheckCircle, contentDescription = "Selected", tint = colors.primary)
+        }
+        IconButton(onClick = onEdit) {
+            Icon(Icons.Rounded.Edit, contentDescription = "Edit ${SnapAction.Ringer(modes).label}")
+        }
+    }
+}
+
+@Composable
+internal fun SelectableCard(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 4.dp),
+    content: @Composable RowScope.() -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (selected) colors.secondaryContainer else colors.surfaceContainerHighest,
@@ -132,17 +154,10 @@ private fun PresetCard(modes: List<RingerMode>, selected: Boolean, onClick: () -
         border = if (selected) BorderStroke(2.dp, colors.primary) else BorderStroke(1.dp, colors.outlineVariant),
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 4.dp),
+            Modifier.fillMaxWidth().padding(contentPadding),
             verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ModeSequence(modes, Modifier.weight(1f))
-            if (selected) {
-                Icon(Icons.Rounded.CheckCircle, contentDescription = "Selected", tint = colors.primary)
-            }
-            IconButton(onClick = onEdit) {
-                Icon(Icons.Rounded.Edit, contentDescription = "Edit ${SnapAction.Ringer(modes).label}")
-            }
-        }
+            content = content,
+        )
     }
 }
 
@@ -210,7 +225,7 @@ private fun PresetEditor(
 }
 
 @Composable
-private fun SheetTitle(title: String, subtitle: String) {
+internal fun SheetTitle(title: String, subtitle: String) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(title, style = MaterialTheme.typography.titleLarge)
         Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

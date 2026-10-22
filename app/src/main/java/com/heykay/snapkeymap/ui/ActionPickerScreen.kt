@@ -354,7 +354,7 @@ private fun Loading() {
 private val iconCache = LruCache<String, ImageBitmap>(300)
 
 @Composable
-private fun AppIcon(component: ComponentName) {
+internal fun AppIcon(component: ComponentName) {
     val pm = LocalContext.current.packageManager
     val key = component.flattenToString()
     val icon by produceState<ImageBitmap?>(iconCache.get(key), key) {
