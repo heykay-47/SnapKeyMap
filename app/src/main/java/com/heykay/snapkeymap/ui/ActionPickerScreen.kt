@@ -66,15 +66,19 @@ import com.heykay.snapkeymap.editRingerPreset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-private data class AppEntry(val label: String, val component: ComponentName) {
+internal data class AppEntry(val label: String, val component: ComponentName) {
     val packageName: String get() = component.packageName
 }
 
-private fun loadActivities(pm: PackageManager, intent: Intent, exclude: String): List<AppEntry> =
+internal fun loadActivities(pm: PackageManager, intent: Intent, exclude: String): List<AppEntry> =
     pm.queryIntentActivities(intent, 0)
         .map { AppEntry(it.loadLabel(pm).toString(), ComponentName(it.activityInfo.packageName, it.activityInfo.name)) }
         .filter { it.packageName != exclude }
         .sortedBy { it.label.lowercase() }
+
+internal fun loadLauncherApps(pm: PackageManager, exclude: String): List<AppEntry> =
+    loadActivities(pm, Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), exclude)
+        .distinctBy { it.packageName }
 
 @Composable
 fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
@@ -90,8 +94,7 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
 
     val apps by produceState<List<AppEntry>?>(null) {
         value = withContext(Dispatchers.IO) {
-            loadActivities(pm, Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), context.packageName)
-                .distinctBy { it.packageName }
+            loadLauncherApps(pm, context.packageName)
         }
     }
     val shortcutApps by produceState<List<AppEntry>?>(null) {
@@ -351,7 +354,7 @@ private fun Loading() {
 private val iconCache = LruCache<String, ImageBitmap>(300)
 
 @Composable
-private fun AppIcon(component: ComponentName) {
+internal fun AppIcon(component: ComponentName) {
     val pm = LocalContext.current.packageManager
     val key = component.flattenToString()
     val icon by produceState<ImageBitmap?>(iconCache.get(key), key) {
@@ -380,7 +383,7 @@ private fun LinkDialog(initial: String, onDismiss: () -> Unit, onConfirm: (Strin
                 value = text,
                 onValueChange = { text = it },
                 label = { Text("Link") },
-                supportingText = { Text("For example https://maps.google.com or spotify:") },
+                supportingText = { Text("For example spotify: or\nsms:+15551234567?body=On my way") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             )

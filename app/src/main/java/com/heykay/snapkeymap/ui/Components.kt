@@ -195,7 +195,9 @@ fun Context.openSafely(intent: Intent) {
     }
 }
 
-fun Context.openPhoneSettings() = openSafely(Intent(Settings.ACTION_SETTINGS))
+fun Context.openPhoneSettings() = openSafely(
+    Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
+)
 
 fun Context.openAccessibilitySettings() = openSafely(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
 

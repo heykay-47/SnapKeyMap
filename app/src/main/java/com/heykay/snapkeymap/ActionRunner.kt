@@ -13,6 +13,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.provider.MediaStore
 import android.provider.Settings
 import android.view.KeyEvent
@@ -192,7 +194,8 @@ object ActionRunner {
                 null
             }
             if (result?.exitCode == 0) {
-                toast(context, next.label)
+                vibrateRinger(context, next)
+                confirm(context, next.label)
                 return
             }
         }
@@ -200,8 +203,22 @@ object ActionRunner {
         val skippedSilent = action.nextMode(current) == RingerMode.SILENT && !canSilence
         val next = action.nextMode(current, allowSilent = canSilence)
         audio.ringerMode = next.audioMode
-        toast(context, if (skippedSilent) "Allow Do Not Disturb access to use Silent" else next.label)
+        vibrateRinger(context, next)
+        if (skippedSilent) toast(context, "Allow Do Not Disturb access to use Silent")
+        else confirm(context, next.label)
     }
+
+    private fun vibrateRinger(context: Context, mode: RingerMode) {
+        val vibrator = context.getSystemService(Vibrator::class.java) ?: return
+        vibrator.vibrate(mode.vibrationEffect)
+    }
+
+    private val RingerMode.vibrationEffect: VibrationEffect
+        get() = when (this) {
+            RingerMode.RING -> VibrationEffect.createOneShot(350L, VibrationEffect.DEFAULT_AMPLITUDE)
+            RingerMode.VIBRATE -> VibrationEffect.createWaveform(longArrayOf(0, 40, 90, 40, 90, 40), -1)
+            RingerMode.SILENT -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK)
+        }
 
     private val RingerMode.audioMode: Int
         get() = when (this) {
@@ -221,10 +238,16 @@ object ActionRunner {
         notifications.setInterruptionFilter(
             if (turnOn) NotificationManager.INTERRUPTION_FILTER_PRIORITY else NotificationManager.INTERRUPTION_FILTER_ALL,
         )
-        toast(context, if (turnOn) "Do Not Disturb on" else "Do Not Disturb off")
+        confirm(context, if (turnOn) "Do Not Disturb on" else "Do Not Disturb off")
+    }
+
+    private fun confirm(context: Context, text: String) {
+        if (SnapEngine.store.config.value.showConfirmations) toast(context, text)
     }
 
     private fun toast(context: Context, text: String) {
-        Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+        val service = SnapAccessibilityService.instance
+        if (service != null) service.showMessage(text)
+        else Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
     }
 }

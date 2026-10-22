@@ -49,7 +49,7 @@
       <ol class="steps">
         <li><h3>Choose a method</h3><p>Choose <a href="#shizuku">Shizuku</a> for setup without a computer, or <a href="#computer">Computer (ADB)</a> for one command over USB.</p></li>
         <li><h3>Give log access</h3><p>Follow the instructions for your chosen method. Keep Shizuku running and allow SnapKey Map in it for prompt-free reading. Otherwise, choose <strong>Allow</strong> when Android asks for device logs.</p></li>
-        <li><h3>Turn on accessibility</h3><p>Tap <strong>Open accessibility settings</strong> and turn on SnapKey Map. Even with ADB or Shizuku, the service runs accessibility actions, opens apps and the device-logs prompt from the background, receives supported key events, and helps keep the app running. It cannot read screen content. If Android blocks the switch, open <strong>App info</strong>, tap the three-dot menu, choose <strong>Allow restricted settings</strong>, then retry.</p></li>
+        <li><h3>Turn on accessibility</h3><p>Tap <strong>Open accessibility settings</strong> and turn on SnapKey Map. Even with ADB or Shizuku, the service runs accessibility actions, opens apps and the device-logs prompt from the background, receives supported key events, and helps keep the app running. It checks window-event package and class names to identify app activities, ignoring non-activity windows such as keyboards and status indicators. Only the latest activity's package name stays in memory and is used only to pause in the apps you choose. It cannot read screen content. If Android blocks the switch, open <strong>App info</strong>, tap the three-dot menu, choose <strong>Allow restricted settings</strong>, then retry.</p></li>
         <li><h3>Background operation (optional)</h3><p>Allow the battery-optimisation exemption to reduce ColorOS interruptions, or tap <strong>Skip</strong>. This does not guarantee background detection.</p></li>
         <li><h3>Notifications (optional)</h3><p>Allow alerts when detection pauses, or tap <strong>Skip</strong>. Actions do not need notification permission.</p></li>
         <li><h3>Teach the key</h3><p>Set Oppo's own Snap Key action to <strong>None</strong> in phone Settings. Start teaching, press three times when asked, then hold once.</p></li>
@@ -98,6 +98,7 @@
     <section id="actions" aria-labelledby="actions-heading">
       <h2 id="actions-heading">Choosing actions</h2>
       <p>Tap <strong>Press</strong>, <strong>Double press</strong>, or <strong>Press &amp; hold</strong> on the home screen. Choose an app, supported shortcut, link, or device action. Test it and check the <strong>Last:</strong> text in the Ready card.</p>
+      <p>Use <strong>Pause in apps</strong> on the home screen to keep the key's normal behaviour in chosen apps, such as the camera. Turn off <strong>Show confirmations</strong> to hide ringer and Do Not Disturb pop-ups. Errors and permission reminders still show. Each ringer mode has its own vibration even when confirmations are hidden.</p>
       <ul>
         <li>A double-press assignment adds a 350 ms wait after release before the single-press action runs.</li>
         <li>The known Find X9 log reports press and release edges. Other learned log formats need repeated events while held to detect a hold.</li>
@@ -154,7 +155,7 @@
       <h3>How key lines are checked</h3>
       <p>A learned key line must match the writer UID recorded during teaching, as well as the tag and normalized message. The known Oppo key line is accepted only from the system UID, 1000. Other apps cannot fake a Snap Key press just by writing the same line under their own UID.</p>
       <h3>Accessibility and settings</h3>
-      <p>The accessibility service can receive supported key events and perform device actions. Its configuration sets <code>canRetrieveWindowContent="false"</code>, so it cannot read window content.</p>
+      <p>The accessibility service can receive supported key events and perform device actions. It checks window-event package and class names to identify app activities, ignoring non-activity windows such as keyboards and status indicators. It keeps only the latest activity's package name in memory and uses it only to pause in the apps you choose. Your chosen paused-app package names are saved in settings. Its configuration sets <code>canRetrieveWindowContent="false"</code>, so it cannot read screen content.</p>
       <p>Settings use private app storage. Android backup is disabled with <code>allowBackup="false"</code>. Mappings and the learned key are not included in Android backups.</p>
       <h3>Declared permissions</h3>
       <p>The app's <a href="https://github.com/heykay-47/SnapKeyMap/blob/main/app/expected-permissions.txt">permission list</a> contains:</p>

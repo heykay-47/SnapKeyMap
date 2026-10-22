@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.AvTimer
+import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -63,6 +64,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.app.NotificationManagerCompat
 import com.heykay.snapkeymap.Gesture
 import com.heykay.snapkeymap.LogAccess
@@ -95,6 +97,16 @@ fun HomeScreen(
     val resumes by SnapEngine.uiResumes.collectAsState()
     var showThemeMenu by rememberSaveable { mutableStateOf(false) }
     var showTiming by rememberSaveable { mutableStateOf(false) }
+    var showPausedApps by rememberSaveable { mutableStateOf(false) }
+    val pausedSummary = remember(config.pausedApps, resumes) {
+        if (config.pausedApps.isEmpty()) "None" else {
+            val pm = context.packageManager
+            config.pausedApps.mapNotNull { packageName ->
+                runCatching { pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString() }.getOrNull()
+            }.sortedBy { it.lowercase() }.joinToString(", ")
+                .takeIf { it.isNotEmpty() } ?: "${config.pausedApps.size} apps"
+        }
+    }
     val notificationsAllowed = remember(resumes) {
         NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
@@ -208,6 +220,25 @@ fun HomeScreen(
                         supportingContent = { Text("Double ${config.doublePressWindowMs} ms · Hold ${config.holdMs} ms", maxLines = 1) },
                         trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
                     )
+                    HorizontalDivider()
+                    ListItem(
+                        modifier = Modifier.clickable {
+                            SnapEngine.store.update { it.copy(showConfirmations = !it.showConfirmations) }
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        headlineContent = { Text("Show confirmations") },
+                        supportingContent = { Text("Pop-ups such as Vibrate or Do Not Disturb on. Errors always show.") },
+                        trailingContent = { Switch(checked = config.showConfirmations, onCheckedChange = null) },
+                    )
+                    HorizontalDivider()
+                    ListItem(
+                        modifier = Modifier.clickable { showPausedApps = true },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        headlineContent = { Text("Pause in apps") },
+                        leadingContent = { Icon(Icons.Rounded.Apps, contentDescription = null) },
+                        supportingContent = { Text(pausedSummary, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
+                    )
                 }
             }
             item { SectionHeader("Tips") }
@@ -255,6 +286,7 @@ fun HomeScreen(
         }
     }
     if (showTiming) TimingDialog(onDismiss = { showTiming = false })
+    if (showPausedApps) PausedAppsSheet(onDismiss = { showPausedApps = false })
 }
 
 @Composable
