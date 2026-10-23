@@ -482,7 +482,7 @@ internal fun GestureRow(
             if (available) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Icon(actionIcon(action), contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text(action.label, maxLines = 1)
+                    Text(action.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
