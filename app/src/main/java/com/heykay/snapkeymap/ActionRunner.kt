@@ -177,15 +177,14 @@ object ActionRunner {
 
     private suspend fun changeRinger(context: Context, action: SnapAction.Ringer) {
         val audio = context.getSystemService(AudioManager::class.java)
-        val current = when (audio.ringerMode) {
-            AudioManager.RINGER_MODE_NORMAL -> RingerMode.RING
-            AudioManager.RINGER_MODE_VIBRATE -> RingerMode.VIBRATE
-            AudioManager.RINGER_MODE_SILENT -> RingerMode.SILENT
-            else -> null
-        }
+        val externalMode = audio.ringerMode
         // Before Android 15, `cmd audio` has no set-ringer-mode yet still exits 0, so success can't be trusted.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM && canUseShizuku()) {
-            val next = action.nextMode(current)
+            // DND can mask the internal mode as Silent through AudioManager's public getter.
+            val internalMode = runCatching {
+                Settings.Global.getInt(context.contentResolver, Settings.Global.MODE_RINGER, externalMode)
+            }.getOrDefault(externalMode)
+            val next = action.nextMode(ringerMode(internalMode))
             val result = try {
                 setRingerWithShizuku(context, next.audioMode)
             } catch (e: CancellationException) {
@@ -199,6 +198,7 @@ object ActionRunner {
                 return
             }
         }
+        val current = ringerMode(externalMode)
         val canSilence = context.getSystemService(NotificationManager::class.java).isNotificationPolicyAccessGranted
         val skippedSilent = action.nextMode(current) == RingerMode.SILENT && !canSilence
         val next = action.nextMode(current, allowSilent = canSilence)
@@ -206,6 +206,13 @@ object ActionRunner {
         vibrateRinger(context, next)
         if (skippedSilent) toast(context, "Allow Do Not Disturb access to use Silent")
         else confirm(context, next.label)
+    }
+
+    private fun ringerMode(mode: Int): RingerMode? = when (mode) {
+        AudioManager.RINGER_MODE_NORMAL -> RingerMode.RING
+        AudioManager.RINGER_MODE_VIBRATE -> RingerMode.VIBRATE
+        AudioManager.RINGER_MODE_SILENT -> RingerMode.SILENT
+        else -> null
     }
 
     private fun vibrateRinger(context: Context, mode: RingerMode) {
