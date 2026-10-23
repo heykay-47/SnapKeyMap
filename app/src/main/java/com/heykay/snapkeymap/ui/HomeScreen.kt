@@ -413,8 +413,9 @@ private fun StatusCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
             )
-            if (config.needsLogAccess && config.inputKey == null &&
-                (inputLive || (logSource == LogSource.SHIZUKU && access == LogAccess.FULL))) {
+            if (config.needsLogAccess && ((config.inputKey == null &&
+                (inputLive || (logSource == LogSource.SHIZUKU && access == LogAccess.FULL))) ||
+                (config.logSignature?.hasExplicitKeyEdges == true && config.logKeyCode == null))) {
                 Text(
                     "Teach the Snap Key again for more precise detection.",
                     style = MaterialTheme.typography.bodySmall,

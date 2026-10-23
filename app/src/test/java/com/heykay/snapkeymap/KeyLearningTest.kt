@@ -34,6 +34,68 @@ class KeyLearningTest {
     }
 
     @Test
+    fun parsesLoggedKeyIdentityOnlyFromSystemKeyEventLines() {
+        val tag = "KEYLOG_PhoneWindowManagerExtImpl"
+        val snap = "overrideInterceptKeyBeforeQueueing:KeyEvent { action=ACTION_DOWN, " +
+            "keyCode=KEYCODE_ACTION_BUTTON_CLICK, scanCode=735, metaState=0, flags=0x8, " +
+            "repeatCount=0, eventTime=117351784942000, downTime=117351784942000, " +
+            "deviceId=3, source=0x101, displayId=-1 },  keyguardOn = false,  screenOn = true"
+        val keyboard = "overrideInterceptKeyBeforeQueueing:KeyEvent { action=ACTION_DOWN, " +
+            "keyCode=KEYCODE_A, scanCode=0, metaState=0, flags=0x0, repeatCount=0, " +
+            "eventTime=117394451000000, downTime=117394451000000 }"
+        assertEquals("KEYCODE_ACTION_BUTTON_CLICK", loggedKeyCode("1000", tag, snap))
+        assertEquals("KEYCODE_A", loggedKeyCode("1000", tag, keyboard))
+        assertEquals("KEYCODE_A", loggedKeyCode("system", tag, keyboard))
+        assertEquals(null, loggedKeyCode("10234", tag, snap))
+        assertEquals(null, loggedKeyCode("1000", "KEYLOG_OplusKeyEventUtil", snap))
+        assertEquals(null, loggedKeyCode("1000", tag, "keyCode=KEYCODE_A"))
+        assertEquals(null, loggedKeyCode("1000", tag, "overrideInterceptKeyBeforeQueueing:KeyEvent {}"))
+    }
+
+    @Test
+    fun loggedKeyFilterRejectsOnlyKnownMismatches() {
+        val snap = "KEYCODE_ACTION_BUTTON_CLICK"
+        val other = "KEYCODE_A"
+        for (learned in listOf(null, snap, other)) {
+            for (line in listOf(null, snap, other)) {
+                assertEquals(learned == null || line == null || learned == line, acceptsLoggedKey(learned, line))
+            }
+        }
+    }
+
+    @Test
+    fun learnsLoggedIdentityAcrossTapWindowsButNotFromBaseline() {
+        val snap = KeyLearning.loggedKey("KEYCODE_ACTION_BUTTON_CLICK")
+        val keyboard = KeyLearning.loggedKey("KEYCODE_A")
+        val times = listOf(7000L, 11000L, 15000L)
+        val observations = times.map(::snapKeyPress) + times.map { Observation(it, snap) } +
+            listOf(1000L, 7000L, 11000L, 15000L).map { Observation(it, keyboard) }
+        val result = KeyLearning.analyze(observations, baseline, taps, hold) as LearnResult.LogLineFound
+        assertEquals("KEYCODE_ACTION_BUTTON_CLICK", result.logKeyCode)
+
+        val legacy = KeyLearning.analyze(times.map(::snapKeyPress), baseline, taps, hold) as LearnResult.LogLineFound
+        assertEquals(null, legacy.logKeyCode)
+        assertEquals(LearnResult.NothingFound, KeyLearning.analyze(
+            times.map { Observation(it, snap) }, baseline, taps, hold,
+        ))
+        val generic = times.map { log(it, "OtherKey", "pressed") } + times.map { Observation(it, snap) }
+        val fallback = KeyLearning.analyze(generic, baseline, taps, hold) as LearnResult.LogLineFound
+        assertEquals(null, fallback.logKeyCode)
+    }
+
+    @Test
+    fun loggedIdentityNeedsEnoughRoundsAndPrefersTheMostTapWindows() {
+        val times = listOf(7000L, 11000L, 15000L)
+        val logs = times.map(::snapKeyPress)
+        val snap = times.map { Observation(it, KeyLearning.loggedKey("KEYCODE_ACTION_BUTTON_CLICK")) }
+        val other = times.take(2).map { Observation(it, KeyLearning.loggedKey("KEYCODE_A")) }
+        val result = KeyLearning.analyze(logs + other + snap, baseline, taps, hold) as LearnResult.LogLineFound
+        assertEquals("KEYCODE_ACTION_BUTTON_CLICK", result.logKeyCode)
+        val insufficient = KeyLearning.analyze(logs + snap.take(1), baseline, taps, hold) as LearnResult.LogLineFound
+        assertEquals(null, insufficient.logKeyCode)
+    }
+
+    @Test
     fun findsTheLogLineThatOnlyAppearsWhenPressing() {
         val observations = noise() +
             listOf(7000L, 11000L, 15000L).map(::snapKeyPress) +
