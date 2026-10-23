@@ -95,6 +95,15 @@ The F-Droid submission will request the same developer-signed APK as GitHub Rele
 - [ ] **Privacy policy and Data safety.** Publish a privacy policy on the website and declare that the app collects no data.
 - [ ] **Closed test.** New personal developer accounts need 12 testers opted in for 14 days before a production release.
 
+### Delivered in v1.0.17
+
+This release was tested on a Find X9. Behaviour on other firmware may differ.
+
+- [x] **Tap, then hold.** Press once, then press again and hold to run a fourth action. A short second press still counts as a double press. ([#24](https://github.com/heykay-47/SnapKeyMap/issues/24))
+- [x] **Only when unlocked.** Tap the lock next to a gesture so its action doesn't run while the phone is locked. ([#25](https://github.com/heykay-47/SnapKeyMap/issues/25))
+- [x] **Keyboard input no longer triggers actions.** Keys typed on a keyboard, including from a PC while casting, are ignored. Teach the Snap Key again once after updating. ([#27](https://github.com/heykay-47/SnapKeyMap/issues/27))
+- [x] **Ringer cycle with Do Not Disturb on.** With Shizuku, Ring, Vibrate and Silent cycle normally while Do Not Disturb is on. ([#23](https://github.com/heykay-47/SnapKeyMap/issues/23))
+
 ### Delivered in v1.0.16
 
 This release was tested on a Find X9. Behaviour on other firmware may differ.
