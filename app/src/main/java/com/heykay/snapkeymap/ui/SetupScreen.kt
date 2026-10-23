@@ -150,7 +150,7 @@ fun SetupScreen(
                 Text(title, style = MaterialTheme.typography.headlineSmall)
                 when (page) {
                     SetupPage.METHOD -> {
-                        Text("Assign your own actions to a press, double press or hold. Oppo keeps the key private, " +
+                        Text("Assign your own actions to a press, double press, hold or tap then hold. Oppo keeps the key private, " +
                             "so SnapKey Map needs system logs to detect it. Logs stay on your phone.")
                         MethodOption(
                             title = "Shizuku",
@@ -230,7 +230,7 @@ fun SetupScreen(
                             }
                         }
                         if (!config.canDetectHold) {
-                            Text("Your phone doesn't report holding the key, so Press & hold cannot be detected.")
+                            Text("Your phone doesn't report holding the key, so Press & hold and Tap, then hold cannot be detected.")
                         }
                     }
                 }

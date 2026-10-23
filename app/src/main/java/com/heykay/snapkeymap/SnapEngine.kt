@@ -313,6 +313,7 @@ object SnapEngine {
         }
         inputGestures.wantsDouble = config.action(Gesture.DOUBLE) != SnapAction.NoAction
         inputGestures.wantsLong = config.action(Gesture.LONG) != SnapAction.NoAction
+        inputGestures.wantsTapHold = config.action(Gesture.TAP_HOLD) != SnapAction.NoAction
         markKeySeen()
         if (event.down) inputGestures.down() else inputGestures.up()
     }
@@ -377,6 +378,7 @@ object SnapEngine {
         val config = store.config.value
         logGestures.wantsDouble = config.action(Gesture.DOUBLE) != SnapAction.NoAction
         logGestures.wantsLong = (explicitEdges || config.holdRepeats) && config.action(Gesture.LONG) != SnapAction.NoAction
+        logGestures.wantsTapHold = (explicitEdges || config.holdRepeats) && config.action(Gesture.TAP_HOLD) != SnapAction.NoAction
         if (explicitEdges) {
             inputPressed = false
             oplusEdges.accept(timestamp)
@@ -405,6 +407,7 @@ object SnapEngine {
         if (key.keyCode == KeyEvent.KEYCODE_UNKNOWN && event.scanCode != key.scanCode) return false
         keyGestures.wantsDouble = config.action(Gesture.DOUBLE) != SnapAction.NoAction
         keyGestures.wantsLong = config.action(Gesture.LONG) != SnapAction.NoAction
+        keyGestures.wantsTapHold = config.action(Gesture.TAP_HOLD) != SnapAction.NoAction
         when (event.action) {
             KeyEvent.ACTION_DOWN -> if (event.repeatCount == 0) {
                 markKeySeen()

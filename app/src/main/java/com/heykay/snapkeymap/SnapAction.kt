@@ -7,6 +7,7 @@ enum class Gesture(val title: String) {
     SINGLE("Press"),
     DOUBLE("Double press"),
     LONG("Press & hold"),
+    TAP_HOLD("Tap, then hold"),
 }
 
 enum class Section(val title: String) {

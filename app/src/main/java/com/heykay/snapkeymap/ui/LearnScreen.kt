@@ -220,7 +220,7 @@ private fun Finished(result: LearnResult, finishedAt: Long, onRetry: () -> Unit,
             "The app will spot your Snap Key in the system log."
         } else {
             "The app will spot your Snap Key in the system log. Your phone doesn't report holding the " +
-                "key, so press and double press work, but press & hold doesn't."
+                "key, so press and double press work, but press & hold and tap then hold don't."
         }
         LearnResult.NothingFound -> ""
     }

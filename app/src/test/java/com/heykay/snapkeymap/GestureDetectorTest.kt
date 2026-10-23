@@ -43,6 +43,94 @@ class GestureDetectorTest {
     }
 
     @Test
+    fun holdingSecondPressFiresOnlyTapHold() {
+        val h = Harness()
+        h.detector.wantsTapHold = true
+        h.tap(0)
+        h.advanceTo(200)
+        h.detector.down()
+        h.advanceTo(849)
+        assertTrue(h.gestures.isEmpty())
+        h.detector.down()
+        h.advanceTo(850)
+        assertEquals(listOf(Gesture.TAP_HOLD), h.gestures)
+        assertTrue(h.detector.hasHandledPress)
+        h.detector.up()
+        h.advanceTo(3000)
+        assertEquals(listOf(Gesture.TAP_HOLD), h.gestures)
+    }
+
+    @Test
+    fun quickSecondTapWithTapHoldAssignedFiresDoubleOnRelease() {
+        val h = Harness()
+        h.detector.wantsDouble = false
+        h.detector.wantsTapHold = true
+        h.tap(0)
+        h.advanceTo(200)
+        h.detector.down()
+        assertTrue(h.gestures.isEmpty())
+        h.advanceTo(250)
+        h.detector.up()
+        assertEquals(listOf(Gesture.DOUBLE), h.gestures)
+        h.advanceTo(3000)
+        assertEquals(listOf(Gesture.DOUBLE), h.gestures)
+    }
+
+    @Test
+    fun withoutTapHoldDoubleStillFiresOnSecondDown() {
+        val h = Harness()
+        h.tap(0)
+        h.advanceTo(200)
+        h.detector.down()
+        assertEquals(listOf(Gesture.DOUBLE), h.gestures)
+        h.advanceTo(1000)
+        h.detector.up()
+        h.advanceTo(3000)
+        assertEquals(listOf(Gesture.DOUBLE), h.gestures)
+    }
+
+    @Test
+    fun singleWaitsForWindowWhenOnlyTapHoldIsAssigned() {
+        val h = Harness()
+        h.detector.wantsDouble = false
+        h.detector.wantsLong = false
+        h.detector.wantsTapHold = true
+        h.tap(0)
+        h.advanceTo(399)
+        assertTrue(h.gestures.isEmpty())
+        h.advanceTo(400)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
+    fun resetCancelsPendingTapHold() {
+        val h = Harness()
+        h.detector.wantsTapHold = true
+        h.tap(0)
+        h.advanceTo(200)
+        h.detector.down()
+        h.advanceTo(300)
+        h.detector.reset()
+        h.detector.up()
+        h.advanceTo(3000)
+        assertTrue(h.gestures.isEmpty())
+        h.tap(4000)
+        h.advanceTo(5000)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
+    fun tapHoldAssignmentDoesNotChangeFirstPressHold() {
+        val h = Harness()
+        h.detector.wantsTapHold = true
+        h.detector.down()
+        h.advanceTo(650)
+        h.detector.up()
+        h.advanceTo(3000)
+        assertEquals(listOf(Gesture.LONG), h.gestures)
+    }
+
+    @Test
     fun holdingWithDuplicateDownsNeverYieldsDoubleOrSingle() {
         for (hold in listOf(300L, 650L, 1200L)) {
             val h = Harness().apply { holdMs = hold }

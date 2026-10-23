@@ -191,7 +191,7 @@ fun HomeScreen(
                         GestureRow(
                             gesture = gesture,
                             action = config.action(gesture),
-                            available = gesture != Gesture.LONG || config.canDetectHold,
+                            available = (gesture != Gesture.LONG && gesture != Gesture.TAP_HOLD) || config.canDetectHold,
                             onClick = { onPick(gesture) },
                         )
                         if (config.action(gesture) != SnapAction.NoAction) {
@@ -209,10 +209,10 @@ fun HomeScreen(
                     }
                 }
             }
-            if (config.action(Gesture.DOUBLE) != SnapAction.NoAction) {
+            if (config.action(Gesture.DOUBLE) != SnapAction.NoAction || config.action(Gesture.TAP_HOLD) != SnapAction.NoAction) {
                 item {
                     Text(
-                        "With a double press set, a single press waits a split second to see if a second press follows.",
+                        "With a double press or tap, then hold set, a single press waits a split second to see if a second press follows.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
