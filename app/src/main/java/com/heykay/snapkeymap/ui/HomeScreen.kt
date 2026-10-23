@@ -27,6 +27,8 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.AvTimer
@@ -40,6 +42,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -98,6 +101,7 @@ fun HomeScreen(
     var showThemeMenu by rememberSaveable { mutableStateOf(false) }
     var showTiming by rememberSaveable { mutableStateOf(false) }
     var showPausedApps by rememberSaveable { mutableStateOf(false) }
+    var showUnlockHint by rememberSaveable { mutableStateOf(false) }
     val pausedSummary = remember(config.pausedApps, resumes) {
         if (config.pausedApps.isEmpty()) "None" else {
             val pm = context.packageManager
@@ -192,20 +196,15 @@ fun HomeScreen(
                             gesture = gesture,
                             action = config.action(gesture),
                             available = (gesture != Gesture.LONG && gesture != Gesture.TAP_HOLD) || config.canDetectHold,
+                            unlockedOnly = gesture in config.unlockedOnly,
+                            onUnlockedOnlyChange = { on ->
+                                SnapEngine.store.update {
+                                    it.copy(unlockedOnly = if (on) it.unlockedOnly + gesture else it.unlockedOnly - gesture)
+                                }
+                                if (on && !config.unlockHintShown) showUnlockHint = true
+                            },
                             onClick = { onPick(gesture) },
                         )
-                        if (config.action(gesture) != SnapAction.NoAction) {
-                            ListItem(
-                                modifier = Modifier.clickable {
-                                    SnapEngine.store.update {
-                                        it.copy(unlockedOnly = if (gesture in it.unlockedOnly) it.unlockedOnly - gesture else it.unlockedOnly + gesture)
-                                    }
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                headlineContent = { Text("Only when unlocked") },
-                                trailingContent = { Switch(checked = gesture in config.unlockedOnly, onCheckedChange = null) },
-                            )
-                        }
                     }
                 }
             }
@@ -299,6 +298,23 @@ fun HomeScreen(
     }
     if (showTiming) TimingDialog(onDismiss = { showTiming = false })
     if (showPausedApps) PausedAppsSheet(onDismiss = { showPausedApps = false })
+    if (showUnlockHint) UnlockHintDialog(onDismiss = {
+        SnapEngine.store.update { it.copy(unlockHintShown = true) }
+        showUnlockHint = false
+    })
+}
+
+@Composable
+internal fun UnlockHintDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Only when unlocked") },
+        text = {
+            Text("With the lock on, this action won't run while your phone is locked, so presses in a pocket or bag do nothing. " +
+                "Tap the lock again to turn it off.")
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Got it") } },
+    )
 }
 
 @Composable
@@ -449,7 +465,14 @@ private fun StatusCard(
 }
 
 @Composable
-internal fun GestureRow(gesture: Gesture, action: SnapAction, available: Boolean, onClick: () -> Unit) {
+internal fun GestureRow(
+    gesture: Gesture,
+    action: SnapAction,
+    available: Boolean,
+    unlockedOnly: Boolean,
+    onUnlockedOnlyChange: (Boolean) -> Unit,
+    onClick: () -> Unit,
+) {
     ListItem(
         modifier = Modifier.clickable(enabled = available, onClick = onClick),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -469,7 +492,20 @@ internal fun GestureRow(gesture: Gesture, action: SnapAction, available: Boolean
             }
         },
         trailingContent = {
-            if (available) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null)
+            if (available) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (action != SnapAction.NoAction) {
+                        IconToggleButton(checked = unlockedOnly, onCheckedChange = onUnlockedOnlyChange) {
+                            Icon(
+                                if (unlockedOnly) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                                contentDescription = if (unlockedOnly) "Only when unlocked, on" else "Only when unlocked, off",
+                                tint = if (unlockedOnly) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null)
+                }
+            }
         },
     )
 }

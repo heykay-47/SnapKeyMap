@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,6 +76,7 @@ fun SetupScreen(
     val config by SnapEngine.store.config.collectAsState()
     val serviceOn by SnapAccessibilityService.running.collectAsState()
     val resumes by SnapEngine.uiResumes.collectAsState()
+    var showUnlockHint by rememberSaveable { mutableStateOf(false) }
     fun readChecks() = SetupChecks(
         logs = SnapEngine.hasLogPermission(),
         shizuku = canUseShizuku(),
@@ -226,7 +228,19 @@ fun SetupScreen(
                             "After finishing, try the key and check Last: on the home screen.")
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Gesture.entries.forEach { gesture ->
-                                GestureRow(gesture, config.action(gesture), available = true) { onPick(gesture) }
+                                GestureRow(
+                                    gesture = gesture,
+                                    action = config.action(gesture),
+                                    available = true,
+                                    unlockedOnly = gesture in config.unlockedOnly,
+                                    onUnlockedOnlyChange = { on ->
+                                        SnapEngine.store.update {
+                                            it.copy(unlockedOnly = if (on) it.unlockedOnly + gesture else it.unlockedOnly - gesture)
+                                        }
+                                        if (on && !config.unlockHintShown) showUnlockHint = true
+                                    },
+                                    onClick = { onPick(gesture) },
+                                )
                             }
                         }
                         if (!config.canDetectHold) {
@@ -261,6 +275,10 @@ fun SetupScreen(
             }
         }
     }
+    if (showUnlockHint) UnlockHintDialog(onDismiss = {
+        SnapEngine.store.update { it.copy(unlockHintShown = true) }
+        showUnlockHint = false
+    })
 }
 
 @Composable

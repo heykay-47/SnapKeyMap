@@ -58,6 +58,8 @@
 
 Assign one action each to **Press**, **Double press**, **Press & hold**, and **Tap, then hold**. For the last gesture, tap once, then hold the second press. When it is assigned, a quick double press runs on release instead of on the second press down.
 
+Tap the lock next to a gesture to run it only when your phone is unlocked.
+
 | Category | Actions |
 | --- | --- |
 | Phone | Flashlight, ringer presets you can create and edit (ring, vibrate, silent), a distinct vibration for each ringer mode, Do Not Disturb |
