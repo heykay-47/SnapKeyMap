@@ -194,6 +194,18 @@ fun HomeScreen(
                             available = gesture != Gesture.LONG || config.canDetectHold,
                             onClick = { onPick(gesture) },
                         )
+                        if (config.action(gesture) != SnapAction.NoAction) {
+                            ListItem(
+                                modifier = Modifier.clickable {
+                                    SnapEngine.store.update {
+                                        it.copy(unlockedOnly = if (gesture in it.unlockedOnly) it.unlockedOnly - gesture else it.unlockedOnly + gesture)
+                                    }
+                                },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                headlineContent = { Text("Only when unlocked") },
+                                trailingContent = { Switch(checked = gesture in config.unlockedOnly, onCheckedChange = null) },
+                            )
+                        }
                     }
                 }
             }

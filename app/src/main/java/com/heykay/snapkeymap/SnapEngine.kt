@@ -1,6 +1,7 @@
 package com.heykay.snapkeymap
 
 import android.Manifest
+import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -426,6 +427,7 @@ object SnapEngine {
         lastDetected.value = Detected(gesture, now())
         val config = store.config.value
         if (foregroundApp in config.pausedApps) return
+        if (gesture in config.unlockedOnly && app.getSystemService(KeyguardManager::class.java).isKeyguardLocked) return
         val action = config.action(gesture)
         if (action == SnapAction.NoAction) return
         if (action !is SnapAction.Ringer) buzz()
