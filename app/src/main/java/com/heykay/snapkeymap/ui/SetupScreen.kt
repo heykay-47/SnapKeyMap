@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,6 +76,7 @@ fun SetupScreen(
     val config by SnapEngine.store.config.collectAsState()
     val serviceOn by SnapAccessibilityService.running.collectAsState()
     val resumes by SnapEngine.uiResumes.collectAsState()
+    var showUnlockHint by rememberSaveable { mutableStateOf(false) }
     fun readChecks() = SetupChecks(
         logs = SnapEngine.hasLogPermission(),
         shizuku = canUseShizuku(),
@@ -150,7 +152,7 @@ fun SetupScreen(
                 Text(title, style = MaterialTheme.typography.headlineSmall)
                 when (page) {
                     SetupPage.METHOD -> {
-                        Text("Assign your own actions to a press, double press or hold. Oppo keeps the key private, " +
+                        Text("Assign your own actions to a press, double press, hold or tap then hold. Oppo keeps the key private, " +
                             "so SnapKey Map needs system logs to detect it. Logs stay on your phone.")
                         MethodOption(
                             title = "Shizuku",
@@ -226,11 +228,23 @@ fun SetupScreen(
                             "After finishing, try the key and check Last: on the home screen.")
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Gesture.entries.forEach { gesture ->
-                                GestureRow(gesture, config.action(gesture), available = true) { onPick(gesture) }
+                                GestureRow(
+                                    gesture = gesture,
+                                    action = config.action(gesture),
+                                    available = true,
+                                    unlockedOnly = gesture in config.unlockedOnly,
+                                    onUnlockedOnlyChange = { on ->
+                                        SnapEngine.store.update {
+                                            it.copy(unlockedOnly = if (on) it.unlockedOnly + gesture else it.unlockedOnly - gesture)
+                                        }
+                                        if (on && !config.unlockHintShown) showUnlockHint = true
+                                    },
+                                    onClick = { onPick(gesture) },
+                                )
                             }
                         }
                         if (!config.canDetectHold) {
-                            Text("Your phone doesn't report holding the key, so Press & hold cannot be detected.")
+                            Text("Your phone doesn't report holding the key, so Press & hold and Tap, then hold cannot be detected.")
                         }
                     }
                 }
@@ -261,6 +275,10 @@ fun SetupScreen(
             }
         }
     }
+    if (showUnlockHint) UnlockHintDialog(onDismiss = {
+        SnapEngine.store.update { it.copy(unlockHintShown = true) }
+        showUnlockHint = false
+    })
 }
 
 @Composable

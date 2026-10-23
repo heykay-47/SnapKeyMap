@@ -16,6 +16,8 @@ data class Config(
     val enabled: Boolean = true,
     val showConfirmations: Boolean = true,
     val pausedApps: Set<String> = emptySet(),
+    val unlockedOnly: Set<Gesture> = emptySet(),
+    val unlockHintShown: Boolean = false,
     val actions: Map<Gesture, SnapAction> = mapOf(Gesture.SINGLE to SnapAction.Device(DeviceAction.FLASHLIGHT)),
     val ringerPresets: List<List<RingerMode>> = DEFAULT_RINGER_PRESETS,
     /** Set when Android hands the Snap Key to apps as a normal key. Then no log access is needed. */
@@ -23,6 +25,7 @@ data class Config(
     val inputKey: InputKey? = null,
     /** Set when the Snap Key can only be seen in the system log. */
     val logSignature: KeySignature? = null,
+    val logKeyCode: String? = null,
     val holdRepeats: Boolean = true,
     val releaseGapMs: Long = DEFAULT_RELEASE_GAP_MS,
     val doublePressWindowMs: Long = 350L,
@@ -97,10 +100,15 @@ class ConfigStore(private val context: Context) {
             enabled = prefs.getBoolean("enabled", true),
             showConfirmations = prefs.getBoolean("show_confirmations", true),
             pausedApps = prefs.getStringSet("paused_apps", emptySet()).orEmpty().toSet(),
+            unlockedOnly = Gesture.entries.filter {
+                it.name in prefs.getStringSet("unlocked_only", emptySet()).orEmpty()
+            }.toSet(),
+            unlockHintShown = prefs.getBoolean("unlock_hint_shown", false),
             actions = actions,
             ringerPresets = loadRingerPresets(prefs.getString("ringer_presets", null), actions.values),
             keyEvent = if (keyCode >= 0) LearnedKey(keyCode, prefs.getInt("scan_code", 0)) else null,
             inputKey = prefs.getString("input_code", null)?.let(::InputKey),
+            logKeyCode = prefs.getString("log_key_code", null),
             logSignature = if (tag != null && message != null) {
                 KeySignature(tag, message, prefs.getString("log_uid", null)?.let(::normalizeLogUid))
             } else null,
@@ -131,6 +139,8 @@ class ConfigStore(private val context: Context) {
             putBoolean("enabled", config.enabled)
             putBoolean("show_confirmations", config.showConfirmations)
             putStringSet("paused_apps", config.pausedApps)
+            putStringSet("unlocked_only", config.unlockedOnly.map { it.name }.toSet())
+            putBoolean("unlock_hint_shown", config.unlockHintShown)
             putString("theme", config.theme.name)
             putBoolean("setup_complete", config.setupComplete)
             putString("grant_method", config.grantMethod?.name)
@@ -140,6 +150,7 @@ class ConfigStore(private val context: Context) {
             putInt("key_code", config.keyEvent?.keyCode ?: -1)
             putInt("scan_code", config.keyEvent?.scanCode ?: 0)
             putString("input_code", config.inputKey?.code)
+            putString("log_key_code", config.logKeyCode)
             if (config.logSignature != null) {
                 putString("log_tag", config.logSignature.tag)
                 putString("log_message", config.logSignature.message)

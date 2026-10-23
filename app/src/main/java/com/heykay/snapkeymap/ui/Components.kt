@@ -107,6 +107,7 @@ fun gestureIcon(gesture: Gesture): ImageVector = when (gesture) {
     Gesture.SINGLE -> Icons.Rounded.TouchApp
     Gesture.DOUBLE -> Icons.Rounded.Repeat
     Gesture.LONG -> Icons.Rounded.Timer
+    Gesture.TAP_HOLD -> Icons.Rounded.Timer
 }
 
 fun actionIcon(action: SnapAction): ImageVector = when (action) {

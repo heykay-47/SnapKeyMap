@@ -59,7 +59,8 @@ fun HelpScreen(onDone: () -> Unit, onRunSetup: () -> Unit) {
                     "4. Optionally allow background operation to reduce ColorOS interruptions.\n\n" +
                     "5. Optionally allow notifications for detection paused alerts.\n\n" +
                     "6. Set Oppo's Snap Key action to None. Teach the key: press three times, then hold once.\n\n" +
-                    "7. Choose Press, Double press and Press & hold actions, then tap Finish. Test them and check Last:.",
+                    "7. Choose Press, Double press, Press & hold and Tap, then hold actions, then tap Finish. Test them and check Last:.\n\n" +
+                    "Tap the lock next to a gesture to run it only when your phone is unlocked.",
             )
             HelpSection(
                 icon = Icons.AutoMirrored.Rounded.HelpOutline,

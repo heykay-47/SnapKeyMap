@@ -6,7 +6,7 @@
 
 <p align="center">
   Map the Oppo Find X9's Snap Key to any app or action.<br>
-  A different action for a press, a double press, and a press and hold. No root needed.
+  A different action for a press, a double press, a press and hold, and a tap then hold. No root needed.
 </p>
 
 <p align="center">
@@ -56,7 +56,9 @@
 
 # Features
 
-Assign one action each to **Press**, **Double press**, and **Press & hold**.
+Assign one action each to **Press**, **Double press**, **Press & hold**, and **Tap, then hold**. For the last gesture, tap once, then hold the second press. When it is assigned, a quick double press runs on release instead of on the second press down.
+
+Tap the lock next to a gesture to run it only when your phone is unlocked.
 
 | Category | Actions |
 | --- | --- |
@@ -92,6 +94,15 @@ The F-Droid submission will request the same developer-signed APK as GitHub Rele
 - [ ] **App bundle builds.** CI builds the Android App Bundle that Google Play requires.
 - [ ] **Privacy policy and Data safety.** Publish a privacy policy on the website and declare that the app collects no data.
 - [ ] **Closed test.** New personal developer accounts need 12 testers opted in for 14 days before a production release.
+
+### Delivered in v1.0.17
+
+This release was tested on a Find X9. Behaviour on other firmware may differ.
+
+- [x] **Tap, then hold.** Press once, then press again and hold to run a fourth action. A short second press still counts as a double press. ([#24](https://github.com/heykay-47/SnapKeyMap/issues/24))
+- [x] **Only when unlocked.** Tap the lock next to a gesture so its action doesn't run while the phone is locked. ([#25](https://github.com/heykay-47/SnapKeyMap/issues/25))
+- [x] **Keyboard input no longer triggers actions.** Keys typed on a keyboard, including from a PC while casting, are ignored. Teach the Snap Key again once after updating. ([#27](https://github.com/heykay-47/SnapKeyMap/issues/27))
+- [x] **Ringer cycle with Do Not Disturb on.** With Shizuku, Ring, Vibrate and Silent cycle normally while Do Not Disturb is on. ([#23](https://github.com/heykay-47/SnapKeyMap/issues/23))
 
 ### Delivered in v1.0.16
 
@@ -150,7 +161,7 @@ Open SnapKey Map. The wizard has seven steps. It saves your progress and resumes
 4. **Background operation (optional).** Allow the battery-optimisation exemption to reduce ColorOS interruptions, or tap **Skip**. Background reliability is not guaranteed.
 5. **Notifications (optional).** Allow alerts for paused detection, or tap **Skip**. Actions run without notifications.
 6. **Teach the key.** Set Oppo's own Snap Key action to **None** in phone Settings. Then follow the prompts: press three times and hold once.
-7. **Choose actions.** Tap **Press**, **Double press**, or **Press & hold**. Assign at least one action, then tap **Finish**.
+7. **Choose actions.** Tap **Press**, **Double press**, **Press & hold**, or **Tap, then hold**. Assign at least one action, then tap **Finish**.
 
 Test each gesture and check **Last:** in the Ready card. You can change actions on the home screen at any time. To repeat setup without clearing your mappings, choose **Run setup again** in Help.
 
@@ -230,7 +241,7 @@ The accessibility service checks window-event package and class names to identif
 
 Keep these limits in mind:
 
-- A double-press assignment adds a wait after release before the single-press action runs: 350 ms by default, adjustable from 200 to 600 ms in **Timing**. The hold threshold defaults to 650 ms and can be set from 300 to 1200 ms.
+- A double-press or tap-then-hold assignment adds a wait after release before the single-press action runs: 350 ms by default, adjustable from 200 to 600 ms in **Timing**. The hold threshold defaults to 650 ms and can be set from 300 to 1200 ms.
 - With a learned input key and a live Shizuku input stream, press and hold uses explicit key edges. Log fallback on the Find X9 infers press and release from known key lines. Other learned log formats need the line to repeat while the key is held.
 - Screen-off detection and background reliability depend on ColorOS and are not guaranteed.
 - The shortcut picker lists apps that provide `ACTION_CREATE_SHORTCUT`. It cannot list every pinned shortcut. A deep link may work instead.

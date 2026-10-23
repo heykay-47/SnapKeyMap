@@ -1,6 +1,7 @@
 package com.heykay.snapkeymap
 
 import android.Manifest
+import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -90,6 +91,8 @@ object SnapEngine {
         main.post { connectShizukuIfNeeded() }
     }
     @Volatile private var logGeneration = 0
+    private val loggedKeysByThread = mutableMapOf<String, String>()
+    private var loggedKeysGeneration = -1
     private var retryDelayMs = 1000L
     private var inputRetryDelayMs = 1000L
     private val reconnectInput = Runnable {
@@ -312,6 +315,7 @@ object SnapEngine {
         }
         inputGestures.wantsDouble = config.action(Gesture.DOUBLE) != SnapAction.NoAction
         inputGestures.wantsLong = config.action(Gesture.LONG) != SnapAction.NoAction
+        inputGestures.wantsTapHold = config.action(Gesture.TAP_HOLD) != SnapAction.NoAction
         markKeySeen()
         if (event.down) inputGestures.down() else inputGestures.up()
     }
@@ -346,12 +350,23 @@ object SnapEngine {
     }
 
     // Called on the logcat thread for every line from another process.
-    private fun onLogLine(timestamp: String, uid: String, tag: String, message: String) {
+    private fun onLogLine(timestamp: String, uid: String, tid: String, tag: String, message: String) {
         val generation = logGeneration
+        if (loggedKeysGeneration != generation) {
+            loggedKeysByThread.clear()
+            loggedKeysGeneration = generation
+        }
+        val keyCode = loggedKeyCode(uid, tag, message)
+        if (keyCode != null) loggedKeysByThread[tid] = keyCode
+        val lineKey = loggedKeysByThread[tid]
         val explicitEdges = isKnownOplusKeyLine(uid, tag, message)
         learning?.let { list ->
             synchronized(list) {
-                if (learning === list) list += Observation(now(), KeyLearning.logKey(uid, tag, message))
+                if (learning === list) {
+                    val time = now()
+                    list += Observation(time, KeyLearning.logKey(uid, tag, message))
+                    if (keyCode != null) list += Observation(time, KeyLearning.loggedKey(keyCode))
+                }
             }
             if (explicitEdges) main.post {
                 if (generation == logGeneration) oplusEdges.observe(timestamp)
@@ -360,6 +375,7 @@ object SnapEngine {
         }
         val config = store.config.value
         if (preciseState.value) return
+        if (explicitEdges && !acceptsLoggedKey(config.logKeyCode, lineKey)) return
         val isSnapKey = config.enabled && config.needsLogAccess && acceptsKeyLog(config.logSignature, uid, tag, message)
         if (explicitEdges || isSnapKey) main.post {
             if (generation != logGeneration || !store.config.value.enabled || preciseState.value) return@post
@@ -376,6 +392,7 @@ object SnapEngine {
         val config = store.config.value
         logGestures.wantsDouble = config.action(Gesture.DOUBLE) != SnapAction.NoAction
         logGestures.wantsLong = (explicitEdges || config.holdRepeats) && config.action(Gesture.LONG) != SnapAction.NoAction
+        logGestures.wantsTapHold = (explicitEdges || config.holdRepeats) && config.action(Gesture.TAP_HOLD) != SnapAction.NoAction
         if (explicitEdges) {
             inputPressed = false
             oplusEdges.accept(timestamp)
@@ -404,6 +421,7 @@ object SnapEngine {
         if (key.keyCode == KeyEvent.KEYCODE_UNKNOWN && event.scanCode != key.scanCode) return false
         keyGestures.wantsDouble = config.action(Gesture.DOUBLE) != SnapAction.NoAction
         keyGestures.wantsLong = config.action(Gesture.LONG) != SnapAction.NoAction
+        keyGestures.wantsTapHold = config.action(Gesture.TAP_HOLD) != SnapAction.NoAction
         when (event.action) {
             KeyEvent.ACTION_DOWN -> if (event.repeatCount == 0) {
                 markKeySeen()
@@ -426,6 +444,7 @@ object SnapEngine {
         lastDetected.value = Detected(gesture, now())
         val config = store.config.value
         if (foregroundApp in config.pausedApps) return
+        if (gesture in config.unlockedOnly && app.getSystemService(KeyguardManager::class.java).isKeyguardLocked) return
         val action = config.action(gesture)
         if (action == SnapAction.NoAction) return
         if (action !is SnapAction.Ringer) buzz()
@@ -476,13 +495,14 @@ object SnapEngine {
         val result = KeyLearning.analyze(observations, baseline, taps, hold)
         when (result) {
             is LearnResult.KeyEventFound -> store.update {
-                it.copy(keyEvent = result.key, logSignature = null, inputKey = result.inputKey)
+                it.copy(keyEvent = result.key, logSignature = null, inputKey = result.inputKey, logKeyCode = null)
             }
             is LearnResult.LogLineFound -> store.update {
                 it.copy(
                     keyEvent = null,
                     logSignature = result.signature,
                     inputKey = result.inputKey,
+                    logKeyCode = result.logKeyCode,
                     holdRepeats = result.holdRepeats,
                     releaseGapMs = result.releaseGapMs,
                 )

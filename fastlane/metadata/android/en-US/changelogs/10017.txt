@@ -1,0 +1,1 @@
+Add Tap, then hold as a fourth gesture. Tap the lock next to a gesture to run it only when your phone is unlocked. Typing on a keyboard, for example from a PC while casting, no longer triggers actions. Teach the Snap Key again once after updating. With Shizuku, the ringer cycle now works while Do Not Disturb is on.

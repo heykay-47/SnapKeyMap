@@ -4,11 +4,21 @@ package com.heykay.snapkeymap
 const val DEFAULT_RELEASE_GAP_MS = 270L
 
 private val NUMBERS = Regex("""\d+""")
+private val LOGGED_KEY_CODE = Regex("""\bkeyCode=([^,\s}]+)""")
 
 /** Strips the parts of a log message that change between presses (timestamps, counters, ids). */
 fun normalizeLogMessage(message: String): String = message.trim().replace(NUMBERS, "#").take(160)
 
 internal fun normalizeLogUid(uid: String): String = if (uid == "system") "1000" else uid
+
+fun loggedKeyCode(uid: String, tag: String, message: String): String? {
+    if (normalizeLogUid(uid) != "1000" || !tag.contains("PhoneWindowManagerExtImpl") ||
+        !message.contains("overrideInterceptKeyBeforeQueueing:KeyEvent")) return null
+    return LOGGED_KEY_CODE.find(message)?.groupValues?.get(1)
+}
+
+internal fun acceptsLoggedKey(logKeyCode: String?, lineKey: String?): Boolean =
+    logKeyCode == null || lineKey == null || lineKey == logKeyCode
 
 private fun hasOplusKeyMessage(tag: String, message: String): Boolean =
     tag.contains("OplusKeyEventUtil") && message.contains("restrict listen mode")
@@ -45,6 +55,7 @@ sealed interface LearnResult {
         val holdRepeats: Boolean,
         val releaseGapMs: Long,
         val inputKey: InputKey? = null,
+        val logKeyCode: String? = null,
     ) : LearnResult {
         val canDetectHold: Boolean get() = inputKey != null || signature.hasExplicitKeyEdges || holdRepeats
     }
@@ -58,6 +69,7 @@ object KeyLearning {
         "log$SEP$tag$SEP${normalizeLogMessage(message)}$SEP${normalizeLogUid(uid)}"
     fun keyEventKey(keyCode: Int, scanCode: Int) = "key$SEP$keyCode$SEP$scanCode"
     fun inputKey(code: String) = "input$SEP$code"
+    fun loggedKey(code: String) = "logkey$SEP$code"
 
     /**
      * Finds what appears in (almost) every press window but never while the phone was left alone.
@@ -122,6 +134,11 @@ object KeyLearning {
         } else {
             DEFAULT_RELEASE_GAP_MS
         }
-        return LearnResult.LogLineFound(KeySignature(tag, message, uid), holdRepeats, releaseGap, inputKey)
+        val signature = KeySignature(tag, message, uid)
+        val logKeyCode = if (signature.hasExplicitKeyEdges) {
+            candidates.entries.filter { it.key.startsWith("logkey$SEP") }
+                .maxByOrNull { it.value }?.key?.substringAfter(SEP)
+        } else null
+        return LearnResult.LogLineFound(signature, holdRepeats, releaseGap, inputKey, logKeyCode)
     }
 }

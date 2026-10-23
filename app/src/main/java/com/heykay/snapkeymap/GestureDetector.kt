@@ -1,10 +1,10 @@
 package com.heykay.snapkeymap
 
 /**
- * Turns key down/up into press, double press or press & hold. Runs on the main thread.
+ * Turns key down/up into press, double press, press & hold or tap then hold. Runs on the main thread.
  *
- * It only waits when it has to: with nothing set for double press or hold, a press fires on key
- * down; a double press fires on the second key down.
+ * It only waits when it has to: with no double press or either hold assigned, a press fires on key
+ * down; a double press fires on the second key down unless tap then hold is assigned.
  */
 class GestureDetector(
     private val schedule: (Runnable, Long) -> Unit,
@@ -15,10 +15,12 @@ class GestureDetector(
 ) {
     var wantsDouble = false
     var wantsLong = false
+    var wantsTapHold = false
 
+    private enum class Phase { FIRST, WAITING_FOR_SECOND, SECOND }
     private var pressed = false
     private var handled = false
-    private var waitingForSecond = false
+    private var phase = Phase.FIRST
     val hasHandledPress: Boolean get() = pressed && handled
 
     private val longPress = Runnable {
@@ -26,8 +28,12 @@ class GestureDetector(
         onGesture(Gesture.LONG)
     }
     private val singlePress = Runnable {
-        waitingForSecond = false
+        phase = Phase.FIRST
         onGesture(Gesture.SINGLE)
+    }
+    private val tapHold = Runnable {
+        handled = true
+        onGesture(Gesture.TAP_HOLD)
     }
 
     fun down() {
@@ -35,13 +41,15 @@ class GestureDetector(
         pressed = true
         handled = false
         when {
-            waitingForSecond -> {
+            phase == Phase.WAITING_FOR_SECOND -> {
                 cancel(singlePress)
-                waitingForSecond = false
-                handled = true
-                onGesture(Gesture.DOUBLE)
+                phase = Phase.SECOND
+                if (wantsTapHold) schedule(tapHold, holdMs()) else {
+                    handled = true
+                    onGesture(Gesture.DOUBLE)
+                }
             }
-            !wantsDouble && !wantsLong -> {
+            !wantsDouble && !wantsLong && !wantsTapHold -> {
                 handled = true
                 onGesture(Gesture.SINGLE)
             }
@@ -53,9 +61,16 @@ class GestureDetector(
         if (!pressed) return
         pressed = false
         cancel(longPress)
-        if (handled) return
-        if (wantsDouble) {
-            waitingForSecond = true
+        cancel(tapHold)
+        if (handled) {
+            phase = Phase.FIRST
+            return
+        }
+        if (phase == Phase.SECOND) {
+            phase = Phase.FIRST
+            onGesture(Gesture.DOUBLE)
+        } else if (wantsDouble || wantsTapHold) {
+            phase = Phase.WAITING_FOR_SECOND
             schedule(singlePress, doublePressWindowMs())
         } else {
             onGesture(Gesture.SINGLE)
@@ -65,8 +80,9 @@ class GestureDetector(
     fun reset() {
         cancel(longPress)
         cancel(singlePress)
+        cancel(tapHold)
         pressed = false
         handled = false
-        waitingForSecond = false
+        phase = Phase.FIRST
     }
 }
