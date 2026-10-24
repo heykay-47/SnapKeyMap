@@ -22,6 +22,7 @@ enum class DeviceAction(val label: String, val section: Section, val needsServic
     FLASHLIGHT("Flashlight on / off", Section.PHONE),
     DO_NOT_DISTURB("Do Not Disturb on / off", Section.PHONE),
     SCREENSHOT("Take a screenshot", Section.SCREEN, needsService = true),
+    CIRCLE_TO_SEARCH("Circle to Search", Section.SCREEN),
     LOCK_SCREEN("Lock the screen", Section.SCREEN, needsService = true),
     NOTIFICATIONS("Show notifications", Section.SCREEN, needsService = true),
     QUICK_SETTINGS("Show quick settings", Section.SCREEN, needsService = true),

@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.FlashlightOn
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.ImageSearch
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Mic
@@ -121,6 +122,7 @@ fun actionIcon(action: SnapAction): ImageVector = when (action) {
         DeviceAction.FLASHLIGHT -> Icons.Rounded.FlashlightOn
         DeviceAction.DO_NOT_DISTURB -> Icons.Rounded.DoNotDisturbOn
         DeviceAction.SCREENSHOT -> Icons.Rounded.Screenshot
+        DeviceAction.CIRCLE_TO_SEARCH -> Icons.Rounded.ImageSearch
         DeviceAction.LOCK_SCREEN -> Icons.Rounded.Lock
         DeviceAction.NOTIFICATIONS -> Icons.Rounded.Notifications
         DeviceAction.QUICK_SETTINGS -> Icons.Rounded.Tune

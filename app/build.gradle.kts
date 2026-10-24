@@ -80,6 +80,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
+    implementation("org.lsposed.hiddenapibypass:hiddenapibypass:6.1")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
