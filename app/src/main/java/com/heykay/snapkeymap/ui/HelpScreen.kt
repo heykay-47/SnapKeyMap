@@ -35,8 +35,8 @@ fun HelpScreen(onDone: () -> Unit, onRunSetup: () -> Unit) {
     val context = LocalContext.current
     SnapScaffold(title = "Help", onBack = onDone) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding)
-                .verticalScroll(rememberScrollState()).padding(16.dp),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             NoteCard(
@@ -50,6 +50,7 @@ fun HelpScreen(onDone: () -> Unit, onRunSetup: () -> Unit) {
             HelpSection(
                 icon = Icons.Rounded.Settings,
                 title = "Getting started",
+                summary = "Grant access, teach the key and choose your actions.",
                 initiallyExpanded = true,
                 body = "The setup wizard saves your progress and resumes at the first unfinished step.\n\n" +
                     "1. Choose Shizuku or Computer (ADB).\n\n" +
@@ -65,6 +66,7 @@ fun HelpScreen(onDone: () -> Unit, onRunSetup: () -> Unit) {
             HelpSection(
                 icon = Icons.AutoMirrored.Rounded.HelpOutline,
                 title = "Troubleshooting",
+                summary = "Fix paused detection, missed presses and background limits.",
                 body = "Paused after a restart? Reopen the app, tap Connect if needed and allow device logs. " +
                     "The one-time grant does not need repeating. While Shizuku runs and SnapKey Map is " +
                     "allowed in it, no device-logs prompt is needed. Otherwise Android asks for one-time " +
@@ -80,6 +82,7 @@ fun HelpScreen(onDone: () -> Unit, onRunSetup: () -> Unit) {
             HelpSection(
                 icon = Icons.Rounded.Info,
                 title = "Is it safe?",
+                summary = "Logs stay on your phone; learn what each permission does.",
                 body = "The app has no INTERNET permission. It does not send your logs or settings off the phone. " +
                     "Apps and websites you open handle their own data.\n\n" +
                     "Log access can see the whole live system log. Lines are checked in memory, not saved as a log. " +
@@ -116,6 +119,7 @@ private fun HelpSection(
     icon: ImageVector,
     title: String,
     body: String,
+    summary: String,
     initiallyExpanded: Boolean = false,
     onSource: (() -> Unit)? = null,
 ) {
@@ -123,7 +127,7 @@ private fun HelpSection(
     NoteCard(
         icon = icon,
         title = title,
-        body = if (expanded) body else "Show the essentials.",
+        body = if (expanded) body else summary,
     ) {
         CardTextButton(
             if (expanded) "Hide" else "Read",

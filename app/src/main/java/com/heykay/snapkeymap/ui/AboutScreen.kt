@@ -28,8 +28,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,12 +45,19 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.heykay.snapkeymap.R
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
-fun AboutScreen(onDone: () -> Unit) {
+fun AboutScreen(onDone: () -> Unit, onLicenses: () -> Unit) {
     val context = LocalContext.current
-    val version = remember(context) {
-        context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val version by produceState("", context, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            value = withContext(Dispatchers.Default) {
+                context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
+            }
+        }
     }
     val repoUrl = stringResource(R.string.repository_url)
     val profileUrl = stringResource(R.string.author_profile_url)
@@ -54,8 +66,8 @@ fun AboutScreen(onDone: () -> Unit) {
 
     SnapScaffold(title = stringResource(R.string.about_title), onBack = onDone) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding)
-                .verticalScroll(rememberScrollState()).padding(16.dp),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Card(
@@ -81,6 +93,7 @@ fun AboutScreen(onDone: () -> Unit) {
                         }
                     }
                     Text(stringResource(R.string.about_description), style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = onLicenses) { Text("Open-source licences") }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         LinkButton(stringResource(R.string.view_repository), Modifier.weight(1f)) {
                             context.openSafely(Intent(Intent.ACTION_VIEW, Uri.parse(repoUrl)))
@@ -93,7 +106,7 @@ fun AboutScreen(onDone: () -> Unit) {
             }
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
             ) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
