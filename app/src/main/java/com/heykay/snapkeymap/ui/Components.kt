@@ -47,7 +47,6 @@ import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material.icons.rounded.VerticalSplit
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.Wifi
@@ -128,7 +127,6 @@ fun actionIcon(action: SnapAction): ImageVector = when (action) {
         DeviceAction.HOME -> Icons.Rounded.Home
         DeviceAction.BACK -> Icons.AutoMirrored.Rounded.ArrowBack
         DeviceAction.POWER_MENU -> Icons.Rounded.PowerSettingsNew
-        DeviceAction.SPLIT_SCREEN -> Icons.Rounded.VerticalSplit
         DeviceAction.PLAY_PAUSE -> Icons.Rounded.PlayArrow
         DeviceAction.NEXT_TRACK -> Icons.Rounded.SkipNext
         DeviceAction.PREVIOUS_TRACK -> Icons.Rounded.SkipPrevious

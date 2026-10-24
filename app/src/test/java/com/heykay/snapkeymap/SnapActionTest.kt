@@ -72,6 +72,11 @@ class SnapActionTest {
         }
     }
 
+    @Test
+    fun savedSplitScreenMappingLoadsAsDoNothing() {
+        assertEquals(SnapAction.NoAction, SnapAction.fromJson("""{"type":"device","action":"SPLIT_SCREEN"}"""))
+    }
+
     private fun cycles(): List<List<RingerMode>> = RingerMode.entries.flatMap { first ->
         (RingerMode.entries - first).flatMap { second ->
             listOf(listOf(first, second), listOf(first, second) + (RingerMode.entries - setOf(first, second)))
