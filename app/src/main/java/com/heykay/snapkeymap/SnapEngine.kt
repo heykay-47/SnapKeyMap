@@ -24,6 +24,24 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
 
+internal class LogRetryBackoff {
+    private var healthySinceMs: Long? = null
+    private var delayMs = 1000L
+
+    fun onAccess(access: LogAccess, nowMs: Long) {
+        if (access == LogAccess.FULL) {
+            if (healthySinceMs == null) healthySinceMs = nowMs
+        } else {
+            healthySinceMs?.let { if (nowMs - it >= 30_000L) delayMs = 1000L }
+            healthySinceMs = null
+        }
+    }
+
+    fun nextDelayMs(): Long = delayMs.also {
+        delayMs = (delayMs * 2).coerceAtMost(60_000L)
+    }
+}
+
 /** Connects the two ways of noticing the Snap Key (key events and the system log) to the actions. */
 object SnapEngine {
     data class Detected(val gesture: Gesture, val atMs: Long)
@@ -93,7 +111,7 @@ object SnapEngine {
     @Volatile private var logGeneration = 0
     private val loggedKeysByThread = mutableMapOf<String, String>()
     private var loggedKeysGeneration = -1
-    private var retryDelayMs = 1000L
+    private val logRetry = LogRetryBackoff()
     private var inputRetryDelayMs = 1000L
     private val reconnectInput = Runnable {
         if (wantsLog && store.config.value.enabled && canUseShizuku()) inputReader.start()
@@ -322,11 +340,11 @@ object SnapEngine {
     }
 
     private fun onAccessChanged(access: LogAccess) {
+        logRetry.onAccess(access, now())
         accessState.value = access
         updateListeningSince()
         if (access == LogAccess.FULL) {
             consentAttempted = false
-            retryDelayMs = 1000L
             Notifications.cancelPaused(app)
         }
         if (access == LogAccess.OFF || access == LogAccess.LIMITED) {
@@ -338,8 +356,7 @@ object SnapEngine {
         }
         main.removeCallbacks(reconnect)
         if (access == LogAccess.OFF && wantsLog && store.config.value.enabled && hasLogPermission()) {
-            main.postDelayed(reconnect, retryDelayMs)
-            retryDelayMs = (retryDelayMs * 2).coerceAtMost(60_000L)
+            main.postDelayed(reconnect, logRetry.nextDelayMs())
         }
     }
 
