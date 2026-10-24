@@ -15,47 +15,60 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import org.json.JSONObject
 
 @Composable
 fun LicensesScreen(onDone: () -> Unit) {
     val context = LocalContext.current
+    val notices = remember(context) {
+        JSONObject(context.assets.open("licenses/notices.json").bufferedReader().use { it.readText() })
+    }
+    val attributions = remember(context) {
+        context.assets.open("licenses/${notices.getString("attributions")}").bufferedReader().use { it.readText() }
+    }
+    val licenseTexts = remember(context) {
+        val licenses = notices.getJSONArray("licenses")
+        List(licenses.length()) { index ->
+            val license = licenses.getJSONObject(index)
+            license.getString("name") to context.assets.open("licenses/${license.getString("file")}")
+                .bufferedReader().use { it.readText() }
+        }
+    }
     BackHandler(onBack = onDone)
     SnapScaffold(title = "Open-source licences", onBack = onDone) { padding ->
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            listOf(
-                Triple("Shizuku API", "RikkaApps", "https://github.com/RikkaApps/Shizuku-API"),
-                Triple("HiddenApiBypass", "LSPosed", "https://github.com/LSPosed/AndroidHiddenApiBypass"),
-                Triple("AndroidX / Jetpack Compose", "Google", "https://github.com/androidx/androidx"),
-            ).forEach { (name, author, url) ->
+            val dependencies = notices.getJSONArray("dependencies")
+            repeat(dependencies.length()) { index ->
+                val dependency = dependencies.getJSONObject(index)
+                val url = dependency.getString("url")
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
-                        Text("$author · Apache License 2.0")
+                        Text(dependency.getString("name"), style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.semantics { heading() })
+                        Text(dependency.getString("license"))
                         TextButton(onClick = { context.openSafely(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }) {
                             Text(url)
                         }
                     }
                 }
             }
-            Text("Apache License, Version 2.0", style = MaterialTheme.typography.titleMedium)
-            Text("Licensed under the Apache License, Version 2.0 (the \"License\"); " +
-                "you may not use this file except in compliance with the License. " +
-                "You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0\n\n" +
-                "Unless required by applicable law or agreed to in writing, software distributed under the License " +
-                "is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, " +
-                "either express or implied. See the License for the specific language governing permissions " +
-                "and limitations under the License.")
-            TextButton(onClick = {
-                context.openSafely(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.apache.org/licenses/LICENSE-2.0")))
-            }) { Text("Read the full licence") }
+            Text("Attribution notices", style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { heading() })
+            Text(attributions)
+            licenseTexts.forEach { (name, text) ->
+                Text(name, style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.semantics { heading() })
+                Text(text)
+            }
         }
     }
 }
