@@ -21,7 +21,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -39,6 +43,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.coroutineScope
 
 @Composable
 fun IntroScreen(onContinue: () -> Unit) {
@@ -63,20 +68,25 @@ fun IntroScreen(onContinue: () -> Unit) {
 @Composable
 private fun IntroLogo() {
     val animate = remember { ValueAnimator.areAnimatorsEnabled() }
-    val background = remember { Animatable(if (animate) 0f else 1f) }
-    val capsule = remember { Animatable(if (animate) 0f else 1f) }
-    val dots = remember { List(3) { Animatable(if (animate) 0f else 1f) } }
+    var completed by rememberSaveable { mutableStateOf(false) }
+    val initialValue = if (completed || !animate) 1f else 0f
+    val background = remember { Animatable(initialValue) }
+    val capsule = remember { Animatable(initialValue) }
+    val dots = remember { List(3) { Animatable(initialValue) } }
     LaunchedEffect(animate) {
-        if (animate) {
-            launch { background.animateTo(1f, tween(220)) }
-            launch { capsule.animateTo(1f, tween(300, delayMillis = 160)) }
-            dots.forEachIndexed { index, dot ->
-                launch {
-                    dot.animateTo(1f, tween(240, delayMillis = 420 + index * 90,
-                        easing = CubicBezierEasing(0.2f, 1.45f, 0.5f, 1f)))
+        if (animate && !completed) {
+            coroutineScope {
+                launch { background.animateTo(1f, tween(220)) }
+                launch { capsule.animateTo(1f, tween(300, delayMillis = 160)) }
+                dots.forEachIndexed { index, dot ->
+                    launch {
+                        dot.animateTo(1f, tween(240, delayMillis = 420 + index * 90,
+                            easing = CubicBezierEasing(0.2f, 1.45f, 0.5f, 1f)))
+                    }
                 }
             }
         }
+        completed = true
     }
     val branches = remember {
         listOf(

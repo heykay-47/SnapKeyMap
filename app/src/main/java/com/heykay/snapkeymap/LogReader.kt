@@ -100,7 +100,6 @@ class LogReader(
                 input.bufferedReader().use { reader ->
                     while (active) {
                         val line = reader.readLine() ?: break
-                        // Keep draining the fallback stream, but avoid regex/locking while input owns detection.
                         if (full && !shouldParse()) continue
                         val match = LINE.matchEntire(line) ?: continue
                         val timestamp = match.groupValues[1]
