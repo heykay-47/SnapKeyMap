@@ -1,0 +1,18 @@
+# Privacy and limits
+
+SnapKey Map reads the system log on the phone to detect the Snap Key. The log permission covers more than key events. Lines are checked in memory and discarded, never saved or uploaded. Teaching keeps observations in memory and saves a learned log signature and, when available, an input key code. The app accepts a key log line only from the app that wrote it while you taught the key, which on the Find X9 is the system, so other apps can't fake a press.
+
+With Shizuku allowed, the app runs `logcat` and also reads raw key input events using `getevent` as the shell user through Shizuku. Input events are filtered in memory, never stored or uploaded. A learned input key uses explicit press and release events while the input stream is live; otherwise detection falls back to the system log. Ringer actions also use Shizuku to switch modes with `cmd audio set-ringer-mode`, including true Silent on Android 15 or later. You can also use it to allow Do Not Disturb access. Other mapped actions do not use Shizuku. Apps and websites you open through an action have their own privacy policies.
+
+The accessibility service checks window-event package and class names to identify app activities, ignoring non-activity windows such as keyboards and status indicators. It keeps only the latest activity's package name in memory and uses it only to pause in the apps you choose. It cannot read screen content. Your chosen paused-app package names are saved in settings.
+
+Keep these limits in mind:
+
+- A double-press or tap-then-hold assignment adds a wait after release before the single-press action runs: 350 ms by default, adjustable from 200 to 600 ms in **Timing**. The hold threshold defaults to 650 ms and can be set from 300 to 1200 ms.
+- With a learned input key and a live Shizuku input stream, press and hold uses explicit key edges. Log fallback on the Find X9 infers press and release from known key lines. Other learned log formats need the line to repeat while the key is held.
+- Screen-off detection and background reliability depend on ColorOS and are not guaranteed.
+- The shortcut picker lists apps that provide `ACTION_CREATE_SHORTCUT`. It cannot list every pinned shortcut. A deep link may work instead.
+- Calls are not placed directly, because the app has no calling permission. Call a contact opens the dialer, and direct-dial shortcuts show a message instead.
+- With Shizuku running and allowed on Android 15 or later, ringer presets use true Silent without turning on Do Not Disturb. On older Android versions, without Shizuku, or if the shell command fails, Silent uses the public Android API, needs Do Not Disturb access, and may turn on Do Not Disturb. Without that access, the fallback skips Silent and shows a reminder. The Do Not Disturb toggle always needs notification policy access; the app asks when you assign it, or when assigning Silent without Shizuku.
+- Mappings and the learned key are not included in Android backups.
+- The app cannot bypass the lock screen or control every function in every app.
