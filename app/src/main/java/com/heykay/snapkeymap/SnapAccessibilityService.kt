@@ -44,7 +44,6 @@ class SnapAccessibilityService : AccessibilityService() {
         val activityPackage = if (activityPackages.containsKey(component)) {
             activityPackages[component]
         } else {
-            // Cache misses too: keyboard/status widgets are not foreground activities.
             val resolved = runCatching { packageManager.getActivityInfo(component, 0).packageName }.getOrNull()
             if (activityPackages.size >= 64) activityPackages.remove(activityPackages.keys.first())
             activityPackages[component] = resolved
