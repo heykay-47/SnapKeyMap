@@ -29,6 +29,7 @@ class LogReader(
     private val onAccess: (LogAccess) -> Unit,
     private val onSource: (LogSource) -> Unit,
     private val dispatchAccess: (() -> Unit) -> Unit = { it() },
+    private val shouldParse: () -> Boolean = { true },
 ) {
     @Volatile private var session: Session? = null
     @Volatile private var tryLocal = false
@@ -99,6 +100,8 @@ class LogReader(
                 input.bufferedReader().use { reader ->
                     while (active) {
                         val line = reader.readLine() ?: break
+                        // Keep draining the fallback stream, but avoid regex/locking while input owns detection.
+                        if (full && !shouldParse()) continue
                         val match = LINE.matchEntire(line) ?: continue
                         val timestamp = match.groupValues[1]
                         val uid = match.groupValues[2]

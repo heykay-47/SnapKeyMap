@@ -119,6 +119,7 @@ object SnapEngine {
             onAccess = ::onAccessChanged,
             onSource = { sourceState.value = it },
             dispatchAccess = { task -> main.post { task() }; Unit },
+            shouldParse = { !preciseState.value || learning != null },
         )
         keyGestures = gestureDetector()
         logGestures = gestureDetector()
@@ -351,6 +352,7 @@ object SnapEngine {
 
     // Called on the logcat thread for every line from another process.
     private fun onLogLine(timestamp: String, uid: String, tid: String, tag: String, message: String) {
+        if (preciseState.value && learning == null) return
         val generation = logGeneration
         if (loggedKeysGeneration != generation) {
             loggedKeysByThread.clear()
