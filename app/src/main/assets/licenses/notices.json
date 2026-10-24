@@ -2,6 +2,7 @@
   "reviewed": "2026-10-24",
   "scope": "Pinned direct dependencies and runtime/compile POM transitive licensing groups. POM traversal is not Gradle Android variant resolution or an APK contents audit. Older transitive version requests may be superseded. See docs/third-party-notices.md for remaining verification gaps.",
   "attributions": "attributions.txt",
+  "attributions_sha256": "8ad47aee0237c52aa2789cdd733e75c9d10b90080951566ae9e95ef01d50848d",
   "licenses": [
     {"name": "MIT (Shizuku)", "file": "shizuku-mit.txt", "sha256": "930975f35446e70a87a12ca68360144b056ea30748f755f3c393e90a431bc05c"},
     {"name": "Apache-2.0", "file": "apache-2.0.txt", "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"}

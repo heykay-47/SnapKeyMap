@@ -37,6 +37,7 @@ jobs:
       - name: Check notice assets and lint summaries
         run: |
           python3 scripts/check-license-notices.py
+          python3 scripts/test-license-notices.py
           python3 scripts/test-lint-summary.py
 
       - name: Set up signing key

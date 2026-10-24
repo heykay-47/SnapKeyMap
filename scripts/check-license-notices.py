@@ -58,7 +58,9 @@ assert "APPENDIX: How to apply the Apache License to your work." in apache
 assert apache.rstrip().endswith("limitations under the License.")
 assert len(apache) > 11000, "Truncated Apache licence"
 
-attributions = (ASSETS / notices["attributions"]).read_text()
+attribution_bytes = (ASSETS / notices["attributions"]).read_bytes()
+assert hashlib.sha256(attribution_bytes).hexdigest() == notices["attributions_sha256"], "Attribution checksum mismatch"
+attributions = attribution_bytes.decode("utf-8")
 for author in ["2021-2025 LSPosed", "The Android Open Source Project", "JetBrains s.r.o.",
                "The JSpecify Authors", "The Guava Authors"]:
     assert author in attributions, f"Missing attribution for {author}"
