@@ -72,6 +72,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.unit.dp
@@ -450,8 +451,15 @@ private fun StatusCard(
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f).semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
-                    Text(title, style = MaterialTheme.typography.headlineSmall)
+                Column(Modifier.weight(1f)) {
+                    Text(title, style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.semantics {
+                            liveRegion = LiveRegionMode.Polite
+                            stateDescription = if (ready && last != null) {
+                                "Last: ${last.gesture.title.lowercase()} at " +
+                                    java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM).format(Date(last.atMs))
+                            } else if (ready) "Press the Snap Key to try it." else body
+                        })
                     Text(body, style = MaterialTheme.typography.bodyMedium)
                 }
                 Spacer(Modifier.size(12.dp))
