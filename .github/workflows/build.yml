@@ -27,9 +27,9 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - uses: gradle/actions/wrapper-validation@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+
       - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
-        with:
-          gradle-version: "8.14.3"
 
       - name: Install pinned Build Tools
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"'
@@ -54,7 +54,7 @@ jobs:
           SIGNING_STORE_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.SIGNING_STORE_PASSWORD || '' }}
           SIGNING_KEY_ALIAS: ${{ github.event_name != 'pull_request' && secrets.SIGNING_KEY_ALIAS || '' }}
           SIGNING_KEY_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.SIGNING_KEY_PASSWORD || '' }}
-        run: gradle --no-daemon testReleaseUnitTest assembleRelease
+        run: ./gradlew --no-daemon testReleaseUnitTest assembleRelease
 
       - name: Delete signing key
         if: always()
@@ -90,7 +90,7 @@ jobs:
 
       - name: Lint release
         continue-on-error: true
-        run: gradle --no-daemon lintRelease
+        run: ./gradlew --no-daemon lintRelease
 
       - name: Upload lint reports
         if: always()
@@ -131,7 +131,6 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
         with:
-          gradle-version: "8.14.3"
           cache-disabled: true
 
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
@@ -154,7 +153,7 @@ jobs:
         working-directory: rebuild
         env:
           GRADLE_USER_HOME: ${{ runner.temp }}/reproducibility-gradle
-        run: gradle --no-daemon --no-build-cache --no-configuration-cache assembleRelease
+        run: ./gradlew --no-daemon --no-build-cache --no-configuration-cache assembleRelease
 
       - name: Verify signatures and exact APK bytes
         shell: bash
