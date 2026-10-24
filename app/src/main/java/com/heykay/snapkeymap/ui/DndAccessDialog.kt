@@ -20,6 +20,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.heykay.snapkeymap.canUseShizuku
 import com.heykay.snapkeymap.grantDndAccessWithShizuku
 import kotlinx.coroutines.CancellationException
@@ -30,19 +33,24 @@ import kotlinx.coroutines.launch
 internal fun DndAccessDialog(onDone: () -> Unit, forSilent: Boolean = false) {
     val context = LocalContext.current
     val notifications = context.getSystemService(NotificationManager::class.java)
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
-    val granted by produceState(notifications.isNotificationPolicyAccessGranted) {
-        while (true) {
-            value = notifications.isNotificationPolicyAccessGranted
-            delay(1000)
+    val granted by produceState(notifications.isNotificationPolicyAccessGranted, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                value = notifications.isNotificationPolicyAccessGranted
+                delay(1000)
+            }
         }
     }
-    val shizukuAvailable by produceState(canUseShizuku()) {
-        while (true) {
-            value = canUseShizuku()
-            delay(1000)
+    val shizukuAvailable by produceState(canUseShizuku(), lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                value = canUseShizuku()
+                delay(1000)
+            }
         }
     }
 

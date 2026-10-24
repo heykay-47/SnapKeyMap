@@ -44,7 +44,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -57,6 +57,11 @@ import com.heykay.snapkeymap.SnapAction
 
 private class Editing(val initial: List<RingerMode>?)
 
+private val EditingSaver = Saver<Editing?, List<String>>(
+    save = { editing -> editing?.initial?.map { it.name } ?: if (editing == null) listOf("closed") else emptyList() },
+    restore = { names -> if (names == listOf("closed")) null else Editing(names.takeIf { it.isNotEmpty() }?.map(RingerMode::valueOf)) },
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun RingerSheet(
@@ -68,7 +73,7 @@ internal fun RingerSheet(
     onDelete: (List<RingerMode>) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var editing by remember { mutableStateOf<Editing?>(null) }
+    var editing by rememberSaveable(stateSaver = EditingSaver) { mutableStateOf<Editing?>(null) }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
