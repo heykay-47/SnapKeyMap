@@ -131,6 +131,7 @@ object SnapEngine {
     fun init(context: Context) {
         app = context.applicationContext
         store = ConfigStore(app)
+        ActionRunner.init(app)
         reader = LogReader(
             context = app,
             onLine = ::onLogLine,
