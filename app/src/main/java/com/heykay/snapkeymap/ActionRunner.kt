@@ -224,8 +224,9 @@ object ActionRunner {
 
     private val RingerMode.vibrationEffect: VibrationEffect
         get() = when (this) {
-            RingerMode.RING -> VibrationEffect.createOneShot(350L, VibrationEffect.DEFAULT_AMPLITUDE)
-            RingerMode.VIBRATE -> VibrationEffect.createWaveform(longArrayOf(0, 40, 90, 40, 90, 40), -1)
+            RingerMode.RING -> VibrationEffect.createOneShot(400L, VibrationEffect.DEFAULT_AMPLITUDE)
+            // ColorOS replaces steps of about 40 ms with a light click, which felt like the Ring buzz.
+            RingerMode.VIBRATE -> VibrationEffect.createWaveform(longArrayOf(0, 150, 200, 150), -1)
             RingerMode.SILENT -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK)
         }
 
