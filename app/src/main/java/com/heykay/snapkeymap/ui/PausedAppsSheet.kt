@@ -24,7 +24,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -39,6 +38,7 @@ import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.heykay.snapkeymap.SnapEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -50,7 +50,7 @@ internal fun PausedAppsSheet(onDismiss: () -> Unit) {
     val apps by produceState<List<AppEntry>?>(null) {
         value = withContext(Dispatchers.IO) { loadLauncherApps(context.packageManager, context.packageName) }
     }
-    val config by SnapEngine.store.config.collectAsState()
+    val config by SnapEngine.store.config.collectAsStateWithLifecycle()
     val initiallyPaused = remember { config.pausedApps }
     val sortedApps = remember(apps, initiallyPaused) {
         apps?.sortedWith(compareBy<AppEntry> { it.packageName !in initiallyPaused }.thenBy { it.label.lowercase() })

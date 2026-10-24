@@ -27,7 +27,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +37,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.heykay.snapkeymap.GrantMethod
 import com.heykay.snapkeymap.LogAccess
 import com.heykay.snapkeymap.SnapEngine
@@ -55,27 +58,31 @@ private const val GRANT_HINT = "On ColorOS, turn on Disable permission monitorin
 
 @Composable
 fun LogAccessScreen(onDone: () -> Unit) {
-    val resumes by SnapEngine.uiResumes.collectAsState()
+    val resumes by SnapEngine.uiResumes.collectAsStateWithLifecycle()
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     val currentOnDone by rememberUpdatedState(onDone)
-    val config by SnapEngine.store.config.collectAsState()
+    val config by SnapEngine.store.config.collectAsStateWithLifecycle()
+    val grantMethod by rememberUpdatedState(config.grantMethod)
     fun isGranted() = SnapEngine.hasLogPermission() &&
-        (config.grantMethod != GrantMethod.SHIZUKU || canUseShizuku())
+        (grantMethod != GrantMethod.SHIZUKU || canUseShizuku())
     val grantedOnEntry = remember { isGranted() }
-    LaunchedEffect(resumes) {
+    LaunchedEffect(resumes, lifecycle) {
         if (grantedOnEntry) return@LaunchedEffect
-        while (true) {
-            if (isGranted()) {
-                if (SnapEngine.logAccess.value == LogAccess.OFF) SnapEngine.connect()
-                currentOnDone()
-                break
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                if (isGranted()) {
+                    if (SnapEngine.logAccess.value == LogAccess.OFF) SnapEngine.connect()
+                    currentOnDone()
+                    break
+                }
+                delay(1000)
             }
-            delay(1000)
         }
     }
     SnapScaffold(title = "One-time log access", onBack = onDone) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding)
-                .verticalScroll(rememberScrollState()).padding(16.dp),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             if (grantedOnEntry) {
@@ -90,20 +97,23 @@ fun LogAccessScreen(onDone: () -> Unit) {
 @Composable
 internal fun LogAccessInstructions(method: GrantMethod? = null) {
     val context = LocalContext.current
-    val resumes by SnapEngine.uiResumes.collectAsState()
+    val resumes by SnapEngine.uiResumes.collectAsStateWithLifecycle()
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     val scope = rememberCoroutineScope()
     var shizukuRunning by remember { mutableStateOf(runCatching { Shizuku.pingBinder() }.getOrDefault(false)) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(resumes) {
-        while (true) {
-            shizukuRunning = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
-            if (!shizukuRunning && busy) {
-                busy = false
-                message = "Shizuku disconnected. $GRANT_HINT"
+    LaunchedEffect(resumes, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                shizukuRunning = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+                if (!shizukuRunning && busy) {
+                    busy = false
+                    message = "Shizuku disconnected. $GRANT_HINT"
+                }
+                delay(1000)
             }
-            delay(1000)
         }
     }
 
