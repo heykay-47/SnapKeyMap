@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,15 +50,18 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun SnapKeyMapApp() {
     val config by SnapEngine.store.config.collectAsStateWithLifecycle()
-    var route by rememberSaveable { mutableStateOf("home") }
+    var route by rememberSaveable { mutableStateOf(initialAppRoute(config.introSeen)) }
     var setupPage by rememberSaveable { mutableStateOf<String?>(null) }
     val goHome = { route = "home" }
-    if (route != "home") BackHandler(onBack = goHome)
+    if (route != "home" && route != "intro") BackHandler(onBack = goHome)
 
     when {
-        !config.introSeen -> IntroScreen(onContinue = {
-            SnapEngine.store.update { it.copy(introSeen = true) }
-        })
+        route == "intro" -> {
+            LaunchedEffect(Unit) {
+                SnapEngine.store.update { it.copy(introSeen = true) }
+            }
+            IntroScreen(onContinue = goHome)
+        }
         route == "help" -> HelpScreen(onDone = goHome, onRunSetup = {
             setupPage = null
             SnapEngine.store.update {
