@@ -20,7 +20,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -130,8 +129,8 @@ fun LicensesScreen(onDone: () -> Unit) {
                         CardTextButton("Project website") {
                             context.openSafely(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                         }
-                        TextButton(onClick = { selectedEntryId = attributionEntry.id }) {
-                            Text("Read complete attribution notices")
+                        CardTextButton("Read complete attribution notices") {
+                            selectedEntryId = attributionEntry.id
                         }
                     }
                     selectedEntry.license?.let {
