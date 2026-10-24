@@ -79,7 +79,10 @@ class ShizukuLogService : Binder() {
             thread(isDaemon = true, name = "snapkey-shell-$code") {
                 try {
                     ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use { output ->
-                        proc.inputStream.use { it.copyTo(output) }
+                        proc.inputStream.use { input ->
+                            if (code == INPUT) copyInputKeyEvents(input, output)
+                            else input.copyTo(output)
+                        }
                     }
                 } catch (_: IOException) {
                     // Closing the app's read end breaks the pipe and stops its shell reader too.
@@ -209,7 +212,7 @@ internal class ShizukuLogStream(
         // Removing one user service must not kill the other reader.
         .tag(if (transaction == ShizukuLogService.INPUT) "input-reader" else "log-reader")
         .processNameSuffix(if (transaction == ShizukuLogService.INPUT) "input-reader" else "log-reader")
-        .version(2)
+        .version(3)
         .daemon(false)
     private val connected = CountDownLatch(1)
     @Volatile private var closed = false
