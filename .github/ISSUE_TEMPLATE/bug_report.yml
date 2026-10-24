@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Check the [troubleshooting steps](https://github.com/heykay-47/SnapKeyMap#troubleshooting) first. Do not paste an unfiltered system log. Device logs can contain sensitive information.
+        Check the [troubleshooting steps](https://github.com/heykay-47/SnapKeyMap/blob/main/docs/troubleshooting.md) first. Do not paste an unfiltered system log. Device logs can contain sensitive information.
   - type: textarea
     id: what-happened
     attributes:
