@@ -19,6 +19,8 @@ With Shizuku running and allowed, run **Teach the Snap Key again** after updatin
 
 ## Setup wizard
 
+On a new installation, the introduction appears before setup. Tap **Get started** or **Skip** to continue. Existing installations go straight to their current screen.
+
 Open SnapKey Map. The wizard has seven steps. It saves your progress and resumes at the first unfinished step.
 
 1. **Choose a method.** Shizuku works without a computer. Computer (ADB) uses a USB cable.
