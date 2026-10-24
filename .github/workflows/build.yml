@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -83,6 +87,19 @@ jobs:
             fi
           fi
           cp app/build/outputs/apk/release/app-release.apk "SnapKeyMap-$VERSION.apk"
+
+      - name: Lint release
+        continue-on-error: true
+        run: gradle --no-daemon lintRelease
+
+      - name: Upload lint reports
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: lint-reports
+          path: |
+            app/build/reports/lint-results-release.html
+            app/build/reports/lint-results-release.xml
 
       - name: Upload test results
         if: always()
