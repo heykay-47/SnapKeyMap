@@ -3,7 +3,7 @@
 <p><b>Actions</b></p>
 <ul>
 <li>Phone: flashlight, ringer presets you create and edit (ring, vibrate, silent), Do Not Disturb.</li>
-<li>Screen and navigation: screenshot, lock screen, notifications, quick settings, recent apps, home, back, power menu, split screen.</li>
+<li>Screen and navigation: screenshot, lock screen, notifications, quick settings, recent apps, home, back, power menu.</li>
 <li>Music and video: play or pause, next and previous track, media volume up and down, mute media, volume slider.</li>
 <li>Open: camera, video camera, voice assistant, Wi-Fi, Bluetooth, NFC, and internet panels.</li>
 <li>More: call a contact (opens the dialer), open a link, run an app shortcut, or open any installed app.</li>

@@ -29,7 +29,6 @@ enum class DeviceAction(val label: String, val section: Section, val needsServic
     HOME("Go to home screen", Section.SCREEN, needsService = true),
     BACK("Go back", Section.SCREEN, needsService = true),
     POWER_MENU("Power menu", Section.SCREEN, needsService = true),
-    SPLIT_SCREEN("Split screen", Section.SCREEN, needsService = true),
     PLAY_PAUSE("Play / pause", Section.MEDIA),
     NEXT_TRACK("Next track", Section.MEDIA),
     PREVIOUS_TRACK("Previous track", Section.MEDIA),
@@ -104,9 +103,12 @@ sealed interface SnapAction {
                     "shortcut" -> OpenShortcut(json.getString("uri"), json.getString("name"))
                     "link" -> OpenLink(json.getString("url"))
                     "contact" -> CallContact(json.getString("number"), json.getString("name"))
-                    "device" -> if (json.getString("action") == "RINGER_CYCLE") {
-                        Ringer(RingerMode.entries.toList())
-                    } else Device(DeviceAction.valueOf(json.getString("action")))
+                    "device" -> when (val name = json.getString("action")) {
+                        "RINGER_CYCLE" -> Ringer(RingerMode.entries.toList())
+                        // Android 13+ ignores the split screen global action, so the action was removed.
+                        "SPLIT_SCREEN" -> NoAction
+                        else -> Device(DeviceAction.valueOf(name))
+                    }
                     "ringer" -> {
                         val modes = json.getJSONArray("modes")
                         Ringer(List(modes.length()) { RingerMode.valueOf(modes.getString(it)) })

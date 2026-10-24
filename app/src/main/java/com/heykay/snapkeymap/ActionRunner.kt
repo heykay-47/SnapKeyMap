@@ -86,7 +86,6 @@ object ActionRunner {
             DeviceAction.HOME -> global(context, AccessibilityService.GLOBAL_ACTION_HOME)
             DeviceAction.BACK -> global(context, AccessibilityService.GLOBAL_ACTION_BACK)
             DeviceAction.POWER_MENU -> global(context, AccessibilityService.GLOBAL_ACTION_POWER_DIALOG)
-            DeviceAction.SPLIT_SCREEN -> global(context, AccessibilityService.GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN)
             DeviceAction.PLAY_PAUSE -> mediaKey(context, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
             DeviceAction.NEXT_TRACK -> mediaKey(context, KeyEvent.KEYCODE_MEDIA_NEXT)
             DeviceAction.PREVIOUS_TRACK -> mediaKey(context, KeyEvent.KEYCODE_MEDIA_PREVIOUS)
