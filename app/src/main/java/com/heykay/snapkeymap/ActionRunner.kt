@@ -79,6 +79,9 @@ object ActionRunner {
             DeviceAction.FLASHLIGHT -> toggleTorch(context)
             DeviceAction.DO_NOT_DISTURB -> toggleDoNotDisturb(context)
             DeviceAction.SCREENSHOT -> global(context, AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT)
+            DeviceAction.CIRCLE_TO_SEARCH -> if (!CircleToSearch.start()) {
+                toast(context, "Circle to Search isn't available. Set Google as your digital assistant app.")
+            }
             DeviceAction.LOCK_SCREEN -> global(context, AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN)
             DeviceAction.NOTIFICATIONS -> global(context, AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
             DeviceAction.QUICK_SETTINGS -> global(context, AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS)
