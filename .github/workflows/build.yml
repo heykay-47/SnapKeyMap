@@ -89,14 +89,24 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk "SnapKeyMap-$VERSION.apk"
 
       - name: Lint release
+        id: lint
         continue-on-error: true
         run: gradle --no-daemon lintRelease
 
+      - name: Summarize advisory lint
+        if: always()
+        continue-on-error: true
+        env:
+          LINT_OUTCOME: ${{ steps.lint.outcome }}
+        run: bash scripts/lint-summary.sh "$LINT_OUTCOME" app/build/reports "$GITHUB_STEP_SUMMARY"
+
       - name: Upload lint reports
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: lint-reports
+          if-no-files-found: error
           path: |
             app/build/reports/lint-results-release.html
             app/build/reports/lint-results-release.xml
