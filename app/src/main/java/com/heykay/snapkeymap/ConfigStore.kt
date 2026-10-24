@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import org.json.JSONArray
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
@@ -77,14 +78,16 @@ class ConfigStore(private val context: Context) {
     private val state = MutableStateFlow(load())
     val config: StateFlow<Config> = state.asStateFlow()
 
+    @Synchronized
     fun update(change: (Config) -> Config) {
-        val changed = change(state.value)
-        val next = changed.copy(
-            doublePressWindowMs = changed.doublePressWindowMs.coerceIn(200L, 600L),
-            holdMs = changed.holdMs.coerceIn(300L, 1200L),
-        )
-        state.value = next
-        save(next)
+        state.update { current ->
+            val changed = change(current)
+            changed.copy(
+                doublePressWindowMs = changed.doublePressWindowMs.coerceIn(200L, 600L),
+                holdMs = changed.holdMs.coerceIn(300L, 1200L),
+            )
+        }
+        save(state.value)
     }
 
     private fun load(): Config {
