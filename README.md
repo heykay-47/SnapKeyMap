@@ -1,4 +1,8 @@
 <p align="center">
+  <a href="#support"><img width="720" alt="Find SnapKey Map useful? Please support its development." src="docs/snapkeymap-svg/support-banner.svg" /></a>
+</p>
+
+<p align="center">
   <img width="128" alt="SnapKey Map icon" src="docs/snapkeymap-svg/snapkeymap-icon.svg" />
 </p>
 
@@ -36,17 +40,14 @@
 # Screenshots
 
 <p align="center">
-  <img width="32%" alt="Home screen in the dark theme, showing the Ready card and the three gesture mappings" src="docs/screenshots/snapkeymap_ss1.jpg" />
-  <img width="32%" alt="Home screen in the light theme" src="docs/screenshots/snapkeymap_ss2.jpg" />
-  <img width="32%" alt="Action picker for the Press gesture, with Phone and Screen and navigation actions" src="docs/screenshots/snapkeymap_ss3.jpg" />
+  <img width="32%" alt="Home screen with the Ready card and four gestures, including Circle to Search on Double press" src="docs/screenshots/snapkeymap_ss1.jpg" />
+  <img width="32%" alt="Lower home screen with Timing, Show confirmations, Pause in apps, and tips" src="docs/screenshots/snapkeymap_ss2.jpg" />
+  <img width="32%" alt="Action picker with Phone and Screen and navigation actions, including Circle to Search" src="docs/screenshots/snapkeymap_ss3.jpg" />
 </p>
 <p align="center">
-  <img width="32%" alt="Action picker for the Double press gesture, with Screen and navigation and Music and video actions" src="docs/screenshots/snapkeymap_ss4.jpg" />
-  <img width="32%" alt="Action picker with Open actions and More actions such as Call a contact, Open a link, and App shortcut" src="docs/screenshots/snapkeymap_ss5.jpg" />
-  <img width="32%" alt="Action picker listing installed apps to open" src="docs/screenshots/snapkeymap_ss6.jpg" />
-</p>
-<p align="center">
-  <img width="32%" alt="Help screen with Getting started, Troubleshooting, and Is it safe sections" src="docs/screenshots/snapkeymap_ss7.jpg" />
+  <img width="32%" alt="Action picker with Open actions and More actions such as Call a contact, Open a link, and App shortcut" src="docs/screenshots/snapkeymap_ss4.jpg" />
+  <img width="32%" alt="Timing dialog with the double-press window and press-and-hold sliders" src="docs/screenshots/snapkeymap_ss5.jpg" />
+  <img width="32%" alt="Help screen with Run setup again and Getting started" src="docs/screenshots/snapkeymap_ss6.jpg" />
 </p>
 
 # Features
@@ -58,7 +59,7 @@ Tap the lock next to a gesture to run it only when your phone is unlocked.
 | Category | Actions |
 | --- | --- |
 | Phone | Flashlight, ringer presets you can create and edit (ring, vibrate, silent), a distinct vibration for each ringer mode, Do Not Disturb |
-| Screen & navigation | Screenshot, lock screen, notifications, quick settings, recent apps, home, back, power menu, split screen |
+| Screen & navigation | Screenshot, Circle to Search, lock screen, notifications, quick settings, recent apps, home, back, power menu |
 | Music & video | Play / pause, next and previous track, media volume up and down, mute / unmute media, volume slider |
 | Open | Camera, video camera, voice assistant, Wi-Fi panel, Bluetooth settings, NFC panel, internet and mobile data panel |
 | More | Call a contact (opens the dialer with their number), open a link (including `sms:` and `wa.me` links with a message filled in), run a supported app shortcut |

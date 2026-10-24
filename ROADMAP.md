@@ -2,13 +2,6 @@
 
 Have an idea? [Request a feature](https://github.com/heykay-47/SnapKeyMap/issues/new?template=feature_request.yml).
 
-## In progress
-
-From feedback on the [launch post](https://www.reddit.com/r/Oppo/comments/1xaze1m/i_built_an_app_to_remap_the_oppo_find_x9s_snap_key/) in October 2026.
-
-- [ ] **Circle to Search.** A new action that opens Google's Circle to Search over the current screen. It needs Google as your digital assistant app, on firmware where Circle to Search is available.
-- [ ] **Remove Split screen.** Android 13 and later ignore this action, so it did nothing. A gesture that used it changes to Do nothing.
-
 ## Next: F-Droid
 
 The F-Droid submission will request the same developer-signed APK as GitHub Releases. If accepted, you can switch between the two without uninstalling and keep the log permission.
@@ -28,6 +21,13 @@ The F-Droid submission will request the same developer-signed APK as GitHub Rele
 - [ ] **App bundle builds.** CI builds the Android App Bundle that Google Play requires.
 - [ ] **Privacy policy and Data safety.** Publish a privacy policy on the website and declare that the app collects no data.
 - [ ] **Closed test.** New personal developer accounts need 12 testers opted in for 14 days before a production release.
+
+## Delivered in v1.0.18
+
+From feedback on the [launch post](https://www.reddit.com/r/Oppo/comments/1xaze1m/i_built_an_app_to_remap_the_oppo_find_x9s_snap_key/). This release was tested on a Find X9. Behaviour on other firmware may differ.
+
+- [x] **Circle to Search.** Open Google's Circle to Search over the current screen. It needs Google as your digital assistant app, on firmware where Circle to Search is available.
+- [x] **Split screen removed.** Android 13 and later ignore this action, so it did nothing. A gesture that used it now does nothing until you choose another action.
 
 ## Delivered in v1.0.17
 
