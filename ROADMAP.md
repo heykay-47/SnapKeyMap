@@ -15,7 +15,7 @@ This candidate combines the Android skill review with feedback from the [launch 
 - [ ] **Preset editing.** Preserve an unfinished ringer preset across rotation. Keep the link dialog usable in landscape.
 - [ ] **Setup and help.** Explain disabled Next buttons, animate step changes, add a Details toggle to the status card, and give Help cards useful summaries.
 - [ ] **Open-source licences.** Add a licence page under About.
-- [x] **Build reports.** CI uploads Android Lint reports and cancels superseded branch builds. Main and release-tag builds do not cancel each other. Gradle remains pinned in CI because the repository has no executable wrapper or wrapper JAR.
+- [ ] **Build checks.** Use the checksum-pinned Gradle wrapper in both CI builds and validate its JAR. Upload advisory Android Lint reports with an explicit outcome. Cancel superseded branch builds without cancelling main or release-tag builds.
 - [ ] **Release transition.** Publish v1.1.0 with versionCode 10100 after manual approval. Then remove the superseded v1.0.18 release and tag. Keep the same signing certificate so existing installations can update without uninstalling.
 
 ## Next: F-Droid
