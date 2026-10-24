@@ -21,4 +21,4 @@ This is a conservative POM traversal, not Gradle dependency resolution. It inclu
 
 Some old Kotlin POM dependencies omit inherited versions. Four older AndroidX POM fetches failed during traversal: collection 1.5.0, lifecycle-runtime 2.3.1, annotation-experimental 1.1.0, and core-ktx 1.9.0. Their groups are covered, but their missing transitive edges are not asserted complete. Attribution blocks are verified source notices, not an exhaustive per-file copyright inventory of all AndroidX artifacts.
 
-The parent must compare the combined candidate's resolved release runtime graph and packaged `META-INF` notices with this registry before release. Add any additional licensing group or required third-party attribution found there. No claim of complete legal compliance is made for uninspected transitives or embedded third-party code.
+The v1.1.0 release build's resolved runtime dependency report mapped every group to this registry, and its packaged licence assets matched the source. Repeat that check for each release. No claim of complete legal compliance is made for uninspected transitives or embedded third-party code.
