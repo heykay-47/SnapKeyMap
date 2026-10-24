@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
 import android.text.format.DateFormat
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,10 +17,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
@@ -52,7 +57,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -61,15 +69,23 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.app.NotificationManagerCompat
 import com.heykay.snapkeymap.Gesture
+import com.heykay.snapkeymap.Config
 import com.heykay.snapkeymap.LogAccess
 import com.heykay.snapkeymap.LogSource
 import com.heykay.snapkeymap.R
@@ -80,9 +96,19 @@ import com.heykay.snapkeymap.ThemeMode
 import java.util.Date
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 
 private const val SHIZUKU_LOG_REQUEST = 2
+
+private data class HomeChecks(
+    val hasLogPermission: Boolean = false,
+    val notificationsAllowed: Boolean = true,
+    val backgroundAllowed: Boolean = true,
+    val canAskShizuku: Boolean = false,
+    val now: Long = SnapEngine.now(),
+)
 
 @Composable
 fun HomeScreen(
@@ -93,46 +119,69 @@ fun HomeScreen(
     onHelp: () -> Unit,
 ) {
     val context = LocalContext.current
-    val config by SnapEngine.store.config.collectAsState()
-    val access by SnapEngine.logAccess.collectAsState()
-    val precise by SnapEngine.preciseDetection.collectAsState()
-    val serviceOn by SnapAccessibilityService.running.collectAsState()
-    val resumes by SnapEngine.uiResumes.collectAsState()
+    val config by SnapEngine.store.config.collectAsStateWithLifecycle()
+    val access by SnapEngine.logAccess.collectAsStateWithLifecycle()
+    val precise by SnapEngine.preciseDetection.collectAsStateWithLifecycle()
+    val serviceOn by SnapAccessibilityService.running.collectAsStateWithLifecycle()
+    val resumes by SnapEngine.uiResumes.collectAsStateWithLifecycle()
+    val last by SnapEngine.lastGesture.collectAsStateWithLifecycle()
+    val lastKeySeenAt by SnapEngine.lastKeySeenAt.collectAsStateWithLifecycle()
+    val listeningSince by SnapEngine.listeningSince.collectAsStateWithLifecycle()
+    val logSource by SnapEngine.logSource.collectAsStateWithLifecycle()
+    val inputLive by SnapEngine.inputLive.collectAsStateWithLifecycle()
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val layoutDirection = LocalLayoutDirection.current
     var showThemeMenu by rememberSaveable { mutableStateOf(false) }
     var showTiming by rememberSaveable { mutableStateOf(false) }
     var showPausedApps by rememberSaveable { mutableStateOf(false) }
     var showUnlockHint by rememberSaveable { mutableStateOf(false) }
-    val pausedSummary = remember(config.pausedApps, resumes) {
-        if (config.pausedApps.isEmpty()) "None" else {
-            val pm = context.packageManager
-            config.pausedApps.mapNotNull { packageName ->
-                runCatching { pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString() }.getOrNull()
-            }.sortedBy { it.lowercase() }.joinToString(", ")
-                .takeIf { it.isNotEmpty() } ?: "${config.pausedApps.size} apps"
+    val pausedSummary by produceState("None", config.pausedApps, resumes, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            value = withContext(Dispatchers.Default) {
+                if (config.pausedApps.isEmpty()) "None" else {
+                    val pm = context.packageManager
+                    config.pausedApps.mapNotNull { packageName ->
+                        runCatching { pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString() }.getOrNull()
+                    }.sortedBy { it.lowercase() }.joinToString(", ")
+                        .takeIf { it.isNotEmpty() } ?: "${config.pausedApps.size} apps"
+                }
+            }
         }
     }
-    val notificationsAllowed = remember(resumes) {
-        NotificationManagerCompat.from(context).areNotificationsEnabled()
-    }
-    val backgroundAllowed = remember(resumes) {
-        context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName)
-    }
-
-    val hasLogPermission by produceState(SnapEngine.hasLogPermission(), resumes) {
-        while (true) {
-            value = SnapEngine.hasLogPermission()
-            delay(1000)
+    val checks by produceState(HomeChecks(), lifecycle, resumes) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                value = HomeChecks(
+                    hasLogPermission = SnapEngine.hasLogPermission(),
+                    notificationsAllowed = NotificationManagerCompat.from(context).areNotificationsEnabled(),
+                    backgroundAllowed = context.getSystemService(PowerManager::class.java)
+                        .isIgnoringBatteryOptimizations(context.packageName),
+                    canAskShizuku = runCatching {
+                        Shizuku.pingBinder() && !Shizuku.isPreV11() &&
+                            Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED
+                    }.getOrDefault(false),
+                )
+                delay(1000)
+            }
         }
     }
     val warning = when {
         !serviceOn -> "Accessibility is off. Turn it on to run your actions."
-        config.needsLogAccess && !hasLogPermission -> "Log access is missing. Grant it again to detect the key."
+        config.needsLogAccess && !checks.hasLogPermission -> "Log access is missing. Grant it again to detect the key."
         !config.isTaught -> "Teach the Snap Key again so it can be detected."
         else -> null
     }
 
     SnapScaffold(
         title = "SnapKey Map",
+        titleLeadingContent = {
+            Box(Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))) {
+                Image(painterResource(R.drawable.ic_launcher_background), contentDescription = null,
+                    modifier = Modifier.matchParentSize())
+                Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null,
+                    modifier = Modifier.matchParentSize().graphicsLayer(scaleX = 1.4f, scaleY = 1.4f))
+            }
+        },
         actions = {
             Box {
                 IconButton(onClick = { showThemeMenu = true }) {
@@ -163,8 +212,13 @@ fun HomeScreen(
         },
     ) { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = padding.calculateStartPadding(layoutDirection) + 16.dp,
+                top = padding.calculateTopPadding() + 16.dp,
+                end = padding.calculateEndPadding(layoutDirection) + 16.dp,
+                bottom = padding.calculateBottomPadding() + 16.dp,
+            ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
@@ -173,7 +227,7 @@ fun HomeScreen(
                     onFix = {
                         when {
                             !serviceOn -> context.openAccessibilitySettings()
-                            config.needsLogAccess && !hasLogPermission -> onLogAccess()
+                            config.needsLogAccess && !checks.hasLogPermission -> onLogAccess()
                             else -> onLearn()
                         }
                     },
@@ -181,9 +235,23 @@ fun HomeScreen(
                     onEnabledChange = { on -> SnapEngine.store.update { it.copy(enabled = on) } },
                     listening = !config.needsLogAccess || precise || access == LogAccess.FULL,
                     access = access,
+                    config = config,
+                    last = last,
+                    lastKeySeenAt = lastKeySeenAt,
+                    listeningSince = listeningSince,
+                    logSource = logSource,
+                    precise = precise,
+                    inputLive = inputLive,
+                    now = checks.now,
+                    canAskShizuku = checks.canAskShizuku,
                 )
             }
 
+            item {
+                TextButton(onClick = onLearn, modifier = Modifier.fillMaxWidth()) {
+                    Text("Teach the Snap Key again")
+                }
+            }
             item { SectionHeader("What the Snap Key does") }
             item {
                 Card(
@@ -262,7 +330,7 @@ fun HomeScreen(
                     CardTextButton("Open phone settings") { context.openPhoneSettings() }
                 }
             }
-            if (!notificationsAllowed) {
+            if (!checks.notificationsAllowed) {
                 item {
                     NoteCard(
                         icon = Icons.Rounded.Notifications,
@@ -273,7 +341,7 @@ fun HomeScreen(
                     }
                 }
             }
-            if (!backgroundAllowed) {
+            if (!checks.backgroundAllowed) {
                 item {
                     NoteCard(
                         icon = Icons.Rounded.BatteryChargingFull,
@@ -289,14 +357,9 @@ fun HomeScreen(
                     }
                 }
             }
-            item {
-                TextButton(onClick = onLearn, modifier = Modifier.fillMaxWidth()) {
-                    Text("Teach the Snap Key again")
-                }
-            }
         }
     }
-    if (showTiming) TimingDialog(onDismiss = { showTiming = false })
+    if (showTiming) TimingDialog(config = config, onDismiss = { showTiming = false })
     if (showPausedApps) PausedAppsSheet(onDismiss = { showPausedApps = false })
     if (showUnlockHint) UnlockHintDialog(onDismiss = {
         SnapEngine.store.update { it.copy(unlockHintShown = true) }
@@ -318,8 +381,7 @@ internal fun UnlockHintDialog(onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun TimingDialog(onDismiss: () -> Unit) {
-    val config by SnapEngine.store.config.collectAsState()
+private fun TimingDialog(config: Config, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Timing") },
@@ -367,21 +429,18 @@ private fun StatusCard(
     onEnabledChange: (Boolean) -> Unit,
     listening: Boolean,
     access: LogAccess,
+    config: Config,
+    last: SnapEngine.Detected?,
+    lastKeySeenAt: Long?,
+    listeningSince: Long?,
+    logSource: LogSource?,
+    precise: Boolean,
+    inputLive: Boolean,
+    now: Long,
+    canAskShizuku: Boolean,
 ) {
-    val last by SnapEngine.lastGesture.collectAsState()
-    val lastKeySeenAt by SnapEngine.lastKeySeenAt.collectAsState()
-    val listeningSince by SnapEngine.listeningSince.collectAsState()
-    val logSource by SnapEngine.logSource.collectAsState()
-    val precise by SnapEngine.preciseDetection.collectAsState()
-    val inputLive by SnapEngine.inputLive.collectAsState()
-    val config by SnapEngine.store.config.collectAsState()
     val timeFormat = DateFormat.getTimeFormat(LocalContext.current)
-    val now by produceState(SnapEngine.now()) {
-        while (true) {
-            delay(1000)
-            value = SnapEngine.now()
-        }
-    }
+    var showDetails by rememberSaveable { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
     val ready = warning == null && enabled && listening
     val (title, body) = when {
@@ -407,48 +466,55 @@ private fun StatusCard(
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(title, style = MaterialTheme.typography.headlineSmall)
+                    Text(title, style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.semantics {
+                            liveRegion = LiveRegionMode.Polite
+                            stateDescription = if (ready && last != null) {
+                                "Last: ${last.gesture.title.lowercase()} at " +
+                                    java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM).format(Date(last.atMs))
+                            } else if (ready) "Press the Snap Key to try it." else body
+                        })
                     Text(body, style = MaterialTheme.typography.bodyMedium)
                 }
                 Spacer(Modifier.size(12.dp))
                 Switch(checked = enabled, onCheckedChange = onEnabledChange)
             }
-            Text(
-                listOfNotNull(
-                    listeningSince?.let {
-                        "Listening since ${timeFormat.format(Date(it))}" +
-                            when {
-                                precise -> " · Precise input via Shizuku"
-                                logSource == LogSource.SHIZUKU && access == LogAccess.FULL -> " · Logs via Shizuku"
-                                config.needsLogAccess -> " · System logs"
-                                else -> ""
-                            }
-                    },
-                    lastKeySeenAt?.let { "Last key press ${timeFormat.format(Date(it))}" } ?: "No key press yet",
-                ).joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.onSurfaceVariant,
+            CardTextButton(
+                text = if (showDetails) "Hide details" else "Details",
+                modifier = Modifier.heightIn(min = 48.dp),
+                onClick = { showDetails = !showDetails },
             )
-            if (config.needsLogAccess && ((config.inputKey == null &&
-                (inputLive || (logSource == LogSource.SHIZUKU && access == LogAccess.FULL))) ||
-                (config.logSignature?.hasExplicitKeyEdges == true && config.logKeyCode == null))) {
+            if (showDetails) {
                 Text(
-                    "Teach the Snap Key again for more precise detection.",
+                    listOfNotNull(
+                        listeningSince?.let {
+                            "Listening since ${timeFormat.format(Date(it))}" +
+                                when {
+                                    precise -> " · Precise input via Shizuku"
+                                    logSource == LogSource.SHIZUKU && access == LogAccess.FULL -> " · Logs via Shizuku"
+                                    config.needsLogAccess -> " · System logs"
+                                    else -> ""
+                                }
+                        },
+                        lastKeySeenAt?.let { "Last key press ${timeFormat.format(Date(it))}" } ?: "No key press yet",
+                    ).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.onSurfaceVariant,
                 )
+                if (config.needsLogAccess && ((config.inputKey == null &&
+                    (inputLive || (logSource == LogSource.SHIZUKU && access == LogAccess.FULL))) ||
+                    (config.logSignature?.hasExplicitKeyEdges == true && config.logKeyCode == null))) {
+                    Text(
+                        "Teach the Snap Key again for more precise detection.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.onSurfaceVariant,
+                    )
+                }
             }
             if (warning != null) {
                 Button(onClick = onFix) { Text("Fix") }
             } else if (enabled && !listening && access != LogAccess.WAITING) {
                 Button(onClick = { SnapEngine.connect() }) { Text("Connect") }
-            }
-            val resumes by SnapEngine.uiResumes.collectAsState()
-            val canAskShizuku = remember(resumes, logSource) {
-                runCatching {
-                    Shizuku.pingBinder() && !Shizuku.isPreV11() &&
-                        Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED
-                }.getOrDefault(false)
             }
             if (warning == null && enabled && canAskShizuku) {
                 Text(

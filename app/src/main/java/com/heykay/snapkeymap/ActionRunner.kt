@@ -30,10 +30,16 @@ import kotlinx.coroutines.sync.withLock
 /** Runs a [SnapAction]. Called on the main thread. */
 object ActionRunner {
     private var torchCameraId: String? = null
-    private var torchOn = false
+    private var torchOn: Boolean? = null
     private var torchWatched = false
+    private var torchUnavailable = false
+    private var pendingTorchToggle = false
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val ringerMutex = Mutex()
+
+    fun init(context: Context) {
+        runCatching { watchTorch(context.applicationContext) }
+    }
 
     fun run(context: Context, action: SnapAction) {
         try {
@@ -139,27 +145,56 @@ object ActionRunner {
         audio.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
     }
 
-    private fun toggleTorch(context: Context) {
+    private fun watchTorch(context: Context): String? {
         val cameras = context.getSystemService(CameraManager::class.java)
         val id = torchCameraId ?: cameras.cameraIdList.firstOrNull {
             cameras.getCameraCharacteristics(it).get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+        } ?: return null
+        torchCameraId = id
+        if (!torchWatched) {
+            val app = context.applicationContext
+            cameras.registerTorchCallback(object : CameraManager.TorchCallback() {
+                override fun onTorchModeChanged(cameraId: String, enabled: Boolean) {
+                    if (cameraId != torchCameraId) return
+                    torchUnavailable = false
+                    torchOn = enabled
+                    if (pendingTorchToggle) {
+                        pendingTorchToggle = false
+                        run(app, SnapAction.Device(DeviceAction.FLASHLIGHT))
+                    }
+                }
+
+                override fun onTorchModeUnavailable(cameraId: String) {
+                    if (cameraId != torchCameraId) return
+                    torchUnavailable = true
+                    torchOn = null
+                    if (pendingTorchToggle) toast(app, "Flashlight isn't available while the camera is in use")
+                    pendingTorchToggle = false
+                }
+            }, Handler(Looper.getMainLooper()))
+            torchWatched = true
         }
+        return id
+    }
+
+    private fun toggleTorch(context: Context) {
+        val id = watchTorch(context)
         if (id == null) {
             toast(context, "This phone has no flashlight")
             return
         }
-        torchCameraId = id
-        if (!torchWatched) {
-            torchWatched = true
-            // Keeps torchOn right when the flashlight is switched from quick settings too.
-            cameras.registerTorchCallback(object : CameraManager.TorchCallback() {
-                override fun onTorchModeChanged(cameraId: String, enabled: Boolean) {
-                    if (cameraId == torchCameraId) torchOn = enabled
-                }
-            }, Handler(Looper.getMainLooper()))
+        if (torchUnavailable) {
+            toast(context, "Flashlight isn't available while the camera is in use")
+            return
         }
-        torchOn = !torchOn
-        cameras.setTorchMode(id, torchOn)
+        val current = torchOn
+        if (current == null) {
+            // Registration delivers the real initial state asynchronously, including Quick Settings changes.
+            pendingTorchToggle = !pendingTorchToggle
+            return
+        }
+        context.getSystemService(CameraManager::class.java).setTorchMode(id, !current)
+        torchOn = !current
     }
 
     private fun cycleRinger(context: Context, action: SnapAction.Ringer) {
@@ -224,8 +259,9 @@ object ActionRunner {
 
     private val RingerMode.vibrationEffect: VibrationEffect
         get() = when (this) {
-            RingerMode.RING -> VibrationEffect.createOneShot(350L, VibrationEffect.DEFAULT_AMPLITUDE)
-            RingerMode.VIBRATE -> VibrationEffect.createWaveform(longArrayOf(0, 40, 90, 40, 90, 40), -1)
+            RingerMode.RING -> VibrationEffect.createOneShot(400L, VibrationEffect.DEFAULT_AMPLITUDE)
+            // ColorOS replaces steps of about 40 ms with a light click, which felt like the Ring buzz.
+            RingerMode.VIBRATE -> VibrationEffect.createWaveform(longArrayOf(0, 150, 200, 150), -1)
             RingerMode.SILENT -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK)
         }
 

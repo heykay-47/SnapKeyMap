@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,12 +27,18 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - uses: gradle/actions/wrapper-validation@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+
       - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
-        with:
-          gradle-version: "8.14.3"
 
       - name: Install pinned Build Tools
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"'
+
+      - name: Check notice assets and lint summaries
+        run: |
+          python3 scripts/check-license-notices.py
+          python3 scripts/test-license-notices.py
+          python3 scripts/test-lint-summary.py
 
       - name: Set up signing key
         if: github.event_name != 'pull_request'
@@ -50,7 +60,7 @@ jobs:
           SIGNING_STORE_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.SIGNING_STORE_PASSWORD || '' }}
           SIGNING_KEY_ALIAS: ${{ github.event_name != 'pull_request' && secrets.SIGNING_KEY_ALIAS || '' }}
           SIGNING_KEY_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.SIGNING_KEY_PASSWORD || '' }}
-        run: gradle --no-daemon testReleaseUnitTest assembleRelease
+        run: ./gradlew --no-daemon testReleaseUnitTest assembleRelease
 
       - name: Delete signing key
         if: always()
@@ -84,6 +94,41 @@ jobs:
           fi
           cp app/build/outputs/apk/release/app-release.apk "SnapKeyMap-$VERSION.apk"
 
+      - name: Lint release
+        id: lint
+        continue-on-error: true
+        run: ./gradlew --no-daemon lintRelease
+
+      - name: Summarize advisory lint
+        if: always()
+        continue-on-error: true
+        env:
+          LINT_OUTCOME: ${{ steps.lint.outcome }}
+        run: bash scripts/lint-summary.sh "$LINT_OUTCOME" app/build/reports "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload lint reports
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: lint-reports
+          if-no-files-found: error
+          path: |
+            app/build/reports/lint-results-release.html
+            app/build/reports/lint-results-release.xml
+
+      - name: Report resolved release dependencies
+        run: |
+          mkdir -p app/build/reports
+          ./gradlew --no-daemon :app:dependencies --configuration releaseRuntimeClasspath > app/build/reports/release-runtime-dependencies.txt
+
+      - name: Upload resolved release dependencies
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: runtime-dependencies
+          path: app/build/reports/release-runtime-dependencies.txt
+          if-no-files-found: error
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
@@ -114,7 +159,6 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
         with:
-          gradle-version: "8.14.3"
           cache-disabled: true
 
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
@@ -137,7 +181,7 @@ jobs:
         working-directory: rebuild
         env:
           GRADLE_USER_HOME: ${{ runner.temp }}/reproducibility-gradle
-        run: gradle --no-daemon --no-build-cache --no-configuration-cache assembleRelease
+        run: ./gradlew --no-daemon --no-build-cache --no-configuration-cache assembleRelease
 
       - name: Verify signatures and exact APK bytes
         shell: bash

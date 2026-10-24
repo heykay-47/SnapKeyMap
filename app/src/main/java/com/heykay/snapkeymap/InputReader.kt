@@ -2,7 +2,24 @@ package com.heykay.snapkeymap
 
 import android.content.Context
 import android.os.SystemClock
+import java.io.InputStream
+import java.io.OutputStream
 import java.util.concurrent.Executors
+
+/** Keep touchscreen/sync traffic in the shell process, without pinning a device during learning. */
+internal fun copyInputKeyEvents(input: InputStream, output: OutputStream) {
+    val writer = output.bufferedWriter()
+    input.bufferedReader().use { reader ->
+        while (true) {
+            val line = reader.readLine() ?: break
+            if (!line.contains(" EV_KEY ")) continue
+            writer.write(line)
+            writer.newLine()
+            // A buffered key edge must not wait for another press to reach the app.
+            writer.flush()
+        }
+    }
+}
 
 /** Shell-only input stream. A failed reader leaves log detection running. */
 class InputReader(

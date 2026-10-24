@@ -26,6 +26,7 @@ class SnapAccessibilityService : AccessibilityService() {
     private val messageHandler = Handler(Looper.getMainLooper())
     private var messageView: TextView? = null
     private val hideMessage = Runnable { removeMessage() }
+    private val activityPackages = LinkedHashMap<ComponentName, String?>()
 
     override fun onServiceConnected() {
         instance = this
@@ -39,10 +40,16 @@ class SnapAccessibilityService : AccessibilityService() {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val packageName = event.packageName?.toString() ?: return
         val className = event.className?.toString() ?: return
-        val activity = runCatching {
-            packageManager.getActivityInfo(ComponentName(packageName, className), 0)
-        }.getOrNull() ?: return
-        SnapEngine.onForegroundApp(activity.packageName)
+        val component = ComponentName(packageName, className)
+        val activityPackage = if (activityPackages.containsKey(component)) {
+            activityPackages[component]
+        } else {
+            val resolved = runCatching { packageManager.getActivityInfo(component, 0).packageName }.getOrNull()
+            if (activityPackages.size >= 64) activityPackages.remove(activityPackages.keys.first())
+            activityPackages[component] = resolved
+            resolved
+        } ?: return
+        SnapEngine.onForegroundApp(activityPackage)
     }
 
     override fun onInterrupt() = Unit
@@ -111,6 +118,7 @@ class SnapAccessibilityService : AccessibilityService() {
 
     private fun clear() {
         removeMessage()
+        activityPackages.clear()
         instance = null
         runningState.value = false
         SnapEngine.onServiceDisconnected()

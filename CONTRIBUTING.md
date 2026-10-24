@@ -57,28 +57,32 @@ Pull request builds get no signing secrets and use a temporary debug key. Other 
 
 After the build, the workflow compares the APK's permissions with [`app/expected-permissions.txt`](app/expected-permissions.txt) and fails on any difference. If a change needs a new permission, update that file in the same change and explain why.
 
-The workflow uses JDK 17, Gradle 8.14.3, and Android SDK Build Tools 35.0.0, the default for AGP 8.13.2. It runs:
+The workflow uses JDK 17, the Gradle 8.14.3 wrapper, and Android SDK Build Tools 35.0.0, the default for AGP 8.13.2. It validates the wrapper JAR before it runs:
 
 ```shell
-gradle --no-daemon testReleaseUnitTest assembleRelease
+./gradlew --no-daemon testReleaseUnitTest assembleRelease
 ```
+
+Android Lint runs separately as an advisory check. The workflow summary reports whether lint passed, found errors, or could not produce its reports. The `lint-reports` artifact contains the HTML and XML reports. A successful APK build does not by itself mean that lint passed.
+
+The workflow also checks the bundled licence texts and uploads the resolved `releaseRuntimeClasspath` report as `runtime-dependencies`. Use that report and the APK's packaged notices to review dependency changes against [the notice sources](docs/third-party-notices.md).
 
 A separate `reproducibility` job checks out the same source commit in a different directory and rebuilds with a fresh Gradle home and no build cache. Both jobs use the pull request head commit, not GitHub's merge commit. The verifier uses F-Droid's `fdroidserver==2.4.5` signing removal and builds without signing secrets. It copies the original APK's signature with `apksigcopier==1.1.1`, verifies the copied APK with `apksigner`, and requires byte-for-byte equality with `cmp`. The `reproducibility` artifact contains the source commit, literal versions, signing-removal diff, certificate reports, SHA-256 hashes, unsigned APK, and signature-copied APK when those files are available, including on failure. This checks independent GitHub-runner builds, not parity with F-Droid's build environment.
 
 ### Build locally
 
-Install JDK 17, Gradle 8.14.3, Android SDK Platform 36, and Android SDK Build Tools 35.0.0. Set `ANDROID_HOME` to your SDK directory, or set `sdk.dir` in an untracked `local.properties` file.
+Install JDK 17, Android SDK Platform 36, and Android SDK Build Tools 35.0.0. Set `ANDROID_HOME` to your SDK directory, or set `sdk.dir` in an untracked `local.properties` file.
 
-The repository has no `gradlew` script. It keeps only `gradle/wrapper/gradle-wrapper.properties`, which tells F-Droid to build with Gradle 8.14.3. Run the installed `gradle` command from the repository root:
+Run the wrapper from the repository root. It downloads the Gradle version pinned in `gradle/wrapper/gradle-wrapper.properties` and verifies the distribution checksum. On Windows, use `gradlew.bat` instead of `./gradlew`.
 
 ```shell
-gradle testReleaseUnitTest
-gradle assembleRelease
+./gradlew testReleaseUnitTest
+./gradlew assembleRelease
 ```
 
 The APK is written to `app/build/outputs/apk/release/app-release.apk`. Local builds use the debug signing key unless you provide the signing environment variables defined in `app/build.gradle.kts`.
 
-F-Droid builds unsigned APKs by running its own signing removal before Gradle. This removes both `signingConfigs` and the debug-key fallback in `signingConfig`; no extra Gradle property is needed. With `fdroidserver==2.4.5` installed in an isolated environment, run this on a clean disposable checkout before `gradle assembleRelease`:
+F-Droid builds unsigned APKs by running its own signing removal before Gradle. This removes both `signingConfigs` and the debug-key fallback in `signingConfig`; no extra Gradle property is needed. With `fdroidserver==2.4.5` installed in an isolated environment, run this on a clean disposable checkout before `./gradlew assembleRelease`:
 
 ```shell
 python -c 'from fdroidserver.common import remove_signing_keys; remove_signing_keys(".")'

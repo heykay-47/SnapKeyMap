@@ -22,12 +22,22 @@ The F-Droid submission will request the same developer-signed APK as GitHub Rele
 - [ ] **Privacy policy and Data safety.** Publish a privacy policy on the website and declare that the app collects no data.
 - [ ] **Closed test.** New personal developer accounts need 12 testers opted in for 14 days before a production release.
 
-## Delivered in v1.0.18
+## Delivered in v1.1.0
 
-From feedback on the [launch post](https://www.reddit.com/r/Oppo/comments/1xaze1m/i_built_an_app_to_remap_the_oppo_find_x9s_snap_key/). This release was tested on a Find X9. Behaviour on other firmware may differ.
+This release replaces v1.0.18 and includes its changes. It combines a review against Android's Compose, lifecycle and accessibility guidance with feedback from the [launch post](https://www.reddit.com/r/Oppo/comments/1xaze1m/i_built_an_app_to_remap_the_oppo_find_x9s_snap_key/). It was tested manually on a Find X9 running ColorOS 17. Behaviour on other firmware may differ.
 
+- [x] **First-open introduction.** A new install shows an animated logo before setup. Existing users skip it. With animations turned off, the finished logo appears.
+- [x] **Less background work.** Status checks stop when you leave the app. Touch events no longer reach the app with Shizuku, and log lines are not parsed while precise input handles the key.
+- [x] **Reader recovery.** A log stream that keeps dropping waits longer between retries. Log detection stays available if precise input fails.
+- [x] **Flashlight state.** The first press turns the flashlight off if it was already on, including from Quick Settings.
+- [x] **Ringer feedback.** Vibrate uses two distinct buzzes and Ring uses one longer buzz, so they feel different on ColorOS. ([#29](https://github.com/heykay-47/SnapKeyMap/issues/29))
+- [x] **Picker and keyboard.** Search results stay above the keyboard, the current action is listed first, app icons are sharper, and TalkBack reads which row is selected.
+- [x] **Preset editing.** An unfinished ringer preset survives rotation. The link dialog scrolls in landscape.
+- [x] **Setup, Home and Help.** Setup explains why Next is disabled and animates between steps. The Home header shows the logo, Teach again sits under the status card, and a Details button holds the diagnostics. Help cards show a one-line summary.
+- [x] **Open-source licences.** About links to a list of libraries with their full licence texts, readable offline.
 - [x] **Circle to Search.** Open Google's Circle to Search over the current screen. It needs Google as your digital assistant app, on firmware where Circle to Search is available.
 - [x] **Split screen removed.** Android 13 and later ignore this action, so it did nothing. A gesture that used it now does nothing until you choose another action.
+- [x] **Build checks.** CI uses the checksum-pinned Gradle wrapper and validates it, uploads advisory Android Lint reports, and cancels superseded branch builds.
 
 ## Delivered in v1.0.17
 
@@ -44,7 +54,7 @@ This release was tested on a Find X9. Behaviour on other firmware may differ.
 
 - [x] **Hide confirmation pop-ups.** Turn off Show confirmations to hide ringer and Do Not Disturb messages. Errors and permission reminders still show.
 - [x] **Consistent background messages.** Confirmation messages also appear while SnapKey Map is in the background.
-- [x] **Feel the ringer mode.** Ring uses one long buzz, Vibrate uses three short pulses, and Silent uses a tick.
+- [x] **Feel the ringer mode.** Ring uses one long buzz, Vibrate uses three short pulses, and Silent uses a tick. v1.1.0 changes the Vibrate pattern to two longer buzzes.
 - [x] **Pause in chosen apps.** Pause mapped actions while a chosen app, such as the camera, is in front.
 - [x] **App icons and Clear all.** The paused-app picker shows app icons and has a **Clear all** button to remove all selections.
 - [x] **Settings and link tips.** Open phone Settings as a fresh task on ColorOS. The link dialog shows how to fill in a message with an `sms:` link.

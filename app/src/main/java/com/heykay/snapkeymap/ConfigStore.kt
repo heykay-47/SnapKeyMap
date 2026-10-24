@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import org.json.JSONArray
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
@@ -32,6 +33,7 @@ data class Config(
     val holdMs: Long = 650L,
     val theme: ThemeMode = ThemeMode.SYSTEM,
     val setupComplete: Boolean = false,
+    val introSeen: Boolean = false,
     /** Null until the user confirms a method, so an interrupted first run starts with the choice. */
     val grantMethod: GrantMethod? = null,
     val setupSkipped: Set<SetupPage> = emptySet(),
@@ -77,14 +79,16 @@ class ConfigStore(private val context: Context) {
     private val state = MutableStateFlow(load())
     val config: StateFlow<Config> = state.asStateFlow()
 
+    @Synchronized
     fun update(change: (Config) -> Config) {
-        val changed = change(state.value)
-        val next = changed.copy(
-            doublePressWindowMs = changed.doublePressWindowMs.coerceIn(200L, 600L),
-            holdMs = changed.holdMs.coerceIn(300L, 1200L),
-        )
-        state.value = next
-        save(next)
+        state.update { current ->
+            val changed = change(current)
+            changed.copy(
+                doublePressWindowMs = changed.doublePressWindowMs.coerceIn(200L, 600L),
+                holdMs = changed.holdMs.coerceIn(300L, 1200L),
+            )
+        }
+        save(state.value)
     }
 
     private fun load(): Config {
@@ -118,6 +122,12 @@ class ConfigStore(private val context: Context) {
             holdMs = prefs.getLong("hold_ms", 650L).coerceIn(300L, 1200L),
             theme = ThemeMode.entries.firstOrNull { it.name == theme } ?: ThemeMode.SYSTEM,
             setupComplete = prefs.getBoolean("setup_complete", false),
+            // Older versions persist setup_complete on first open, even before any step is finished.
+            introSeen = prefs.getBoolean("intro_seen", prefs.contains("setup_complete") ||
+                prefs.getString("grant_method", null) != null ||
+                prefs.getStringSet("setup_skipped", emptySet()).orEmpty().isNotEmpty() ||
+                keyCode >= 0 || prefs.getString("input_code", null) != null || tag != null || message != null ||
+                prefs.getString("log_key_code", null) != null),
             grantMethod = GrantMethod.entries.firstOrNull { it.name == prefs.getString("grant_method", null) },
             setupSkipped = setOf(SetupPage.BATTERY, SetupPage.NOTIFICATIONS).filter {
                 it.name in prefs.getStringSet("setup_skipped", emptySet()).orEmpty()
@@ -143,6 +153,7 @@ class ConfigStore(private val context: Context) {
             putBoolean("unlock_hint_shown", config.unlockHintShown)
             putString("theme", config.theme.name)
             putBoolean("setup_complete", config.setupComplete)
+            putBoolean("intro_seen", config.introSeen)
             putString("grant_method", config.grantMethod?.name)
             putStringSet("setup_skipped", config.setupSkipped.map { it.name }.toSet())
             Gesture.entries.forEach { putString("action_${it.name}", config.action(it).toJson()) }

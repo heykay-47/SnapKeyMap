@@ -18,6 +18,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -79,7 +80,10 @@ class ShizukuLogService : Binder() {
             thread(isDaemon = true, name = "snapkey-shell-$code") {
                 try {
                     ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use { output ->
-                        proc.inputStream.use { it.copyTo(output) }
+                        proc.inputStream.use { input ->
+                            if (code == INPUT) copyInputKeyEvents(input, output)
+                            else input.copyTo(output)
+                        }
                     }
                 } catch (_: IOException) {
                     // Closing the app's read end breaks the pipe and stops its shell reader too.
@@ -192,6 +196,8 @@ private object ShizukuCommands {
                         reply.recycle()
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 disconnect(active)
                 throw e
@@ -209,7 +215,7 @@ internal class ShizukuLogStream(
         // Removing one user service must not kill the other reader.
         .tag(if (transaction == ShizukuLogService.INPUT) "input-reader" else "log-reader")
         .processNameSuffix(if (transaction == ShizukuLogService.INPUT) "input-reader" else "log-reader")
-        .version(2)
+        .version(3)
         .daemon(false)
     private val connected = CountDownLatch(1)
     @Volatile private var closed = false

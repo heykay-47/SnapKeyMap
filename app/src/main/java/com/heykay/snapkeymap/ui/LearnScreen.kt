@@ -24,7 +24,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -37,6 +36,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.heykay.snapkeymap.LearnResult
 import com.heykay.snapkeymap.LogAccess
 import com.heykay.snapkeymap.SnapAccessibilityService
@@ -90,8 +90,8 @@ fun LearnScreen(onDone: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .verticalScroll(rememberScrollState())
+                .padding(padding)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -116,10 +116,10 @@ fun LearnScreen(onDone: () -> Unit) {
 @Composable
 private fun Intro(onStart: () -> Unit) {
     val context = LocalContext.current
-    val config by SnapEngine.store.config.collectAsState()
-    val access by SnapEngine.logAccess.collectAsState()
-    val serviceOn by SnapAccessibilityService.running.collectAsState()
-    val resumes by SnapEngine.uiResumes.collectAsState()
+    val config by SnapEngine.store.config.collectAsStateWithLifecycle()
+    val access by SnapEngine.logAccess.collectAsStateWithLifecycle()
+    val serviceOn by SnapAccessibilityService.running.collectAsStateWithLifecycle()
+    val resumes by SnapEngine.uiResumes.collectAsStateWithLifecycle()
     val hasLogPermission = remember(resumes) { SnapEngine.hasLogPermission() }
     val logReady = !hasLogPermission || access == LogAccess.FULL
 
@@ -195,7 +195,7 @@ private fun Running(state: LearnState.Running, onCancel: () -> Unit) {
 
 @Composable
 private fun Finished(result: LearnResult, finishedAt: Long, onRetry: () -> Unit, onDone: () -> Unit) {
-    val last by SnapEngine.lastGesture.collectAsState()
+    val last by SnapEngine.lastGesture.collectAsStateWithLifecycle()
 
     if (result == LearnResult.NothingFound) {
         NoteCard(

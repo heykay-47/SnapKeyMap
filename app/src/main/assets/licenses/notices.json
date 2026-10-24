@@ -1,0 +1,117 @@
+{
+  "reviewed": "2026-10-24",
+  "scope": "Pinned direct dependencies and runtime/compile POM transitive licensing groups. POM traversal is not Gradle Android variant resolution or an APK contents audit. Older transitive version requests may be superseded. See docs/third-party-notices.md for remaining verification gaps.",
+  "attributions": "attributions.txt",
+  "attributions_sha256": "8ad47aee0237c52aa2789cdd733e75c9d10b90080951566ae9e95ef01d50848d",
+  "licenses": [
+    {"name": "MIT (Shizuku)", "file": "shizuku-mit.txt", "sha256": "930975f35446e70a87a12ca68360144b056ea30748f755f3c393e90a431bc05c"},
+    {"name": "Apache-2.0", "file": "apache-2.0.txt", "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"}
+  ],
+  "dependencies": [
+    {
+      "name": "Shizuku API, provider, aidl and shared 13.1.5",
+      "display_name": "Shizuku",
+      "groups": ["dev.rikka.shizuku"],
+      "license": "MIT (Shizuku)",
+      "url": "https://github.com/RikkaApps/Shizuku-API",
+      "sources": [
+        "https://repo.maven.apache.org/maven2/dev/rikka/shizuku/api/13.1.5/api-13.1.5.pom",
+        "https://repo.maven.apache.org/maven2/dev/rikka/shizuku/provider/13.1.5/provider-13.1.5.pom",
+        "https://repo.maven.apache.org/maven2/dev/rikka/shizuku/aidl/13.1.5/aidl-13.1.5.pom",
+        "https://repo.maven.apache.org/maven2/dev/rikka/shizuku/shared/13.1.5/shared-13.1.5.pom",
+        "https://raw.githubusercontent.com/RikkaApps/Shizuku-API/aaba9928f50f9df62c5e429318de14a0ed473480/LICENSE",
+        "https://raw.githubusercontent.com/RikkaApps/Shizuku-API/aaba9928f50f9df62c5e429318de14a0ed473480/manifest.gradle"
+      ]
+    },
+    {
+      "name": "Android HiddenApiBypass 6.1",
+      "display_name": "Hidden API Bypass",
+      "groups": ["org.lsposed.hiddenapibypass"],
+      "license": "Apache-2.0",
+      "url": "https://github.com/LSPosed/AndroidHiddenApiBypass",
+      "sources": [
+        "https://repo.maven.apache.org/maven2/org/lsposed/hiddenapibypass/hiddenapibypass/6.1/hiddenapibypass-6.1.pom",
+        "https://repo.maven.apache.org/maven2/org/lsposed/hiddenapibypass/hiddenapibypass/6.1/hiddenapibypass-6.1-sources.jar",
+        "https://raw.githubusercontent.com/LSPosed/AndroidHiddenApiBypass/v6.1/LICENSE"
+      ]
+    },
+    {
+      "name": "AndroidX and Jetpack Compose",
+      "display_name": "AndroidX and Compose",
+      "groups": ["androidx.*"],
+      "license": "Apache-2.0",
+      "url": "https://github.com/androidx/androidx",
+      "versions": "Core 1.17.0; Activity 1.11.0; Lifecycle 2.9.4; Compose BOM 2025.10.01 (UI 1.9.4, Material3 1.4.0, extended icons 1.7.8). Transitive AndroidX versions follow their POM requests and BOM constraints.",
+      "sources": [
+        "https://dl.google.com/dl/android/maven2/androidx/compose/compose-bom/2025.10.01/compose-bom-2025.10.01.pom",
+        "https://dl.google.com/dl/android/maven2/androidx/core/core-ktx/1.17.0/core-ktx-1.17.0.pom",
+        "https://dl.google.com/dl/android/maven2/androidx/activity/activity-compose/1.11.0/activity-compose-1.11.0.pom",
+        "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-compose/2.9.4/lifecycle-runtime-compose-2.9.4.pom",
+        "https://dl.google.com/dl/android/maven2/androidx/core/core/1.17.0/core-1.17.0-sources.jar",
+        "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-android/1.9.4/ui-android-1.9.4-sources.jar"
+      ]
+    },
+    {
+      "name": "Kotlin standard library 2.2.21",
+      "display_name": "Kotlin standard library",
+      "groups": ["org.jetbrains.kotlin"],
+      "license": "Apache-2.0",
+      "url": "https://github.com/JetBrains/kotlin",
+      "sources": [
+        "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.2.21/kotlin-stdlib-2.2.21.pom",
+        "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.2.21/kotlin-stdlib-2.2.21-sources.jar",
+        "https://raw.githubusercontent.com/JetBrains/kotlin/v2.2.21/license/LICENSE.txt"
+      ]
+    },
+    {
+      "name": "kotlinx.coroutines, atomicfu and serialization",
+      "display_name": "Coroutines, atomicfu and serialization",
+      "groups": ["org.jetbrains.kotlinx"],
+      "license": "Apache-2.0",
+      "url": "https://github.com/Kotlin",
+      "versions": "POM requests include coroutines core/android 1.8.1 (also older 1.6.4 and 1.7.3), atomicfu 0.27.0 (also 0.17.0), serialization-core 1.7.3. Final Android variant selection remains to be checked.",
+      "sources": [
+        "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-core/1.8.1/kotlinx-coroutines-core-1.8.1.pom",
+        "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/atomicfu/0.27.0/atomicfu-0.27.0.pom",
+        "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-serialization-core/1.7.3/kotlinx-serialization-core-1.7.3.pom",
+        "https://raw.githubusercontent.com/Kotlin/kotlinx.coroutines/1.8.1/LICENSE.txt",
+        "https://raw.githubusercontent.com/Kotlin/kotlinx-atomicfu/0.27.0/LICENSE.txt",
+        "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-serialization-core-jvm/1.7.3/kotlinx-serialization-core-jvm-1.7.3-sources.jar"
+      ]
+    },
+    {
+      "name": "JetBrains annotations (POM requests 13.0 and 23.0.0)",
+      "display_name": "JetBrains annotations",
+      "groups": ["org.jetbrains"],
+      "license": "Apache-2.0",
+      "url": "https://github.com/JetBrains/java-annotations",
+      "sources": [
+        "https://repo.maven.apache.org/maven2/org/jetbrains/annotations/23.0.0/annotations-23.0.0.pom",
+        "https://repo.maven.apache.org/maven2/org/jetbrains/annotations/23.0.0/annotations-23.0.0-sources.jar"
+      ]
+    },
+    {
+      "name": "JSpecify 1.0.0",
+      "display_name": "JSpecify",
+      "groups": ["org.jspecify"],
+      "license": "Apache-2.0",
+      "url": "https://github.com/jspecify/jspecify",
+      "sources": [
+        "https://repo.maven.apache.org/maven2/org/jspecify/jspecify/1.0.0/jspecify-1.0.0.pom",
+        "https://repo.maven.apache.org/maven2/org/jspecify/jspecify/1.0.0/jspecify-1.0.0-sources.jar",
+        "https://raw.githubusercontent.com/jspecify/jspecify/v1.0.0/LICENSE"
+      ]
+    },
+    {
+      "name": "Guava ListenableFuture 1.0",
+      "display_name": "Guava ListenableFuture",
+      "groups": ["com.google.guava"],
+      "license": "Apache-2.0",
+      "url": "https://github.com/google/guava",
+      "sources": [
+        "https://repo.maven.apache.org/maven2/com/google/guava/listenablefuture/1.0/listenablefuture-1.0.pom",
+        "https://repo.maven.apache.org/maven2/com/google/guava/listenablefuture/1.0/listenablefuture-1.0-sources.jar"
+      ]
+    }
+  ]
+}
