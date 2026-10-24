@@ -34,6 +34,11 @@ jobs:
       - name: Install pinned Build Tools
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"'
 
+      - name: Check notice assets and lint summaries
+        run: |
+          python3 scripts/check-license-notices.py
+          python3 scripts/test-lint-summary.py
+
       - name: Set up signing key
         if: github.event_name != 'pull_request'
         env:
@@ -110,6 +115,18 @@ jobs:
           path: |
             app/build/reports/lint-results-release.html
             app/build/reports/lint-results-release.xml
+
+      - name: Report resolved release dependencies
+        run: |
+          mkdir -p app/build/reports
+          ./gradlew --no-daemon :app:dependencies --configuration releaseRuntimeClasspath > app/build/reports/release-runtime-dependencies.txt
+
+      - name: Upload resolved release dependencies
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: runtime-dependencies
+          path: app/build/reports/release-runtime-dependencies.txt
+          if-no-files-found: error
 
       - name: Upload test results
         if: always()

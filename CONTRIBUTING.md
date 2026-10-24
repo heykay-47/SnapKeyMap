@@ -65,6 +65,8 @@ The workflow uses JDK 17, the Gradle 8.14.3 wrapper, and Android SDK Build Tools
 
 Android Lint runs separately as an advisory check. The workflow summary reports whether lint passed, found errors, or could not produce its reports. The `lint-reports` artifact contains the HTML and XML reports. A successful APK build does not by itself mean that lint passed.
 
+The workflow also checks the bundled licence texts and uploads the resolved `releaseRuntimeClasspath` report as `runtime-dependencies`. Use that report and the APK's packaged notices to review dependency changes against [the notice sources](docs/third-party-notices.md).
+
 A separate `reproducibility` job checks out the same source commit in a different directory and rebuilds with a fresh Gradle home and no build cache. Both jobs use the pull request head commit, not GitHub's merge commit. The verifier uses F-Droid's `fdroidserver==2.4.5` signing removal and builds without signing secrets. It copies the original APK's signature with `apksigcopier==1.1.1`, verifies the copied APK with `apksigner`, and requires byte-for-byte equality with `cmp`. The `reproducibility` artifact contains the source commit, literal versions, signing-removal diff, certificate reports, SHA-256 hashes, unsigned APK, and signature-copied APK when those files are available, including on failure. This checks independent GitHub-runner builds, not parity with F-Droid's build environment.
 
 ### Build locally
