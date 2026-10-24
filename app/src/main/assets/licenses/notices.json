@@ -10,6 +10,7 @@
   "dependencies": [
     {
       "name": "Shizuku API, provider, aidl and shared 13.1.5",
+      "display_name": "Shizuku",
       "groups": ["dev.rikka.shizuku"],
       "license": "MIT (Shizuku)",
       "url": "https://github.com/RikkaApps/Shizuku-API",
@@ -24,6 +25,7 @@
     },
     {
       "name": "Android HiddenApiBypass 6.1",
+      "display_name": "Hidden API Bypass",
       "groups": ["org.lsposed.hiddenapibypass"],
       "license": "Apache-2.0",
       "url": "https://github.com/LSPosed/AndroidHiddenApiBypass",
@@ -35,6 +37,7 @@
     },
     {
       "name": "AndroidX and Jetpack Compose",
+      "display_name": "AndroidX and Compose",
       "groups": ["androidx.*"],
       "license": "Apache-2.0",
       "url": "https://github.com/androidx/androidx",
@@ -50,6 +53,7 @@
     },
     {
       "name": "Kotlin standard library 2.2.21",
+      "display_name": "Kotlin standard library",
       "groups": ["org.jetbrains.kotlin"],
       "license": "Apache-2.0",
       "url": "https://github.com/JetBrains/kotlin",
@@ -61,6 +65,7 @@
     },
     {
       "name": "kotlinx.coroutines, atomicfu and serialization",
+      "display_name": "Coroutines, atomicfu and serialization",
       "groups": ["org.jetbrains.kotlinx"],
       "license": "Apache-2.0",
       "url": "https://github.com/Kotlin",
@@ -76,6 +81,7 @@
     },
     {
       "name": "JetBrains annotations (POM requests 13.0 and 23.0.0)",
+      "display_name": "JetBrains annotations",
       "groups": ["org.jetbrains"],
       "license": "Apache-2.0",
       "url": "https://github.com/JetBrains/java-annotations",
@@ -86,6 +92,7 @@
     },
     {
       "name": "JSpecify 1.0.0",
+      "display_name": "JSpecify",
       "groups": ["org.jspecify"],
       "license": "Apache-2.0",
       "url": "https://github.com/jspecify/jspecify",
@@ -97,6 +104,7 @@
     },
     {
       "name": "Guava ListenableFuture 1.0",
+      "display_name": "Guava ListenableFuture",
       "groups": ["com.google.guava"],
       "license": "Apache-2.0",
       "url": "https://github.com/google/guava",

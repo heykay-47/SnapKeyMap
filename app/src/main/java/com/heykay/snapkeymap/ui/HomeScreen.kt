@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
 import android.text.format.DateFormat
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,12 +17,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
@@ -66,9 +69,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -168,6 +174,14 @@ fun HomeScreen(
 
     SnapScaffold(
         title = "SnapKey Map",
+        titleLeadingContent = {
+            Box(Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))) {
+                Image(painterResource(R.drawable.ic_launcher_background), contentDescription = null,
+                    modifier = Modifier.matchParentSize())
+                Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null,
+                    modifier = Modifier.matchParentSize().graphicsLayer(scaleX = 1.4f, scaleY = 1.4f))
+            }
+        },
         actions = {
             Box {
                 IconButton(onClick = { showThemeMenu = true }) {
@@ -233,6 +247,11 @@ fun HomeScreen(
                 )
             }
 
+            item {
+                TextButton(onClick = onLearn, modifier = Modifier.fillMaxWidth()) {
+                    Text("Teach the Snap Key again")
+                }
+            }
             item { SectionHeader("What the Snap Key does") }
             item {
                 Card(
@@ -336,11 +355,6 @@ fun HomeScreen(
                         CardTextButton("Allow") { context.openSafely(request) }
                         CardTextButton("App info") { context.openAppInfo() }
                     }
-                }
-            }
-            item {
-                TextButton(onClick = onLearn, modifier = Modifier.fillMaxWidth()) {
-                    Text("Teach the Snap Key again")
                 }
             }
         }
@@ -465,9 +479,11 @@ private fun StatusCard(
                 Spacer(Modifier.size(12.dp))
                 Switch(checked = enabled, onCheckedChange = onEnabledChange)
             }
-            TextButton(onClick = { showDetails = !showDetails }) {
-                Text(if (showDetails) "Hide details" else "Details")
-            }
+            CardTextButton(
+                text = if (showDetails) "Hide details" else "Details",
+                modifier = Modifier.heightIn(min = 48.dp),
+                onClick = { showDetails = !showDetails },
+            )
             if (showDetails) {
                 Text(
                     listOfNotNull(

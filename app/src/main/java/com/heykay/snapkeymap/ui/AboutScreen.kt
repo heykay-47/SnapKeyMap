@@ -93,7 +93,6 @@ fun AboutScreen(onDone: () -> Unit, onLicenses: () -> Unit) {
                         }
                     }
                     Text(stringResource(R.string.about_description), style = MaterialTheme.typography.bodyMedium)
-                    TextButton(onClick = onLicenses) { Text("Open-source licences") }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         LinkButton(stringResource(R.string.view_repository), Modifier.weight(1f)) {
                             context.openSafely(Intent(Intent.ACTION_VIEW, Uri.parse(repoUrl)))
@@ -122,6 +121,9 @@ fun AboutScreen(onDone: () -> Unit, onLicenses: () -> Unit) {
                         context.openSafely(Intent(Intent.ACTION_VIEW, Uri.parse(sponsorsUrl)))
                     }
                 }
+            }
+            TextButton(onClick = onLicenses, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Text("Open-source licences")
             }
         }
     }
