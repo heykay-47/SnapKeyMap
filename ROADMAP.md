@@ -27,6 +27,7 @@ The F-Droid submission will request the same developer-signed APK as GitHub Rele
 From feedback on the [launch post](https://www.reddit.com/r/Oppo/comments/1xaze1m/i_built_an_app_to_remap_the_oppo_find_x9s_snap_key/). This release was tested on a Find X9. Behaviour on other firmware may differ.
 
 - [x] **Circle to Search.** Open Google's Circle to Search over the current screen. It needs Google as your digital assistant app, on firmware where Circle to Search is available.
+- [x] **Ring and Vibrate feel different on ColorOS.** Vibrate now gives two distinct buzzes instead of short pulses, which ColorOS turned into light clicks that felt like the Ring buzz. ([#29](https://github.com/heykay-47/SnapKeyMap/issues/29))
 - [x] **Split screen removed.** Android 13 and later ignore this action, so it did nothing. A gesture that used it now does nothing until you choose another action.
 
 ## Delivered in v1.0.17
@@ -44,7 +45,7 @@ This release was tested on a Find X9. Behaviour on other firmware may differ.
 
 - [x] **Hide confirmation pop-ups.** Turn off Show confirmations to hide ringer and Do Not Disturb messages. Errors and permission reminders still show.
 - [x] **Consistent background messages.** Confirmation messages also appear while SnapKey Map is in the background.
-- [x] **Feel the ringer mode.** Ring uses one long buzz, Vibrate uses three short pulses, and Silent uses a tick.
+- [x] **Feel the ringer mode.** Ring uses one long buzz, Vibrate uses two short buzzes (since v1.0.18), and Silent uses a tick.
 - [x] **Pause in chosen apps.** Pause mapped actions while a chosen app, such as the camera, is in front.
 - [x] **App icons and Clear all.** The paused-app picker shows app icons and has a **Clear all** button to remove all selections.
 - [x] **Settings and link tips.** Open phone Settings as a fresh task on ColorOS. The link dialog shows how to fill in a message with an `sms:` link.
