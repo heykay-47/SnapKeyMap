@@ -58,7 +58,7 @@ Tap the lock next to a gesture to run it only when your phone is unlocked.
 | Category | Actions |
 | --- | --- |
 | Phone | Flashlight, ringer presets you can create and edit (ring, vibrate, silent), a distinct vibration for each ringer mode, Do Not Disturb |
-| Screen & navigation | Screenshot, lock screen, notifications, quick settings, recent apps, home, back, power menu, split screen |
+| Screen & navigation | Screenshot, Circle to Search, lock screen, notifications, quick settings, recent apps, home, back, power menu |
 | Music & video | Play / pause, next and previous track, media volume up and down, mute / unmute media, volume slider |
 | Open | Camera, video camera, voice assistant, Wi-Fi panel, Bluetooth settings, NFC panel, internet and mobile data panel |
 | More | Call a contact (opens the dialer with their number), open a link (including `sms:` and `wa.me` links with a message filled in), run a supported app shortcut |
