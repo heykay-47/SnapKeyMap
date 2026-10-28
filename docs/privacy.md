@@ -6,9 +6,9 @@ With Shizuku allowed, the app runs `logcat` and also reads raw key input events 
 
 Circle to Search uses Shizuku when available, then tries the system service directly if necessary. It opens Google's search interface over the current screen. Google handles that search under its own privacy policy. SnapKey Map does not capture or store the screen for this action. Other mapped actions do not use Shizuku. Apps and websites you open through an action have their own privacy policies.
 
-The accessibility service checks window-event package and class names to identify app activities, ignoring non-activity windows such as keyboards and status indicators. It keeps only the latest activity's package name in memory and uses it only to pause in the apps you choose. Your chosen paused-app package names are saved in settings.
+The accessibility service checks window-event package and class names to identify app activities, ignoring non-activity windows such as keyboards and status indicators. It keeps only the latest activity's package name in memory and uses it only to pause in the apps you choose. It cannot read screen content. Your chosen paused-app package names are saved in settings.
 
-The service can read window content, but only uses it to find and press Snap to Mind Space in ColorOS's Screenshot preview just after the **Send screenshot to Mind Space** Action takes a screenshot. It reads no other window content and stores none. The screenshot also stays in Pictures/Screenshots. If Mind Space is unavailable for the current screen, the screenshot stays and a message appears when confirmations are on.
+The separate **SnapKey Map Mind Space helper** is off by default and only used for the **Send screenshot to Mind Space** Action. Picking this Action asks for consent before saving and opening Accessibility settings. The helper reads only ColorOS's Screenshot preview just after this Action takes a screenshot, to press Snap to Mind Space. It stores nothing. The screenshot also stays in Pictures/Screenshots. If Mind Space is unavailable for the current screen, the screenshot stays and a message appears when confirmations are on.
 
 Keep these limits in mind:
 

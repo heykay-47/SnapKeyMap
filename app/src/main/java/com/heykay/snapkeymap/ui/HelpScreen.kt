@@ -56,10 +56,7 @@ fun HelpScreen(onDone: () -> Unit, onRunSetup: () -> Unit) {
                     "1. Choose Shizuku or Computer (ADB).\n\n" +
                     "2. Grant log access. Shizuku must be running and allowed for prompt-free reading; " +
                     "otherwise allow device logs when Android asks.\n\n" +
-                    "3. Enable accessibility to run actions and open apps from the background. It can read window " +
-                    "content, but only uses it to find and press Snap to Mind Space in ColorOS's Screenshot preview " +
-                    "just after Send screenshot to Mind Space takes a screenshot. It reads no other window content " +
-                    "and stores none. The screenshot also stays in Pictures/Screenshots.\n\n" +
+                    "3. Enable accessibility to run actions and open apps from the background. It cannot read screen content.\n\n" +
                     "4. Optionally allow background operation to reduce ColorOS interruptions.\n\n" +
                     "5. Optionally allow notifications for detection paused alerts.\n\n" +
                     "6. Set Oppo's Snap Key action to None. Teach the key: press three times, then hold once.\n\n" +
@@ -92,10 +89,11 @@ fun HelpScreen(onDone: () -> Unit, onRunSetup: () -> Unit) {
                     "While teaching, observations stay in memory with message digits replaced by #. " +
                     "One learned signature is saved: tag, shortened message and source UID, plus hold timing. " +
                     "Key lines must match that source UID, so other apps cannot fake presses by copying a line.\n\n" +
-                    "Accessibility can read window content, but only uses it to find and press Snap to Mind Space " +
-                    "in ColorOS's Screenshot preview just after Send screenshot to Mind Space takes a screenshot. " +
-                    "It reads no other window content and stores none. The screenshot also stays in " +
-                    "Pictures/Screenshots. Settings are private to the app; Android backup is off.\n\n" +
+                    "Accessibility cannot read window content. Settings are private to the app; Android backup is off.\n\n" +
+                    "The separate SnapKey Map Mind Space helper is off by default and only used for Send screenshot " +
+                    "to Mind Space. It reads only ColorOS's Screenshot preview just after this Action takes a " +
+                    "screenshot, to press Snap to Mind Space. It stores nothing. The screenshot also stays in " +
+                    "Pictures/Screenshots. Picking the Action asks for consent before opening Accessibility settings.\n\n" +
                     "If you allow SnapKey Map in Shizuku, the app also uses Shizuku to run logcat as the " +
                     "shell user. Shizuku must be running for this. Lines are still checked in memory " +
                     "and discarded, not saved as a log, with the teaching exception above. " +

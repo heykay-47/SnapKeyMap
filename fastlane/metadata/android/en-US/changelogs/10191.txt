@@ -1,0 +1,1 @@
+Beta to find out whether people want Send screenshot to Mind Space. The Action takes a screenshot and presses Snap to Mind Space in ColorOS's Screenshot preview. It needs the optional SnapKey Map Mind Space helper in Accessibility settings. The screenshot also stays in Pictures/Screenshots. Give feedback on GitHub issue #36.

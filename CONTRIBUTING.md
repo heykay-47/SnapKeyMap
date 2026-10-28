@@ -118,4 +118,6 @@ git push origin v1.0.15
 
 The tag starts another build and publishes the APK on GitHub Releases only after both `build` and `reproducibility` pass. The workflow rejects a tag that does not match `versionName` or has no changelog file. The release tag, APK filename, and app version share that version.
 
+Beta tags use `vX.Y.Z-beta.N`, with N in 1..9 and versionCode = (major × 10000 + minor × 100 + patch) - 10 + N. They publish as GitHub pre-releases, not latest, and F-Droid ignores them; if a beta feature is dropped, the next stable must still be at least the beta's base version so testers can upgrade.
+
 F-Droid reads `versionName` and `versionCode` as literals from `app/build.gradle.kts`, and the store listing from [`fastlane/metadata/android/en-US`](fastlane/metadata/android/en-US). Keep both values as plain literals. Releases up to v1.0.14 used the CI run number as `versionCode`, which never went above 67, so the new scheme installs over them.

@@ -17,5 +17,7 @@
     <string name="author_profile_url" translatable="false">https://github.com/heykay-47</string>
     <string name="buy_me_a_tea_url" translatable="false">https://buymeatea.in/heykay47</string>
     <string name="github_sponsors_url" translatable="false">https://github.com/sponsors/heykay-47</string>
-    <string name="service_description">Lets SnapKey Map notice when you press the Snap Key and run the action you picked. It can read window content, but only uses it to find and press Snap to Mind Space in ColorOS\'s Screenshot preview just after Send screenshot to Mind Space takes a screenshot. It reads no other window content and stores none. The screenshot also stays in Pictures/Screenshots.</string>
+    <string name="service_description">Lets SnapKey Map notice when you press the Snap Key and run the action you picked: open an app, take a screenshot, go home, and so on. It does not read what is on your screen.</string>
+    <string name="mind_space_helper_label">SnapKey Map Mind Space helper</string>
+    <string name="mind_space_helper_description">Optional and off by default. Only for the Send screenshot to Mind Space Action. Reads only ColorOS\'s Screenshot preview just after this Action takes a screenshot, to press Snap to Mind Space. Stores nothing. The screenshot also stays in Pictures/Screenshots.</string>
 </resources>

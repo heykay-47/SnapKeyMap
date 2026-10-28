@@ -145,8 +145,8 @@ object ActionRunner {
             toast(context, "Mind Space isn't available here")
             return
         }
-        val service = SnapAccessibilityService.instance
-        if (service == null) toast(context, "Turn on the SnapKey Map service first")
+        val service = MindSpaceHelperService.instance
+        if (service == null) toast(context, "Turn on the SnapKey Map Mind Space helper in Accessibility settings")
         else service.sendScreenshotToMindSpace {
             confirm(context.applicationContext, "Mind Space isn't available here")
         }

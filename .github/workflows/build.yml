@@ -227,3 +227,5 @@ jobs:
         with:
           files: SnapKeyMap-*.apk
           generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          make_latest: ${{ contains(github.ref_name, '-') && 'false' || 'true' }}

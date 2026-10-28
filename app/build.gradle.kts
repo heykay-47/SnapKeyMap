@@ -16,8 +16,8 @@ android {
         minSdk = 29
         targetSdk = 36
         // F-Droid reads both as literals from this file.
-        versionCode = 10100
-        versionName = "1.1.0"
+        versionCode = 10191
+        versionName = "1.2.0-beta.1"
     }
 
     // F-Droid can't inspect the dependency list that Google encrypts into the signing block.
@@ -64,8 +64,13 @@ kotlin {
 
 // Releases up to v1.0.14 used the CI run number (at most 67), so this scheme always installs over them.
 android.defaultConfig.let { config ->
-    val (major, minor, patch) = config.versionName!!.split(".").map(String::toInt)
-    val expected = major * 10000 + minor * 100 + patch
+    val version = checkNotNull(Regex("""([0-9]+)\.([0-9]+)\.([0-9]+)(?:-beta\.([1-9]))?""").matchEntire(config.versionName!!)) {
+        "versionName must be X.Y.Z or X.Y.Z-beta.N with N in 1..9, not ${config.versionName}"
+    }
+    val (major, minor, patch) = version.groupValues.drop(1).take(3).map(String::toInt)
+    val base = major * 10000 + minor * 100 + patch
+    val beta = version.groupValues[4].toIntOrNull()
+    val expected = if (beta == null) base else base - 10 + beta
     check(config.versionCode == expected) {
         "versionCode for ${config.versionName} must be $expected, not ${config.versionCode}"
     }

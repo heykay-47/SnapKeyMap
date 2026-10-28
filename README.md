@@ -67,7 +67,7 @@ Tap the lock next to a gesture to run it only when your phone is unlocked.
 
 On the home screen you can pause the key in chosen apps, such as the camera, and hide confirmation pop-ups. Errors still show.
 
-**Send screenshot to Mind Space** is offered when Mind Space is installed. It takes a screenshot and presses Snap to Mind Space in ColorOS's Screenshot preview to create a Mind Space entry. The accessibility service can read window content, but only uses it to find and press that button just after this Action takes a screenshot. It reads no other window content and stores none. The screenshot also stays in Pictures/Screenshots. If the button is unavailable, the screenshot stays and a message appears when confirmations are on.
+**Send screenshot to Mind Space** is offered when Mind Space is installed. It takes a screenshot and presses Snap to Mind Space in ColorOS's Screenshot preview to create a Mind Space entry. It needs the separate **SnapKey Map Mind Space helper**, which is off by default and only used for this Action. The helper reads only the Screenshot preview just after this Action takes a screenshot, to press Snap to Mind Space. It stores nothing. The screenshot also stays in Pictures/Screenshots. Picking the Action asks for consent before saving and opening Accessibility settings. The main accessibility service cannot read screen content. If the button is unavailable, the screenshot stays and a message appears when confirmations are on.
 
 The app follows Material 3 with dynamic colour and a System, Light, or Dark theme. It declares no internet permission.
 

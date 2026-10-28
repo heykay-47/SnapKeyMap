@@ -76,5 +76,17 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service" />
         </service>
+        <service
+            android:name=".MindSpaceHelperService"
+            android:exported="true"
+            android:label="@string/mind_space_helper_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/mind_space_helper_service" />
+        </service>
     </application>
 </manifest>
