@@ -90,6 +90,9 @@ internal fun loadLauncherApps(pm: PackageManager, exclude: String): List<AppEntr
 fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
     val context = LocalContext.current
     val pm = context.packageManager
+    val mindSpaceInstalled = remember(pm) {
+        runCatching { pm.getPackageInfo("com.oplus.aimemory", 0) }.isSuccess
+    }
     val config by SnapEngine.store.config.collectAsStateWithLifecycle()
     val current = config.action(gesture)
     var query by rememberSaveable { mutableStateOf("") }
@@ -155,9 +158,12 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
     val search = query.trim()
     fun matches(text: String) = search.isEmpty() || text.contains(search, ignoreCase = true)
     val filteredApps = remember(apps, search) { apps?.filter { matches(it.label) } }
-    val actionsBySection = remember(search) {
+    val actionsBySection = remember(search, mindSpaceInstalled) {
         Section.entries.associateWith { section ->
-            DeviceAction.entries.filter { it.section == section && matches(it.label) }
+            DeviceAction.entries.filter {
+                it.section == section && matches(it.label) &&
+                    (it != DeviceAction.SEND_SCREENSHOT_TO_MIND_SPACE || mindSpaceInstalled)
+            }
         }
     }
 

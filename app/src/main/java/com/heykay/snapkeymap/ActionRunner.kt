@@ -85,6 +85,7 @@ object ActionRunner {
             DeviceAction.FLASHLIGHT -> toggleTorch(context)
             DeviceAction.DO_NOT_DISTURB -> toggleDoNotDisturb(context)
             DeviceAction.SCREENSHOT -> global(context, AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT)
+            DeviceAction.SEND_SCREENSHOT_TO_MIND_SPACE -> sendScreenshotToMindSpace(context)
             DeviceAction.CIRCLE_TO_SEARCH -> if (!CircleToSearch.start()) {
                 toast(context, "Circle to Search isn't available. Set Google as your digital assistant app.")
             }
@@ -137,6 +138,18 @@ object ActionRunner {
         val service = SnapAccessibilityService.instance
         if (service == null) toast(context, "Turn on the SnapKey Map service first")
         else service.performGlobalAction(id)
+    }
+
+    private fun sendScreenshotToMindSpace(context: Context) {
+        if (runCatching { context.packageManager.getPackageInfo("com.oplus.aimemory", 0) }.isFailure) {
+            toast(context, "Mind Space isn't available here")
+            return
+        }
+        val service = SnapAccessibilityService.instance
+        if (service == null) toast(context, "Turn on the SnapKey Map service first")
+        else service.sendScreenshotToMindSpace {
+            confirm(context.applicationContext, "Mind Space isn't available here")
+        }
     }
 
     private fun mediaKey(context: Context, keyCode: Int) {

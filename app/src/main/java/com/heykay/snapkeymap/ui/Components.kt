@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeDown
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Bluetooth
@@ -135,6 +136,7 @@ fun actionIcon(action: SnapAction): ImageVector = when (action) {
         DeviceAction.FLASHLIGHT -> Icons.Rounded.FlashlightOn
         DeviceAction.DO_NOT_DISTURB -> Icons.Rounded.DoNotDisturbOn
         DeviceAction.SCREENSHOT -> Icons.Rounded.Screenshot
+        DeviceAction.SEND_SCREENSHOT_TO_MIND_SPACE -> Icons.Rounded.AddPhotoAlternate
         DeviceAction.CIRCLE_TO_SEARCH -> Icons.Rounded.ImageSearch
         DeviceAction.LOCK_SCREEN -> Icons.Rounded.Lock
         DeviceAction.NOTIFICATIONS -> Icons.Rounded.Notifications

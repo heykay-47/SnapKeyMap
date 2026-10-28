@@ -8,10 +8,12 @@ import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.TextView
 import android.widget.Toast
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +29,7 @@ class SnapAccessibilityService : AccessibilityService() {
     private var messageView: TextView? = null
     private val hideMessage = Runnable { removeMessage() }
     private val activityPackages = LinkedHashMap<ComponentName, String?>()
+    private var mindSpacePoll: Runnable? = null
 
     override fun onServiceConnected() {
         instance = this
@@ -53,6 +56,40 @@ class SnapAccessibilityService : AccessibilityService() {
     }
 
     override fun onInterrupt() = Unit
+
+    fun sendScreenshotToMindSpace(onUnavailable: () -> Unit) {
+        mindSpacePoll?.let { messageHandler.removeCallbacks(it) }
+        mindSpacePoll = null
+        if (!performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)) {
+            onUnavailable()
+            return
+        }
+        val deadline = SystemClock.uptimeMillis() + 3000L
+        val poll = object : Runnable {
+            override fun run() {
+                if (mindSpacePoll !== this) return
+                val clicked = runCatching {
+                    for (window in windows) {
+                        val root = window.root ?: continue
+                        if (root.packageName?.toString() != "com.oplus.screenshot") continue
+                        val button = root.findAccessibilityNodeInfosByViewId(
+                            "com.oplus.screenshot:id/collection_icon_container",
+                        ).firstOrNull { it.isEnabled } ?: continue
+                        return@runCatching button.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    }
+                    null
+                }.getOrElse { false }
+                if (clicked != null || SystemClock.uptimeMillis() >= deadline) {
+                    mindSpacePoll = null
+                    if (clicked != true) onUnavailable()
+                } else {
+                    messageHandler.postDelayed(this, 150L)
+                }
+            }
+        }
+        mindSpacePoll = poll
+        messageHandler.postDelayed(poll, 150L)
+    }
 
     fun showMessage(text: CharSequence) {
         messageHandler.removeCallbacks(hideMessage)
@@ -117,6 +154,8 @@ class SnapAccessibilityService : AccessibilityService() {
     }
 
     private fun clear() {
+        mindSpacePoll?.let { messageHandler.removeCallbacks(it) }
+        mindSpacePoll = null
         removeMessage()
         activityPackages.clear()
         instance = null

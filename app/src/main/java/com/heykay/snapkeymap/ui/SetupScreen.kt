@@ -214,7 +214,10 @@ fun SetupScreen(
                         Text("Even with ADB or Shizuku, accessibility runs actions: screenshot, lock, home, back, " +
                             "recents and notification shade. It lets SnapKey Map open apps and the device-logs " +
                             "prompt from the background, catches the key directly on devices that send it, " +
-                            "and helps keep the app running. It cannot read screen content.")
+                            "and helps keep the app running. It can read window content, but only uses it to find " +
+                            "and press Snap to Mind Space in ColorOS's Screenshot preview just after Send screenshot " +
+                            "to Mind Space takes a screenshot. It reads no other window content and stores none. " +
+                            "The screenshot also stays in Pictures/Screenshots.")
                         Button(onClick = { context.openAccessibilitySettings() }) { Text("Open accessibility settings") }
                         Text("Find SnapKey Map and switch it on. If Android blocks the switch, open App info, " +
                             "tap the three-dot menu, choose Allow restricted settings, then try again.")

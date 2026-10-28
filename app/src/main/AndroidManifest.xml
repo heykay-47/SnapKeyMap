@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <queries>
+        <package android:name="com.oplus.aimemory" />
         <!-- Apps the user can pick to open. -->
         <intent>
             <action android:name="android.intent.action.MAIN" />

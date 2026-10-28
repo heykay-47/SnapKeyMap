@@ -59,13 +59,15 @@ Tap the lock next to a gesture to run it only when your phone is unlocked.
 | Category | Actions |
 | --- | --- |
 | Phone | Flashlight, ringer presets you can create and edit (ring, vibrate, silent), a distinct vibration for each ringer mode, Do Not Disturb |
-| Screen & navigation | Screenshot, Circle to Search, lock screen, notifications, quick settings, recent apps, home, back, power menu |
+| Screen & navigation | Screenshot, Send screenshot to Mind Space, Circle to Search, lock screen, notifications, quick settings, recent apps, home, back, power menu |
 | Music & video | Play / pause, next and previous track, media volume up and down, mute / unmute media, volume slider |
 | Open | Camera, video camera, voice assistant, Wi-Fi panel, Bluetooth settings, NFC panel, internet and mobile data panel |
 | More | Call a contact (opens the dialer with their number), open a link (including `sms:` and `wa.me` links with a message filled in), run a supported app shortcut |
 | Open an app | Any installed app |
 
 On the home screen you can pause the key in chosen apps, such as the camera, and hide confirmation pop-ups. Errors still show.
+
+**Send screenshot to Mind Space** is offered when Mind Space is installed. It takes a screenshot and presses Snap to Mind Space in ColorOS's Screenshot preview to create a Mind Space entry. The accessibility service can read window content, but only uses it to find and press that button just after this Action takes a screenshot. It reads no other window content and stores none. The screenshot also stays in Pictures/Screenshots. If the button is unavailable, the screenshot stays and a message appears when confirmations are on.
 
 The app follows Material 3 with dynamic colour and a System, Light, or Dark theme. It declares no internet permission.
 
