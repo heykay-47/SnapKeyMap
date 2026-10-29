@@ -40,6 +40,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.AvTimer
 import androidx.compose.material.icons.rounded.Apps
@@ -90,6 +91,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.app.NotificationManagerCompat
 import com.heykay.snapkeymap.Gesture
+import com.heykay.snapkeymap.ActionRunner
 import com.heykay.snapkeymap.Config
 import com.heykay.snapkeymap.LogAccess
 import com.heykay.snapkeymap.LogSource
@@ -280,6 +282,13 @@ fun HomeScreen(
                                 if (on && !config.unlockHintShown) showUnlockHint = true
                             },
                             onClick = { onPick(gesture) },
+                            onTry = {
+                                ActionRunner.run(
+                                    SnapAccessibilityService.instance ?: context,
+                                    config.action(gesture),
+                                    alwaysConfirm = true,
+                                )
+                            },
                         )
                     }
                 }
@@ -570,6 +579,7 @@ internal fun GestureRow(
     unlockedOnly: Boolean,
     onUnlockedOnlyChange: (Boolean) -> Unit,
     onClick: () -> Unit,
+    onTry: (() -> Unit)? = null,
 ) {
     ListItem(
         modifier = Modifier.clickable(enabled = available, onClick = onClick),
@@ -593,6 +603,11 @@ internal fun GestureRow(
             if (available) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (action != SnapAction.NoAction) {
+                        if (onTry != null) {
+                            IconButton(onClick = onTry) {
+                                Icon(Icons.Rounded.PlayArrow, contentDescription = "Try ${gesture.title}")
+                            }
+                        }
                         IconToggleButton(checked = unlockedOnly, onCheckedChange = onUnlockedOnlyChange) {
                             Icon(
                                 if (unlockedOnly) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
