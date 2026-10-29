@@ -67,6 +67,8 @@ Tap the lock next to a gesture to run it only when your phone is unlocked.
 
 On the home screen you can pause the key in chosen apps, such as the camera, and hide confirmation pop-ups. Errors still show.
 
+Tap ▶ next to a gesture to try its action without pressing the key. Turn the mapping on or off from the **Snap Key** Quick Settings tile. Back up your settings, including the learned key, to a file and restore them after a reinstall. **Details** on the status card can copy a bug report or open a prefilled bug form.
+
 The app follows Material 3 with dynamic colour and a System, Light, or Dark theme. It declares no internet permission.
 
 # Requirements
