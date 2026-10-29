@@ -1,12 +1,17 @@
 package com.heykay.snapkeymap.ui
 
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import android.text.format.DateFormat
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -93,6 +98,9 @@ import com.heykay.snapkeymap.SnapAccessibilityService
 import com.heykay.snapkeymap.SnapAction
 import com.heykay.snapkeymap.SnapEngine
 import com.heykay.snapkeymap.ThemeMode
+import com.heykay.snapkeymap.buildReport
+import com.heykay.snapkeymap.bugReportUrl
+import com.heykay.snapkeymap.gatherReportInfo
 import java.util.Date
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -439,7 +447,8 @@ private fun StatusCard(
     now: Long,
     canAskShizuku: Boolean,
 ) {
-    val timeFormat = DateFormat.getTimeFormat(LocalContext.current)
+    val context = LocalContext.current
+    val timeFormat = DateFormat.getTimeFormat(context)
     var showDetails by rememberSaveable { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
     val ready = warning == null && enabled && listening
@@ -509,6 +518,29 @@ private fun StatusCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = colors.onSurfaceVariant,
                     )
+                }
+                CardTextButton("Copy report") {
+                    val info = gatherReportInfo(context, config, precise)
+                    val wallOffset = System.currentTimeMillis() - SnapEngine.now()
+                    val secondsFormat = java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM)
+                    val report = buildReport(info, config, SnapEngine.detections.value) {
+                        secondsFormat.format(Date(wallOffset + it))
+                    }
+                    context.getSystemService(ClipboardManager::class.java)
+                        .setPrimaryClip(ClipData.newPlainText("SnapKey Map bug report", report))
+                    if (Build.VERSION.SDK_INT < 33) Toast.makeText(context, "Report copied", Toast.LENGTH_SHORT).show()
+                }
+                CardTextButton("Report a bug") {
+                    val info = gatherReportInfo(context, config, precise)
+                    val wallOffset = System.currentTimeMillis() - SnapEngine.now()
+                    val url = bugReportUrl(info, config, SnapEngine.lastGesture.value) {
+                        timeFormat.format(Date(wallOffset + it))
+                    }
+                    try {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    } catch (_: ActivityNotFoundException) {
+                        Toast.makeText(context, "No browser available to open the bug form", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
             if (warning != null) {

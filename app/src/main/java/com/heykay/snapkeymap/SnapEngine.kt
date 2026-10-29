@@ -24,6 +24,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
 
+enum class DetectionSource { KEY_EVENT, PRECISE_INPUT, SYSTEM_LOG }
+
+internal const val DETECTION_HISTORY_SIZE = 20
+
+internal fun appendDetection(history: List<SnapEngine.Detected>, d: SnapEngine.Detected): List<SnapEngine.Detected> =
+    (history + d).takeLast(DETECTION_HISTORY_SIZE)
+
 internal class LogRetryBackoff {
     private var healthySinceMs: Long? = null
     private var delayMs = 1000L
@@ -44,7 +51,7 @@ internal class LogRetryBackoff {
 
 /** Connects the two ways of noticing the Snap Key (key events and the system log) to the actions. */
 object SnapEngine {
-    data class Detected(val gesture: Gesture, val atMs: Long)
+    data class Detected(val gesture: Gesture, val atMs: Long, val source: DetectionSource)
 
     lateinit var store: ConfigStore
         private set
@@ -73,6 +80,8 @@ object SnapEngine {
 
     private val lastDetected = MutableStateFlow<Detected?>(null)
     val lastGesture: StateFlow<Detected?> = lastDetected.asStateFlow()
+    private val historyState = MutableStateFlow<List<Detected>>(emptyList())
+    val detections: StateFlow<List<Detected>> = historyState.asStateFlow()
 
     private val lastKeySeenState = MutableStateFlow<Long?>(null)
     val lastKeySeenAt: StateFlow<Long?> = lastKeySeenState.asStateFlow()
@@ -140,9 +149,9 @@ object SnapEngine {
             dispatchAccess = { task -> main.post { task() }; Unit },
             shouldParse = { !preciseState.value || learning != null },
         )
-        keyGestures = gestureDetector()
-        logGestures = gestureDetector()
-        inputGestures = gestureDetector()
+        keyGestures = gestureDetector(DetectionSource.KEY_EVENT)
+        logGestures = gestureDetector(DetectionSource.SYSTEM_LOG)
+        inputGestures = gestureDetector(DetectionSource.PRECISE_INPUT)
         inputReader = InputReader(app, ::onInputEvent, ::onInputLiveChanged) { task ->
             main.post { task() }; Unit
         }
@@ -165,12 +174,12 @@ object SnapEngine {
 
     fun now(): Long = SystemClock.elapsedRealtime()
 
-    private fun gestureDetector() = GestureDetector(
+    private fun gestureDetector(source: DetectionSource) = GestureDetector(
         schedule = { task, delay -> main.postDelayed(task, delay); Unit },
         cancel = { task -> main.removeCallbacks(task) },
         holdMs = { store.config.value.holdMs },
         doublePressWindowMs = { store.config.value.doublePressWindowMs },
-        onGesture = ::onGesture,
+        onGesture = { onGesture(it, source) },
     )
 
     fun hasLogPermission(): Boolean =
@@ -459,9 +468,11 @@ object SnapEngine {
         foregroundApp = packageName
     }
 
-    private fun onGesture(gesture: Gesture) {
+    private fun onGesture(gesture: Gesture, source: DetectionSource) {
         markKeySeen()
-        lastDetected.value = Detected(gesture, now())
+        val detected = Detected(gesture, now(), source)
+        historyState.value = appendDetection(historyState.value, detected)
+        lastDetected.value = detected
         val config = store.config.value
         if (foregroundApp in config.pausedApps) return
         if (gesture in config.unlockedOnly && app.getSystemService(KeyguardManager::class.java).isKeyguardLocked) return
