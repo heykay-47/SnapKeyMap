@@ -97,7 +97,7 @@ The [setup guide](docs/setup.md) explains each step, including the ADB command.
 
 # Roadmap
 
-Next is the F-Droid release, then Google Play. The [roadmap](ROADMAP.md) lists every step and what each release delivered.
+Next is the F-Droid release. The [roadmap](ROADMAP.md) lists every step and what each release delivered.
 
 Have an idea? [Request a feature](https://github.com/heykay-47/SnapKeyMap/issues/new?template=feature_request.yml).
 
