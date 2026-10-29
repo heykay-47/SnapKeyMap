@@ -16,8 +16,8 @@ android {
         minSdk = 29
         targetSdk = 36
         // F-Droid reads both as literals from this file.
-        versionCode = 10100
-        versionName = "1.1.0"
+        versionCode = 10200
+        versionName = "1.2.0"
     }
 
     // F-Droid can't inspect the dependency list that Google encrypts into the signing block.

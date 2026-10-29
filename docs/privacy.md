@@ -8,6 +8,8 @@ Circle to Search uses Shizuku when available, then tries the system service dire
 
 The accessibility service checks window-event package and class names to identify app activities, ignoring non-activity windows such as keyboards and status indicators. It keeps only the latest activity's package name in memory and uses it only to pause in the apps you choose. It cannot read screen content. Your chosen paused-app package names are saved in settings.
 
+**Copy report** and **Report a bug**, under **Details** on the status card, build a report on the phone. It lists the app, phone, ColorOS and Android versions, the setup method, the learned key, timing, the kind of each gesture's action, and the last 20 detections, which are kept only in memory. It never includes contact numbers, links, app names or log lines. The app does not send it anywhere. Copy report puts it on the clipboard, and Report a bug opens the GitHub form in your browser so you can review it before you submit.
+
 Keep these limits in mind:
 
 - A double-press or tap-then-hold assignment adds a wait after release before the single-press action runs: 350 ms by default, adjustable from 200 to 600 ms in **Timing**. The hold threshold defaults to 650 ms and can be set from 300 to 1200 ms.
