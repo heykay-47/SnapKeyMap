@@ -16,5 +16,5 @@ Keep these limits in mind:
 - The shortcut picker lists apps that provide `ACTION_CREATE_SHORTCUT`. It cannot list every pinned shortcut. A deep link may work instead.
 - Calls are not placed directly, because the app has no calling permission. Call a contact opens the dialer, and direct-dial shortcuts show a message instead.
 - With Shizuku running and allowed on Android 15 or later, ringer presets use true Silent without turning on Do Not Disturb. On older Android versions, without Shizuku, or if the shell command fails, Silent uses the public Android API, needs Do Not Disturb access, and may turn on Do Not Disturb. Without that access, the fallback skips Silent and shows a reminder. The Do Not Disturb toggle always needs notification policy access; the app asks when you assign it, or when assigning Silent without Shizuku.
-- Mappings and the learned key are not included in Android backups.
+- Backups are written only to a file you choose and can contain contact numbers, links and app names; Android cloud backup stays off.
 - The app cannot bypass the lock screen or control every function in every app.
