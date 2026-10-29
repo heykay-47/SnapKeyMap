@@ -13,15 +13,6 @@ The F-Droid submission will request the same developer-signed APK as GitHub Rele
 - [x] **Release v1.0.15 with release notes.** The first release built for F-Droid. Each release since then passes the reproducibility check.
 - [ ] **Submit to F-Droid.** Open a merge request in [fdroiddata](https://gitlab.com/fdroid/fdroiddata) with the build recipe. Review can take days or weeks.
 
-## Later: Google Play
-
-- [ ] **Same signing key on Google Play.** Upload the existing key to Play App Signing before the first upload, so Play updates install over GitHub and F-Droid installs.
-- [ ] **Accessibility disclosure.** Explain what the accessibility service does and ask for consent before the setup step, as Google Play requires for apps that are not accessibility tools.
-- [ ] **Battery step through system settings.** Open Android's battery optimisation list instead of requesting the exemption directly, which Google Play restricts.
-- [ ] **App bundle builds.** CI builds the Android App Bundle that Google Play requires.
-- [ ] **Privacy policy and Data safety.** Publish a privacy policy on the website and declare that the app collects no data.
-- [ ] **Closed test.** New personal developer accounts need 12 testers opted in for 14 days before a production release.
-
 ## Delivered in v1.1.0
 
 This release replaces v1.0.18 and includes its changes. It combines a review against Android's Compose, lifecycle and accessibility guidance with feedback from the [launch post](https://www.reddit.com/r/Oppo/comments/1xaze1m/i_built_an_app_to_remap_the_oppo_find_x9s_snap_key/). It was tested manually on a Find X9 running ColorOS 17. Behaviour on other firmware may differ.
