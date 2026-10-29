@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SnapKey Map</string>
+    <string name="snap_tile_label">Snap Key</string>
+    <string name="snap_tile_on">On</string>
+    <string name="snap_tile_off">Off</string>
+    <string name="snap_tile_setup">Set up in app</string>
     <string name="about_title">About</string>
     <string name="back">Back</string>
     <string name="author_credit">By Krithik (heykay-47)</string>
