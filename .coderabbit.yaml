@@ -1,0 +1,50 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# AGENTS.md and CLAUDE.md are read as code guidelines by default.
+language: en-US
+tone_instructions: "Be brief. Report correctness, security, privacy and battery bugs first. Skip style nits that Kotlin or Compose conventions already settle."
+
+reviews:
+  profile: chill
+  # Keep the author's PR description intact; it becomes the squash commit body.
+  high_level_summary_in_walkthrough: true
+  sequence_diagrams: false
+  suggested_labels: false
+  suggested_reviewers: false
+  poem: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "^v[0-9]+\\.[0-9]+/integration$"
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+    title:
+      mode: warning
+      requirements: "Conventional Commits: a type, an optional (scope), then a colon and an imperative subject with no trailing period."
+  path_instructions:
+    - path: "app/src/main/AndroidManifest.xml"
+      instructions: |
+        Any permission change must also change app/expected-permissions.txt in the same PR, with a reason.
+        The INTERNET permission is never allowed.
+    - path: "app/src/main/res/xml/**"
+      instructions: |
+        Accessibility service config is user-visible and reviewed by stores. Flag any widened event types, flags or capabilities.
+    - path: ".github/workflows/**"
+      instructions: |
+        Pin third-party actions to a full commit SHA with a version comment.
+        Use standard GitHub-hosted runners only.
+        Never expose signing secrets to pull_request runs. Keep permissions minimal.
+        Do not weaken the reproducibility job or the APK permission check.
+    - path: "fastlane/metadata/android/en-US/changelogs/*.txt"
+      instructions: |
+        F-Droid release notes: plain text, at most 500 characters, written for users.
+    - path: "app/src/test/**"
+      instructions: |
+        Tests should assert observable behavior. Recorded Find X9 timings are real device data; flag edits to them that only make a test pass.
+
+knowledge_base:
+  code_guidelines:
+    filePatterns:
+      - files: "CONTRIBUTING.md"
+        applyTo: "**"
