@@ -54,28 +54,36 @@ class OplusKeyEdges(private val onDown: () -> Unit, private val onUp: () -> Unit
 
 internal class TeachingLogEdges {
     private val byCode = mutableMapOf<String?, OplusKeyEdges>()
+    private val contextFree = OplusKeyEdges({}, {})
 
     fun begin(code: String?, source: OplusKeyEdges) {
         byCode.clear()
+        contextFree.reset()
         byCode[null] = OplusKeyEdges({}, {}).apply { resetFrom(source) }
         if (code != null) byCode[code] = OplusKeyEdges({}, {}).apply { resetFrom(source) }
     }
 
     fun observe(timestamp: String, sample: KeySample.Log) {
         byCode.getOrPut(null) { OplusKeyEdges({}, {}) }
-        sample.threadKey?.let { byCode.getOrPut(it) { OplusKeyEdges({}, {}) } }
+        sample.threadKey?.let {
+            byCode.getOrPut(it) { OplusKeyEdges({}, {}).apply { resetFrom(contextFree) } }
+        }
+        if (sample.threadKey == null && KeyMatching.matches(KeyBinding.Logged(null, null, null), sample)) {
+            contextFree.observe(timestamp)
+        }
         byCode.forEach { (code, edges) ->
             if (KeyMatching.matches(KeyBinding.Logged(null, code, null), sample)) edges.observe(timestamp)
         }
     }
 
     fun reset() {
+        contextFree.reset()
         byCode.values.forEach { it.reset() }
     }
 
     fun restore(code: String?, target: OplusKeyEdges) {
-        val source = byCode[code]
-        if (source == null) target.reset() else target.resetFrom(source)
+        val source = byCode[code] ?: contextFree
+        target.resetFrom(source)
     }
 }
 
