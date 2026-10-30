@@ -34,11 +34,12 @@ jobs:
       - name: Install pinned Build Tools
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"'
 
-      - name: Check notice assets and lint summaries
+      - name: Check notice assets, lint summaries, and release checks
         run: |
           python3 scripts/check-license-notices.py
           python3 scripts/test-license-notices.py
           python3 scripts/test-lint-summary.py
+          python3 scripts/test-release-check.py
 
       - name: Set up signing key
         if: github.event_name != 'pull_request'

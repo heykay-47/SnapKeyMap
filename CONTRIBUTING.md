@@ -107,9 +107,10 @@ To publish a release:
 
 1. In [`app/build.gradle.kts`](app/build.gradle.kts), set `versionName` to the new version and `versionCode` to major × 10000 + minor × 100 + patch. For example, `1.0.15` is `10015`. The build fails if the two disagree.
 2. Write the release notes, at most 500 characters, in `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`. F-Droid shows this file.
-3. Commit the release changes and push them to `main`.
+3. Commit the release changes and merge a PR to `main`.
 4. Check that the tests and build pass.
-5. Create and push a matching version tag. For example, for `1.0.15`, run:
+5. Run `scripts/release-check` on the release commit. It checks the version code, F-Droid changelog, and `## Delivered in v<version>` heading in `ROADMAP.md`. Fix any failures before tagging.
+6. Create and push a matching version tag. For example, for `1.0.15`, run:
 
 ```shell
 git tag v1.0.15
