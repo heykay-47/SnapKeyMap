@@ -2,7 +2,6 @@ package com.heykay.snapkeymap
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -63,7 +62,7 @@ class TeachingSessionTest {
             session.observe(context.sample(1, 1, "1000", "42", oplusTag, oplusMessage), 24101)
             session.finishCheck(checkEnd)
             assertTrue("Expected a complete filtered $volume check", session.state is TeachingState.Ready)
-            assertNotNull(session.takeSave())
+            assertTrue(session.save { true })
         }
     }
 
@@ -233,7 +232,7 @@ class TeachingSessionTest {
     fun requiredAccessMustBePresentAtStartAndLossCannotHealWithoutRetry() {
         val startCases = listOf(
             direct(access = fullAccess.copy(accessibility = false)),
-            direct(withInput = true, access = fullAccess.copy(inputLive = false)),
+            direct(withInput = true, access = fullAccess.copy(accessibility = false)),
             logged(access = fullAccess.copy(fullLogs = false)),
             logged(withInput = true, access = fullAccess.copy(inputLive = false)),
         )
@@ -247,7 +246,7 @@ class TeachingSessionTest {
         for (ready in listOf(false, true)) {
             val sessions = listOf(
                 direct() to fullAccess.copy(accessibility = false),
-                direct(withInput = true) to fullAccess.copy(inputLive = false),
+                direct(withInput = true) to fullAccess.copy(accessibility = false),
                 logged() to fullAccess.copy(fullLogs = false),
                 logged(withInput = true) to fullAccess.copy(inputLive = false),
             )
@@ -304,6 +303,27 @@ class TeachingSessionTest {
             inputRestart.beginCheck(checkStart)
             inputRestart.sourceRestarted(logs = false, input = true)
             failed(inputRestart, TeachingFailure.ACCESS_LOST)
+        }
+    }
+
+    @Test
+    fun directInputMetadataDoesNotRequireAnUnusedRuntimeSource() {
+        for (ready in listOf(false, true)) {
+            val session = direct(withInput = true, access = TeachingAccess(true, false, false))
+            session.beginCheck(checkStart)
+            differentAccessibility(session)
+            if (ready) session.finishCheck(checkEnd)
+            session.sourceRestarted(logs = true, input = true)
+            session.accessChanged(fullAccess)
+            session.accessChanged(TeachingAccess(true, false, false))
+            session.finishCheck(checkEnd)
+            assertTrue(session.state is TeachingState.Ready)
+            assertTrue(session.save { patch ->
+                val config = patch.applyTo(Config())
+                assertEquals(LearnedKey(142, 88), config.keyEvent)
+                assertEquals(InputKey(inputCode), config.inputKey)
+                true
+            })
         }
     }
 
@@ -381,18 +401,20 @@ class TeachingSessionTest {
         session.beginCheck(checkStart)
         differentAccessibility(session)
         session.finishCheck(checkEnd)
-        val patch = session.takeSave()!!
         val current = Config(keyEvent = LearnedKey(141, 87), theme = ThemeMode.DARK, releaseGapMs = 400)
-        val changed = patch.applyTo(current)
-        assertNull(changed.keyEvent)
-        assertEquals(learned.signature, changed.logSignature)
-        assertEquals(learned.logKeyCode, changed.logKeyCode)
-        assertEquals(learned.inputKey, changed.inputKey)
-        assertEquals(learned.holdRepeats, changed.holdRepeats)
-        assertEquals(learned.releaseGapMs, changed.releaseGapMs)
-        assertEquals(ThemeMode.DARK, changed.theme)
-        assertTrue(runCatching { patch.applyTo(current) }.isFailure)
-        assertNull(session.takeSave())
+        assertTrue(session.save { patch ->
+            val changed = patch.applyTo(current)
+            assertNull(changed.keyEvent)
+            assertEquals(learned.signature, changed.logSignature)
+            assertEquals(learned.logKeyCode, changed.logKeyCode)
+            assertEquals(learned.inputKey, changed.inputKey)
+            assertEquals(learned.holdRepeats, changed.holdRepeats)
+            assertEquals(learned.releaseGapMs, changed.releaseGapMs)
+            assertEquals(ThemeMode.DARK, changed.theme)
+            assertTrue(runCatching { patch.applyTo(current) }.isFailure)
+            true
+        })
+        assertFalse(session.save { true })
     }
 
     private fun direct(
@@ -437,17 +459,16 @@ class TeachingSessionTest {
 
     private fun failed(session: TeachingSession, reason: TeachingFailure) {
         assertEquals(TeachingState.Failed(reason), session.state)
-        assertNull(session.takeSave())
+        assertFalse(session.save { true })
     }
 
     private class SavedConfig {
         var value = Config(keyEvent = LearnedKey(141, 87), theme = ThemeMode.LIGHT)
         var writes = 0
-        fun save(session: TeachingSession): Boolean {
-            val patch = session.takeSave() ?: return false
+        fun save(session: TeachingSession): Boolean = session.save { patch ->
             value = patch.applyTo(value)
             writes++
-            return true
+            true
         }
     }
 }

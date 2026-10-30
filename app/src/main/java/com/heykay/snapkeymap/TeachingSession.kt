@@ -12,6 +12,7 @@ internal sealed interface TeachingState {
     data class Candidate(val result: LearnResult) : TeachingState
     data class Checking(val result: LearnResult, val startedAtMs: Long) : TeachingState
     data class Ready(val result: LearnResult) : TeachingState
+    data class SaveFailed(val result: LearnResult) : TeachingState
     data class Failed(val reason: TeachingFailure) : TeachingState
     data object Closed : TeachingState
 }
@@ -41,10 +42,10 @@ internal class TeachingSession(private var access: TeachingAccess) {
                     witness(current.result, sample, atMs <= current.startedAtMs + CHECK_MS)
                 }
             }
-            is TeachingState.Ready -> if (KeyMatching.matches(current.result.binding(), sample)) {
-                fail(TeachingFailure.COLLISION)
+            else -> {
+                val result = validatedResult() ?: return
+                if (KeyMatching.matches(result.binding(), sample)) fail(TeachingFailure.COLLISION)
             }
-            else -> Unit
         }
     }
 
@@ -81,8 +82,7 @@ internal class TeachingSession(private var access: TeachingAccess) {
         access = next
         val result = when (val current = state) {
             is TeachingState.Checking -> current.result
-            is TeachingState.Ready -> current.result
-            else -> return
+            else -> validatedResult() ?: return
         }
         if (!requiredAccess(result)) fail(TeachingFailure.ACCESS_LOST)
     }
@@ -90,17 +90,29 @@ internal class TeachingSession(private var access: TeachingAccess) {
     fun sourceRestarted(logs: Boolean, input: Boolean = false, accessibility: Boolean = false) {
         val result = when (val current = state) {
             is TeachingState.Checking -> current.result
-            is TeachingState.Ready -> current.result
-            else -> return
+            else -> validatedResult() ?: return
         }
-        if ((result is LearnResult.KeyEventFound && (accessibility || (input && result.inputKey != null))) ||
+        if ((result is LearnResult.KeyEventFound && accessibility) ||
             (result is LearnResult.LogLineFound && (logs || (input && result.inputKey != null)))) {
             fail(TeachingFailure.ACCESS_LOST)
         }
     }
 
-    fun takeSave(): LearnedKeyPatch? {
-        return LearnedKeyPatch.take(this)
+    fun save(write: (LearnedKeyPatch) -> Boolean): Boolean {
+        val result = validatedResult() ?: return false
+        if (!requiredAccess(result)) {
+            fail(TeachingFailure.ACCESS_LOST)
+            return false
+        }
+        val saved = runCatching { write(LearnedKeyPatch(result)) }.getOrDefault(false)
+        state = if (saved) TeachingState.Closed else TeachingState.SaveFailed(result)
+        return saved
+    }
+
+    private fun validatedResult(): LearnResult? = when (val current = state) {
+        is TeachingState.Ready -> current.result
+        is TeachingState.SaveFailed -> current.result
+        else -> null
     }
 
     fun cancel() {
@@ -110,7 +122,7 @@ internal class TeachingSession(private var access: TeachingAccess) {
     }
 
     private fun requiredAccess(result: LearnResult): Boolean = when (result) {
-        is LearnResult.KeyEventFound -> access.accessibility && (result.inputKey == null || access.inputLive)
+        is LearnResult.KeyEventFound -> access.accessibility
         is LearnResult.LogLineFound -> access.fullLogs && (result.inputKey == null || access.inputLive)
         LearnResult.NothingFound -> false
     }
@@ -168,7 +180,7 @@ internal class TeachingSession(private var access: TeachingAccess) {
         LearnResult.NothingFound -> error("No candidate")
     }
 
-    internal class LearnedKeyPatch private constructor(private val result: LearnResult) {
+    internal class LearnedKeyPatch(private val result: LearnResult) {
         private var used = false
 
         fun applyTo(current: Config): Config {
@@ -183,18 +195,6 @@ internal class TeachingSession(private var access: TeachingAccess) {
                     inputKey = result.inputKey, holdRepeats = result.holdRepeats, releaseGapMs = result.releaseGapMs,
                 )
                 LearnResult.NothingFound -> error("No candidate")
-            }
-        }
-
-        companion object {
-            fun take(session: TeachingSession): LearnedKeyPatch? {
-                val ready = session.state as? TeachingState.Ready ?: return null
-                if (!session.requiredAccess(ready.result)) {
-                    session.fail(TeachingFailure.ACCESS_LOST)
-                    return null
-                }
-                session.state = TeachingState.Closed
-                return LearnedKeyPatch(ready.result)
             }
         }
     }

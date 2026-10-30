@@ -246,6 +246,17 @@ private fun TeachingResult(
     onRetry: () -> Unit,
     onBack: () -> Unit,
 ) {
+    if (state is TeachingState.SaveFailed) {
+        NoteCard(
+            icon = Icons.Rounded.Warning,
+            title = "Couldn't save your key",
+            body = "The save was not confirmed. Your previous key is unchanged. Try saving again or cancel.",
+            container = MaterialTheme.colorScheme.errorContainer,
+        )
+        Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) { Text("Retry save") }
+        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Cancel") }
+        return
+    }
     if (state is TeachingState.Failed) {
         val title = when (state.reason) {
             TeachingFailure.NOT_FOUND -> "Couldn't find your Snap Key"

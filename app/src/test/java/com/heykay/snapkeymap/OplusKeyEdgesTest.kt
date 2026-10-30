@@ -326,6 +326,7 @@ class OplusKeyEdgesTest {
     @Test
     fun missingContextRetainsRuntimeAcceptanceAndResetDiscardsOldTeachingEdges() {
         val tracking = TeachingLogEdges()
+        tracking.begin("KEYCODE_ACTION_BUTTON_CLICK", OplusKeyEdges({}, {}))
         val sample = KeySample.Log("1000", "KEYLOG_OplusKeyEventUtil",
             "should not notify undefined keys in restrict listen mode", null)
         tracking.observe(stamp(0), sample)
@@ -354,6 +355,40 @@ class OplusKeyEdgesTest {
             "should not notify undefined keys in restrict listen mode", "KEYCODE_ACTION_BUTTON_CLICK")
         tracking.observe(stamp(100), sample)
         tracking.restore("KEYCODE_ACTION_BUTTON_CLICK", h.edges)
+        h.duplicatedLine(1000)
+        h.duplicatedLine(1100)
+        h.clock.advanceTo(2000)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
+    fun resetKeepsConfiguredSnapRegistrationBeforeMissingContextDownAndIdentifiedUp() {
+        val h = Harness(enableHold = false)
+        val tracking = TeachingLogEdges()
+        val code = "KEYCODE_ACTION_BUTTON_CLICK"
+        tracking.begin(code, h.edges)
+        tracking.reset()
+        val sample = KeySample.Log("1000", "KEYLOG_OplusKeyEventUtil",
+            "should not notify undefined keys in restrict listen mode", null)
+        tracking.observe(stamp(0), sample)
+        tracking.observe(stamp(100), sample.copy(threadKey = code))
+        tracking.restore(code, h.edges)
+        h.duplicatedLine(1000)
+        h.duplicatedLine(1100)
+        h.clock.advanceTo(2000)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
+    fun heldVolumeWithoutAnySnapSampleCannotSeedConfiguredSnapPhaseOnCancel() {
+        val h = Harness(enableHold = false)
+        val tracking = TeachingLogEdges()
+        val code = "KEYCODE_ACTION_BUTTON_CLICK"
+        tracking.begin(code, h.edges)
+        tracking.reset()
+        tracking.observe(stamp(0), KeySample.Log("1000", "KEYLOG_OplusKeyEventUtil",
+            "should not notify undefined keys in restrict listen mode", "KEYCODE_VOLUME_DOWN"))
+        tracking.restore(code, h.edges)
         h.duplicatedLine(1000)
         h.duplicatedLine(1100)
         h.clock.advanceTo(2000)

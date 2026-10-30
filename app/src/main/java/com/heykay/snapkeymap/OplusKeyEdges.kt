@@ -56,7 +56,7 @@ internal class TeachingLogEdges {
     private val byCode = mutableMapOf<String?, OplusKeyEdges>()
 
     fun begin(code: String?, source: OplusKeyEdges) {
-        reset()
+        byCode.clear()
         byCode[null] = OplusKeyEdges({}, {}).apply { resetFrom(source) }
         if (code != null) byCode[code] = OplusKeyEdges({}, {}).apply { resetFrom(source) }
     }
@@ -70,11 +70,11 @@ internal class TeachingLogEdges {
     }
 
     fun reset() {
-        byCode.clear()
+        byCode.values.forEach { it.reset() }
     }
 
     fun restore(code: String?, target: OplusKeyEdges) {
-        val source = byCode[code] ?: byCode[null]
+        val source = byCode[code]
         if (source == null) target.reset() else target.resetFrom(source)
     }
 }

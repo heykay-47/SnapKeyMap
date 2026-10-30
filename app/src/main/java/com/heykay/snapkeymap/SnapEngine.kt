@@ -98,12 +98,11 @@ object SnapEngine {
     private val teachingState = MutableStateFlow<TeachingState?>(null)
     internal val teaching: StateFlow<TeachingState?> = teachingState.asStateFlow()
     private val delivery = TeachingDelivery()
+    private val inputDelivery = InputKeyDelivery(delivery)
     private var nextTeachingId = 0L
     private var teachingLogDemand = false
     private var inputLearningBoundary = Long.MIN_VALUE
     private var inputPressed = false
-    private var ignoreInputUntilUp = false
-    private val heldInputKeys = mutableSetOf<InputKey>()
     private var logResumeAfterMs = Long.MIN_VALUE
     private var mainUiVisible = false
     private var foregroundApp: String? = null
@@ -335,6 +334,7 @@ object SnapEngine {
     }
 
     private fun onInputLiveChanged(live: Boolean) {
+        if (!live) inputDelivery.readerLost()
         inputLiveState.value = live
         refreshTeachingAccess()
         updateInputSource()
@@ -358,19 +358,19 @@ object SnapEngine {
             resetGestures()
             oplusEdges.reset(pressed = releasedAfterSwitch)
             inputPressed = releasedAfterSwitch
-            ignoreInputUntilUp = alreadyHandled
+            inputDelivery.suppressUntilUp(config.inputKey.takeIf { alreadyHandled })
             preciseState.value = precise
         }
         updateListeningSince()
     }
 
     private fun onInputEvent(event: InputKeyEvent, time: Long, stamp: TeachingDelivery.Stamp) {
-        delivery.deliver(stamp) { onCurrentInputEvent(event, time) }
+        if (preciseState.value && event.key == store.config.value.inputKey) inputPressed = event.down
+        inputDelivery.deliver(event, stamp) { ignored -> onCurrentInputEvent(event, time, ignored) }
     }
 
-    private fun onCurrentInputEvent(event: InputKeyEvent, time: Long) {
+    private fun onCurrentInputEvent(event: InputKeyEvent, time: Long, ignored: Boolean) {
         if (time <= inputLearningBoundary) return
-        if (event.down) heldInputKeys += event.key else heldInputKeys -= event.key
         teachingSession?.let { session ->
             session.observe(KeySample.Input(event), time)
             publishTeaching()
@@ -378,11 +378,7 @@ object SnapEngine {
         }
         val config = store.config.value
         if (!preciseState.value || !KeyMatching.matches(config.keyBinding(), KeySample.Input(event))) return
-        inputPressed = event.down
-        if (ignoreInputUntilUp) {
-            if (!event.down) ignoreInputUntilUp = false
-            return
-        }
+        if (ignored) return
         inputGestures.wantsDouble = config.action(Gesture.DOUBLE) != SnapAction.NoAction
         inputGestures.wantsLong = config.action(Gesture.LONG) != SnapAction.NoAction
         inputGestures.wantsTapHold = config.action(Gesture.TAP_HOLD) != SnapAction.NoAction
@@ -557,7 +553,7 @@ object SnapEngine {
         main.removeCallbacks(logKeyUp)
         logKeyDown = false
         inputPressed = false
-        ignoreInputUntilUp = false
+        inputDelivery.suppressUntilUp(null)
         keyGestures.reset()
         logGestures.reset()
         inputGestures.reset()
@@ -594,8 +590,9 @@ object SnapEngine {
     internal fun saveTeaching(handle: TeachingHandle): Boolean {
         if (delivery.stamp.handle != handle) return false
         refreshTeachingAccess()
-        val patch = teachingSession?.takeSave() ?: return false
-        store.update(patch::applyTo)
+        val saved = teachingSession?.save { patch -> store.updateConfirmed(patch::applyTo) } == true
+        publishTeaching()
+        if (!saved) return false
         endTeaching()
         return true
     }
@@ -613,8 +610,7 @@ object SnapEngine {
         updateInputSource()
         teachingLogEdges.restore(store.config.value.logKeyCode, oplusEdges)
         teachingLogEdges.reset()
-        ignoreInputUntilUp = store.config.value.inputKey?.let { it in heldInputKeys } == true
-        inputPressed = ignoreInputUntilUp
+        inputPressed = inputDelivery.suppressHeld(store.config.value.inputKey)
         logResumeAfterMs = now() + store.config.value.releaseGapMs
     }
 
