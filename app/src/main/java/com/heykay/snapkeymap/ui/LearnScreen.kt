@@ -1,5 +1,6 @@
 package com.heykay.snapkeymap.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,8 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -36,57 +35,100 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.heykay.snapkeymap.LearnResult
 import com.heykay.snapkeymap.LogAccess
 import com.heykay.snapkeymap.SnapAccessibilityService
 import com.heykay.snapkeymap.SnapEngine
+import com.heykay.snapkeymap.TeachingFailure
+import com.heykay.snapkeymap.TeachingHandle
+import com.heykay.snapkeymap.TeachingSession
+import com.heykay.snapkeymap.TeachingState
 import kotlinx.coroutines.delay
 
-private sealed interface LearnState {
-    data object Intro : LearnState
-    data class Running(val prompt: String, val detail: String, val progress: Float) : LearnState
-    data class Finished(val result: LearnResult) : LearnState
-}
+private data class LearnPrompt(val prompt: String, val detail: String, val progress: Float)
 
 @Composable
 fun LearnScreen(onDone: () -> Unit) {
-    var state by remember { mutableStateOf<LearnState>(LearnState.Intro) }
-    var runs by remember { mutableIntStateOf(0) }
-    var finishedAt by remember { mutableLongStateOf(Long.MAX_VALUE) }
+    var handle by remember { mutableStateOf<TeachingHandle?>(null) }
+    var prompt by remember { mutableStateOf(LearnPrompt("Hands off", "Don't touch the phone for a moment…", 0f)) }
+    val teaching by SnapEngine.teaching.collectAsStateWithLifecycle()
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val cancel = {
+        handle?.let(SnapEngine::cancelTeaching)
+        handle = null
+    }
+    val leave = {
+        cancel()
+        SnapEngine.releaseTeachingLogs()
+        onDone()
+    }
+    val retry = {
+        prompt = LearnPrompt("Hands off", "Don't touch the phone for a moment…", 0f)
+        handle = SnapEngine.beginTeaching()
+    }
 
-    LaunchedEffect(runs) {
-        if (runs == 0) return@LaunchedEffect
-        SnapEngine.startLearning()
+    LaunchedEffect(handle) {
+        val owner = handle ?: return@LaunchedEffect
 
-        suspend fun phase(prompt: String, detail: String, millis: Long): LongRange {
+        suspend fun phase(title: String, detail: String, millis: Long): LongRange {
             val start = SnapEngine.now()
             while (true) {
                 val elapsed = SnapEngine.now() - start
                 if (elapsed >= millis) break
-                state = LearnState.Running(prompt, detail, elapsed / millis.toFloat())
+                prompt = LearnPrompt(title, detail, elapsed / millis.toFloat())
                 delay(50)
             }
             return start..SnapEngine.now()
         }
 
         val baseline = phase("Hands off", "Don't touch the phone for a moment…", 5000)
-        SnapEngine.markKeyReleased()
+        SnapEngine.markKeyReleased(owner)
         val taps = (1..3).map { round ->
             val window = phase("Press the Snap Key once", "Press $round of 3", 3000)
             phase("Let go", "Get ready for the next one…", 1000)
             window
         }
         val hold = phase("Now press and hold it", "Keep holding until the bar is full", 3500)
-        val result = SnapEngine.finishLearning(baseline, taps, hold)
-        finishedAt = SnapEngine.now()
-        state = LearnState.Finished(result)
+        SnapEngine.captureTeaching(owner, baseline, taps, hold)
     }
-    DisposableEffect(Unit) {
-        onDispose { SnapEngine.cancelLearning() }
+    val checking = teaching as? TeachingState.Checking
+    LaunchedEffect(handle, checking?.startedAtMs) {
+        val owner = handle ?: return@LaunchedEffect
+        val start = checking?.startedAtMs ?: return@LaunchedEffect
+        val duration = TeachingSession.CHECK_MS + TeachingSession.SETTLE_MS
+        while (SnapEngine.now() - start < duration) {
+            val elapsed = SnapEngine.now() - start
+            prompt = LearnPrompt(
+                if (elapsed < TeachingSession.CHECK_MS) "Press a different key once, then release it" else "Hands off",
+                if (elapsed < TeachingSession.CHECK_MS) "A volume key is recommended. Do not touch the Snap Key."
+                else "Checking the last events…",
+                (elapsed / duration.toFloat()).coerceIn(0f, 1f),
+            )
+            delay(50)
+        }
+        SnapEngine.finishDifferentKeyCheck(owner)
     }
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                cancel()
+                SnapEngine.releaseTeachingLogs()
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose {
+            cancel()
+            SnapEngine.releaseTeachingLogs()
+            lifecycle.removeObserver(observer)
+        }
+    }
+    BackHandler(onBack = leave)
 
-    SnapScaffold(title = "Teach your Snap Key", onBack = onDone) { padding ->
+    SnapScaffold(title = "Teach your Snap Key", onBack = leave) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -95,18 +137,21 @@ fun LearnScreen(onDone: () -> Unit) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            when (val current = state) {
-                LearnState.Intro -> Intro(onStart = { runs++ })
-                is LearnState.Running -> Running(current, onCancel = {
-                    runs = 0
-                    SnapEngine.cancelLearning()
-                    state = LearnState.Intro
-                })
-                is LearnState.Finished -> Finished(
-                    result = current.result,
-                    finishedAt = finishedAt,
-                    onRetry = { runs++ },
-                    onDone = onDone,
+            when (val current = teaching.takeIf { handle != null }) {
+                null, TeachingState.Closed -> Intro(onStart = retry)
+                TeachingState.Capturing, is TeachingState.Checking -> Running(prompt, onCancel = leave)
+                else -> TeachingResult(
+                    state = current,
+                    onCheck = {
+                        prompt = LearnPrompt(
+                            "Press a different key once, then release it",
+                            "A volume key is recommended. Do not touch the Snap Key.", 0f,
+                        )
+                        handle?.let(SnapEngine::checkDifferentKey)
+                    },
+                    onSave = { handle?.let { if (SnapEngine.saveTeaching(it)) onDone() } },
+                    onRetry = retry,
+                    onBack = leave,
                 )
             }
         }
@@ -124,7 +169,7 @@ private fun Intro(onStart: () -> Unit) {
     val logReady = !hasLogPermission || access == LogAccess.FULL
 
     Text(
-        "You'll press the key 3 times, then hold it once. It takes about 20 seconds.",
+        "You'll press the key 3 times, hold it once, then check a different key before saving. It takes about 30 seconds.",
         style = MaterialTheme.typography.bodyLarge,
     )
     NoteCard(
@@ -163,7 +208,7 @@ private fun Intro(onStart: () -> Unit) {
             },
         ) {
             if (access != LogAccess.WAITING) {
-                CardTextButton("Connect") { SnapEngine.connect() }
+                CardTextButton("Connect") { SnapEngine.prepareTeachingLogs() }
             }
         }
     }
@@ -175,7 +220,7 @@ private fun Intro(onStart: () -> Unit) {
 }
 
 @Composable
-private fun Running(state: LearnState.Running, onCancel: () -> Unit) {
+private fun Running(state: LearnPrompt, onCancel: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -194,24 +239,42 @@ private fun Running(state: LearnState.Running, onCancel: () -> Unit) {
 }
 
 @Composable
-private fun Finished(result: LearnResult, finishedAt: Long, onRetry: () -> Unit, onDone: () -> Unit) {
-    val last by SnapEngine.lastGesture.collectAsStateWithLifecycle()
-
-    if (result == LearnResult.NothingFound) {
+private fun TeachingResult(
+    state: TeachingState,
+    onCheck: () -> Unit,
+    onSave: () -> Unit,
+    onRetry: () -> Unit,
+    onBack: () -> Unit,
+) {
+    if (state is TeachingState.Failed) {
+        val title = when (state.reason) {
+            TeachingFailure.NOT_FOUND -> "Couldn't find your Snap Key"
+            TeachingFailure.COLLISION -> "Another key matched"
+            TeachingFailure.NO_DIFFERENT_KEY -> "Couldn't observe a different key"
+            TeachingFailure.ACCESS_LOST -> "The check was interrupted"
+        }
+        val guidance = when (state.reason) {
+            TeachingFailure.NOT_FOUND -> "Make sure access is connected. Press the Snap Key only when asked, then hold it at the end."
+            TeachingFailure.COLLISION -> "This candidate also matched during the different-key check. Try teaching again."
+            TeachingFailure.NO_DIFFERENT_KEY -> "Try again and press and release a volume key during the check. A complete press and release must be observable."
+            TeachingFailure.ACCESS_LOST -> "Restore the service, full system logs and any required Shizuku input, then try again. Reconnecting alone cannot complete this check."
+        }
         NoteCard(
             icon = Icons.Rounded.Warning,
-            title = "Couldn't find your Snap Key",
-            body = "• If you use log access, make sure it's connected before you start.\n" +
-                "• In Settings › Snap Key, pick a different option, then try again. Some options " +
-                "keep the key hidden.\n" +
-                "• Press the key once each time you're asked, and hold it at the end.",
+            title = title,
+            body = "Nothing was saved. Your previous key is unchanged.\n\n$guidance",
             container = MaterialTheme.colorScheme.errorContainer,
         )
         Button(onClick = onRetry, modifier = Modifier.fillMaxWidth()) { Text("Try again") }
-        OutlinedButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text("Back") }
+        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Back") }
         return
     }
 
+    val result = when (state) {
+        is TeachingState.Candidate -> state.result
+        is TeachingState.Ready -> state.result
+        else -> return
+    }
     val body = when (result) {
         is LearnResult.KeyEventFound -> "Your Snap Key talks to apps directly, so no log access is needed."
         is LearnResult.LogLineFound -> if (result.inputKey != null) {
@@ -226,14 +289,13 @@ private fun Finished(result: LearnResult, finishedAt: Long, onRetry: () -> Unit,
     }
     NoteCard(
         icon = Icons.Rounded.CheckCircle,
-        title = "Got it!",
-        body = body,
+        title = if (state is TeachingState.Ready) "Different-key check passed" else "Key found. Not saved yet.",
+        body = body + if (state is TeachingState.Ready) {
+            "\n\nThis check covers the key you pressed, not every possible key. Save this key?"
+        } else {
+            "\n\nCheck a different key before saving. Your previous key is still unchanged."
+        },
         container = MaterialTheme.colorScheme.primaryContainer,
-    )
-    val tried = last?.takeIf { it.atMs > finishedAt }
-    Text(
-        if (tried == null) "Try it now: press the Snap Key." else "Detected: ${tried.gesture.title} ✓",
-        style = MaterialTheme.typography.titleLarge,
     )
     if (result is LearnResult.LogLineFound) {
         result.inputKey?.let { key ->
@@ -246,6 +308,11 @@ private fun Finished(result: LearnResult, finishedAt: Long, onRetry: () -> Unit,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
-    Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text("Done") }
+    if (state is TeachingState.Ready) {
+        Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) { Text("Save key") }
+    } else {
+        Button(onClick = onCheck, modifier = Modifier.fillMaxWidth()) { Text("Check a different key") }
+    }
     TextButton(onClick = onRetry, modifier = Modifier.fillMaxWidth()) { Text("Teach it again") }
+    OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Cancel") }
 }

@@ -46,14 +46,8 @@ class TeachingFalsePositiveTest {
         // This negative challenge is withheld from analyze, as in positive-only teaching.
         val unseenF11Message = "StylusModule.onUpdateToolType():9876 Update tool type = 54"
         assertEquals(reportedSignature, normalizeLogMessage(unseenF11Message))
-        val explicitEdges = isKnownOplusKeyLine(syntheticWriterUid, tag, unseenF11Message)
-        val lineKey = loggedKeyCode(syntheticWriterUid, tag, unseenF11Message)
-        assertFalse(explicitEdges)
-        assertEquals(null, lineKey)
-        val acceptedByFullLogFallback =
-            (!explicitEdges || acceptsLoggedKey(config.logKeyCode, lineKey)) &&
-                config.enabled && config.needsLogAccess &&
-                acceptsKeyLog(config.logSignature, syntheticWriterUid, tag, unseenF11Message)
+        val acceptedByFullLogFallback = KeyMatching.matches(config.keyBinding(),
+            KeySample.Log(syntheticWriterUid, tag, unseenF11Message, null))
 
         assertTrue("The unseen F11 log incorrectly passes the learned F12 runtime filter", acceptedByFullLogFallback)
         println("REPRO synthetic positive-only F12 teaching learned StylusModule; unseen F11 passed full non-Oplus log acceptance")

@@ -30,6 +30,7 @@ class LogReader(
     private val onSource: (LogSource) -> Unit,
     private val dispatchAccess: (() -> Unit) -> Unit = { it() },
     private val shouldParse: () -> Boolean = { true },
+    private val onStart: () -> Unit = {},
 ) {
     @Volatile private var session: Session? = null
     @Volatile private var tryLocal = false
@@ -46,6 +47,7 @@ class LogReader(
         if (preferShizuku) tryLocal = false
         val next = Session()
         session = next
+        onStart()
         worker.execute { next.run() }
     }
 

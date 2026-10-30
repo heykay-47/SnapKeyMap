@@ -70,8 +70,8 @@ class KeyLearningReplayTest {
         }
         fun edge(time: Long, tid: String) {
             clock.advanceTo(time)
-            if (!acceptsKeyLog(result.signature, "1000", oplusTag, oplusMessage) ||
-                !acceptsLoggedKey(result.logKeyCode, keysByThread[tid])) return
+            if (!KeyMatching.matches(KeyBinding.Logged(result.signature, result.logKeyCode, result.inputKey),
+                    KeySample.Log("1000", oplusTag, oplusMessage, keysByThread[tid]))) return
             repeat(3) { edges.accept("10-23 20:15:%02d.%03d".format(time / 1000, time % 1000)) }
         }
 
@@ -115,7 +115,8 @@ class KeyLearningReplayTest {
         fun line(time: Long, timestamp: String, tag: String, message: String) {
             clock.advanceTo(time)
             // These recorded system lines predate capturing logcat's UID column.
-            if (!acceptsKeyLog(result.signature, "1000", tag, message)) return
+            if (!KeyMatching.matches(KeyBinding.Logged(result.signature, result.logKeyCode, result.inputKey),
+                    KeySample.Log("1000", tag, message, null))) return
             if (isKnownOplusKeyLine("1000", tag, message)) {
                 knownAccepted++
                 edges.accept(timestamp)
@@ -169,7 +170,8 @@ class KeyLearningReplayTest {
         fun line(time: Long, code: String, value: String) {
             clock.advanceTo(time)
             val event = parseInputKeyEvent("[ 42.000000] /dev/input/event0: EV_KEY $code $value") ?: return
-            if (event.key != result.inputKey) return
+            if (!KeyMatching.matches(KeyBinding.Logged(result.signature, result.logKeyCode, result.inputKey),
+                    KeySample.Input(event))) return
             if (event.down) detector.down() else detector.up()
         }
         line(0, "BTN_TRIGGER_HAPPY32", "DOWN")
