@@ -11,11 +11,11 @@ def main():
 
     root = pathlib.Path(__file__).resolve().parent.parent
     gradle = (root / "app/build.gradle.kts").read_text(encoding="utf-8")
-    version_match = re.search(r'^\s*versionName = "([0-9]+\.[0-9]+\.[0-9]+)"\s*$', gradle, re.MULTILINE)
+    version_match = re.search(r'^\s*versionName = "((?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]?)\.(?:0|[1-9][0-9]?))"\s*$', gradle, re.MULTILINE)
     code_match = re.search(r'^\s*versionCode = ([0-9]+)\s*$', gradle, re.MULTILINE)
     failures = []
     if not version_match:
-        failures.append("app/build.gradle.kts must have a literal major.minor.patch versionName")
+        failures.append("app/build.gradle.kts must have a literal major.minor.patch versionName without leading zeros, with minor and patch below 100")
     if not code_match:
         failures.append("app/build.gradle.kts must have a literal integer versionCode")
     if not failures:

@@ -84,6 +84,15 @@ class ReleaseCheckTest(unittest.TestCase):
     def test_invalid_version(self):
         self.check_release(version="1.1", expected=("literal major.minor.patch versionName",))
 
+    def test_leading_zero_is_rejected(self):
+        self.check_release(version="1.1.00", expected=("without leading zeros",))
+
+    def test_component_overflow_is_rejected(self):
+        self.check_release(version="1.1.100", code=10200, expected=("below 100",))
+
+    def test_largest_components_pass(self):
+        self.check_release(version="1.99.99", code=19999, roadmap="## Delivered in v1.99.99\n")
+
     def test_invalid_code(self):
         self.check_release(code="invalid", notes=None, expected=("literal integer versionCode",))
 
