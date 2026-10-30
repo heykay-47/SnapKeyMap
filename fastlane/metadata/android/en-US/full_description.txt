@@ -12,7 +12,7 @@
 <p><b>How it works</b></p>
 <p>ColorOS does not pass the Snap Key to apps. SnapKey Map detects it from the system log, so it needs the READ_LOGS permission once. You grant it with <a href="https://shizuku.rikka.app/">Shizuku</a> on the phone, or with ADB from a computer. A setup wizard walks you through each step and then teaches the app your key.</p>
 <p>With Shizuku running, the app reads the log and raw key events through Shizuku. This gives more precise press and release detection, and lets ringer presets use Oppo's own Silent mode on Android 15 or later.</p>
-<p>The accessibility service runs actions such as screenshot and lock, and opens apps from the background. Android passes it every hardware key press, and it acts only on the key you taught it. It is also told which app is in front, so it can pause in apps you choose. It cannot read screen content.</p>
+<p>The accessibility service runs actions such as screenshot and lock, and opens apps from the background. It can receive hardware key events from other apps when Android delivers them. It acts only on the key you taught it. It checks package and class names in window events to identify app activities and pause in apps you choose. It cannot read screen content.</p>
 
 <p><b>Privacy</b></p>
 <p>The app has no internet permission, no ads, and no tracking. Log lines are checked in memory and discarded, never saved or uploaded.</p>
