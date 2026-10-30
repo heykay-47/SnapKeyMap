@@ -56,6 +56,27 @@ internal class TeachingLogEdges {
     private val byCode = mutableMapOf<String?, OplusKeyEdges>()
     private val contextFree = OplusKeyEdges({}, {})
 
+    fun deliver(
+        delivery: TeachingDelivery,
+        receipt: TeachingDelivery.Stamp,
+        timestamp: String,
+        sample: KeySample.Log,
+        runtimeBinding: KeyBinding,
+        runtimeEdges: OplusKeyEdges,
+        action: () -> Unit,
+    ) {
+        val explicitEdges = isKnownOplusKeyLine(sample.uid, sample.tag, sample.message)
+        delivery.deliver(receipt, onStale = {
+            if (explicitEdges) {
+                if (delivery.stamp.handle != null) observe(timestamp, sample)
+                else if (KeyMatching.matches(runtimeBinding, sample)) runtimeEdges.observe(timestamp)
+            }
+        }) {
+            if (receipt.handle != null && explicitEdges) observe(timestamp, sample)
+            action()
+        }
+    }
+
     fun begin(code: String?, source: OplusKeyEdges) {
         byCode.clear()
         contextFree.reset()

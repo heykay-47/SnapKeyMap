@@ -431,12 +431,11 @@ object SnapEngine {
         if (stamp.handle == null && !KeyMatching.matches(store.config.value.keyBinding(), sample)) return
         main.post {
             if (generation != logGeneration) return@post
-            delivery.deliver(stamp) {
+            teachingLogEdges.deliver(delivery, stamp, timestamp, sample, store.config.value.keyBinding(), oplusEdges) {
                 val session = teachingSession
                 if (stamp.handle != null) {
                     if (session == null) return@deliver
                     session.observe(sample, time)
-                    if (explicitEdges) teachingLogEdges.observe(timestamp, sample)
                     publishTeaching()
                     return@deliver
                 }
@@ -545,6 +544,7 @@ object SnapEngine {
     /** Called after the hands-off step: the key is released and lines from earlier presses have been handled. */
     internal fun markKeyReleased(handle: TeachingHandle) {
         if (delivery.stamp.handle != handle || teachingSession?.state != TeachingState.Capturing) return
+        delivery.discardPending()
         oplusEdges.reset()
         teachingLogEdges.reset()
     }
