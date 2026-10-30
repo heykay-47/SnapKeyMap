@@ -5,8 +5,8 @@ Help explains how to get started, how to troubleshoot, and whether the app is sa
 ## Sub-features
 
 - `help-read`: the `Help` screen with `Run setup again`, `Getting started`, `Troubleshooting`, `Is it safe?` and `Full help on the website`.
-- `setup-rerun`: `Run setup` resets the setup progress and the grant method, then opens the setup flow at the method choice. Actions and the taught key are kept.
-- `intro`: the first-run intro. It shows only when no data has been stored yet.
+- `setup-rerun`: `Run setup` resets setup completion, skipped steps, the grant method and the current page. It opens setup at the method choice. Actions and the taught key are kept.
+- `intro`: the first-run intro, controlled by the stored `introSeen` flag.
 
 ## How to get to it (user POV)
 
@@ -21,7 +21,7 @@ Preconditions:
 - Baseline from the README.
 - For `setup-rerun`: the user has agreed. The run clears `setupComplete` and the stored grant method, so Home stays hidden until setup is finished again.
 
-- **Read Help.** Run `sk tap Help --expect "Run setup again"`, then `sk ui help`. Scroll with `sk scroll down` and check that `Getting started`, `Troubleshooting`, `Is it safe?` and `Full help on the website` are there. Leave with `sk back`.
+- **Read Help.** Run `sk tap Help --expect "Run setup again"`, then `sk ui help`. Getting started starts expanded. Scroll to Troubleshooting and Is it safe?, then tap each card's `Read` to inspect its body. Leave with `sk back`; do not tap Run setup during a read-only pass.
 - **Website link.** Run `sk tap "Full help on the website"`, then `sk ui --all web`. The browser opens the project's help page. Come back with `sk back`.
 - **Re-run setup (consent needed).** Run `sk tap "Run setup"`, then `sk ui setup-method`. The setup flow opens at the method choice (Shizuku or ADB). Finish every page with the user's existing choices so that Home returns. The run isn't complete until `sk launch` prints `ready: SnapKey Map` again.
 

@@ -6,9 +6,10 @@ The status card at the top of Home tells the user whether the Snap Key is being 
 
 - `status-ready`: `Ready`, with `Press the Snap Key to try it.` or `Last: <gesture> · just now` / `· Ns ago`.
 - `status-attention`: `Needs attention`, with `Accessibility is off. Turn it on to run your actions.`, `Log access is missing. Grant it again to detect the key.`, or `Teach the Snap Key again so it can be detected.`, plus a `Fix` button.
-- `status-paused`: `Paused` with a `Connect` button. The text depends on log access, for example `Tap "Allow" on the pop-up.`
-- `status-off`: the master switch off shows `Turned off` / `The Snap Key does what Oppo set it to.`
+- `status-paused`: `Paused`. WAITING says `Tap "Allow" on the pop-up.`; declined access says `Log access was declined. Wait a minute, then tap Connect and choose Allow.` Otherwise the card asks the user to tap Connect. Connect appears only when not waiting for consent.
+- `status-off`: without a warning, the master switch off shows `Turned off` / `The Snap Key does what Oppo set it to.` Warnings take priority over this title.
 - `status-details`: `Details` shows `Listening since <time> · <source>` (`Precise input via Shizuku`, `Logs via Shizuku` or `System logs`) and `Last key press <time>` or `No key press yet`.
+- `status-report`: Details also holds `Copy report` and `Report a bug`; follow [Bug report](./bug-report.md) before using them.
 - `status-shizuku-hint`: `Use Shizuku`, when Shizuku runs but hasn't granted SnapKey Map.
 
 ## How to get to it (user POV)
@@ -21,13 +22,13 @@ The status card at the top of Home tells the user whether the Snap Key is being 
 Preconditions:
 
 - Baseline from the README.
-- Write down the switch state from the card title before you touch it.
+- Record the visible switch state from a screenshot before you touch it. A warning title does not tell you whether the switch is on.
 
-- **Read the status.** Run `sk launch`, then `sk ui status`. The first two labels are the card title and body. Compare them with `sk doctor`: `accessibility service: off` must show `Needs attention` / `Accessibility is off…`.
-- **Details.** Run `sk tap Details --expect "Hide details"`, then `sk ui details`. The line names the log source and the last key press.
-- **Master switch off and on.** The switch has no label. In `sk ui`, it's the element without a label marked `clickable` to the right of the card title (on 2026-10-28 it was at `[948,532][1130,700]`, with the accessibility warning showing). Tap the centre of its bounds with `/mnt/c/platform-tools/adb.exe shell input tap <x> <y>`. Then run `sk wait "Turned off"`, tap it again, and wait for the original title. Save `sk ui` after each tap.
+- **Read the status.** Run `sk doctor`, `sk launch` and `sk shot status`. Read the real title and body from the screenshot. A dump can show a false accessibility warning even when doctor reports the service on.
+- **Details.** If `sk tap Details` is blocked by the transient warning, ask the user to expand it. Then `sk ui details` names the log source and the last key press. Collapse it after the check.
+- **Master switch.** The switch has no label. Ask the user to flip it twice, or use the [Quick Settings tile](./quick-settings-tile.md). Capture the actual card with `sk shot` after each flip. With System logs, consent may need renewal; do not finish until the starting switch and listening state are restored.
 - **Fix.** Only with the user's agreement: `sk tap Fix` leaves the app (accessibility settings or another screen). Check where it went with `sk ui --all`, then `sk back`.
-- **Live detection.** Ask the user for one Snap Key press, then run `sk ui pressed`. A working setup shows `Last: press · just now`, and the Details line updates `Last key press`.
+- **Live detection.** Ask the user for one Snap Key press, then run `sk shot pressed`. A working setup shows `Last: press` and a recent age. Check the assigned action's side effect with `sk state`, then undo that effect.
 
 ## Gotchas
 

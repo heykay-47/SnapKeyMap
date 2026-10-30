@@ -5,8 +5,8 @@ The teach wizard learns how the phone reports the Snap Key. That's either a norm
 ## Sub-features
 
 - `teach-preflight`: before `Start`, cards warn `First: set Oppo's Snap Key action to None`, `Turn on the SnapKey Map service first`, `No log access yet` or `Connect to the system log`, as needed.
-- `teach-run`: `Start`, then on-screen instructions while the user presses, with a `Cancel` button.
-- `teach-success`: `Got it!`, with what was matched (for example `Matched input key: …`), then `Done` or `Teach it again`.
+- `teach-run`: `Hands off` for 5 seconds, then three 3-second `Press the Snap Key once` windows, each followed by 1 second of `Let go`, then 3.5 seconds of `Now press and hold it`. `Cancel` returns to the intro without saving a key.
+- `teach-success`: `Got it!`, matched-key information, and `Try it now: press the Snap Key.` A later press changes that line to `Detected: <gesture>`. Buttons are `Done` and `Teach it again`.
 - `teach-failure`: `Couldn't find your Snap Key`, with `Try again` and `Back`.
 
 ## How to get to it (user POV)
@@ -20,14 +20,14 @@ The teach wizard learns how the phone reports the Snap Key. That's either a norm
 Preconditions:
 
 - Baseline from the README.
-- The user is there to press the key, and agrees to re-teach. A successful run replaces the stored key. A cancelled run keeps the old one.
+- For a full run, the user agrees to re-teach and is there to press the key. A successful run replaces the stored key; cancellation and NothingFound keep it. A maintenance pass can inspect the intro and leave without starting.
 - `sk doctor` shows the accessibility service on and READ_LOGS granted, unless you're testing the preflight cards.
 
-- **Open.** Run `sk tap "Teach the Snap Key again" --expect "Teach your Snap Key"`, then `sk ui teach-intro`. Note which preflight cards show. Each one should match a `sk doctor` line.
-- **Start.** Run `sk logcat start`, then `sk tap Start`, then `sk ui teach-running`. Ask the user to press the Snap Key as the screen says, and don't drive the UI while they press.
-- **Result.** Run `sk wait "Got it!" --timeout 60`, then `sk ui teach-result` and `sk shot teach-result`. Then `sk logcat stop`. The log should contain the `KEYLOG_PhoneWindowManagerExtImpl … keyCode=KEYCODE_ACTION_BUTTON_CLICK` line (scanCode 735) followed by the `OplusKeyEventUtil` line.
+- **Open.** Scroll Home's status card offscreen, then run `sk tap "Teach the Snap Key again" --expect "Teach your Snap Key"`. Capture `sk ui teach-intro` and `sk shot teach-intro`. The dump can contain a false service-warning card, which moves Start before a tap lands.
+- **Start.** Only during an approved teaching run, ask the user to tap Start if the helper blocks it. Follow the screen's prompts without dumping or driving while they press.
+- **Result.** After the user completes the prompts, capture `sk ui teach-result` and `sk shot teach-result`. Record Got it! and the matched-key information, or Couldn't find your Snap Key. Do not report success from the phase timer alone.
 - **Finish.** Run `sk tap Done --expect "What the Snap Key does"`. Then ask for one press: the card should read `Last: press · just now`.
-- **Cancel path.** Run `sk tap Start`, then `sk tap Cancel` before pressing anything. You're back on the intro, and Home still detects the key with the old configuration.
+- **Cancel path.** Ask the user to tap Start, then run `sk tap Cancel` during Hands off, before any key presses. Confirm the intro returns. Do not report this path tested if you inspected only the intro.
 
 ## Gotchas
 
@@ -35,3 +35,4 @@ Preconditions:
 - Leaving the app while learning, for example to check something in Settings, can cost the log-access consent (cached for only 60 s), so the run fails with `Couldn't find your Snap Key`.
 - If Oppo's own action is still on, pressing the key also runs it (Mind Space, the camera, and so on), which takes the app out of the foreground. Check `First: set Oppo's Snap Key action to None` first.
 - For bug reports, ask the reporter first what the wizard showed: the matched line, or `Couldn't find your Snap Key`.
+- Start requires the accessibility service and, when READ_LOGS is granted, FULL log access. Use doctor and a screenshot before diagnosing a disabled Start from XML alone.

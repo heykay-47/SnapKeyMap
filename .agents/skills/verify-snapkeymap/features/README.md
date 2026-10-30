@@ -1,6 +1,6 @@
 # SnapKey Map verification map
 
-This folder is the maintained source for verifying what SnapKey Map does for a user. Read this index before driving the phone, then use the matching feature file as the recipe. `sk` means `.claude/skills/verify-snapkeymap/scripts/sk`, run from the repo root.
+This folder is the maintained source for verifying what SnapKey Map does for a user. Read this index before driving the phone, then use the matching feature file as the recipe. `sk` means `.agents/skills/verify-snapkeymap/scripts/sk`, run from the repo root.
 
 ## Baseline preconditions
 
@@ -14,8 +14,10 @@ This folder is the maintained source for verifying what SnapKey Map does for a u
 
 - Start every journey from Home. `sk back` returns there from any inner screen.
 - Use exact visible labels and content descriptions with `sk tap`. Never tap raw coordinates for app elements: the layout moves with the status card's state.
-- Pass `sk tap --expect "<label>"` (or follow the tap with `sk wait`) for every tap that should change the screen.
+- Use `sk tap --expect "<label>"` for repeatable navigation. For Try, Restore and toggles, tap once and check separately with `sk wait`, a screenshot or a state comparison.
 - Compose lists show only what's on screen. `sk scroll down` before you look for lower items.
+- Home's status card resizes during a dump. Before tapping a row below it, scroll the card offscreen with `sk scroll down --px 700` and inspect fresh bounds. Use screenshots for the actual card state.
+- Use `sk tap --all` only for an agreed system window. Default dumps and taps stay inside SnapKey Map.
 - Snap Key presses come from the user. Ask for exactly one gesture at a time, and say which one.
 
 ## Proof and skip reporting
@@ -38,3 +40,7 @@ Each feature file starts with an H1 title and one paragraph describing what the 
 - [Timing and settings](./timing-and-settings.md): the timing sliders, Show confirmations, Pause in apps, the per-gesture lock, and the theme.
 - [Teach the Snap Key](./teach-key.md): the teach wizard that learns how the key shows up.
 - [Help and setup](./help-and-setup.md): the Help screen and "Run setup again". Setup changes the user's configuration, so it needs their consent.
+- [Try a gesture](./try-gesture.md): run a harmless assigned action from Home without a key press.
+- [Quick Settings tile](./quick-settings-tile.md): toggle the master switch and restore the original tile layout.
+- [Back up and restore](./backup-restore.md): restore the current backup and compare all saved fields without exposing them.
+- [Bug report](./bug-report.md): clipboard feedback and the prefilled GitHub form, without submitting it.
