@@ -27,15 +27,17 @@ if [[ "$branch" == "$(git symbolic-ref --quiet --short HEAD || true)" && "$(git 
   exit 1
 fi
 
+# gh defaults to the upstream repository in a fork clone; build where the branch was checked.
+repo=$(gh repo view "$(git remote get-url origin)" --json nameWithOwner --jq .nameWithOwner)
 destination=${SNAPKEYMAP_APK_DIR:-/mnt/c/Users/heykay47/Downloads}
 mkdir -p "$destination"
-previous=$(gh run list --workflow build.yml --branch "$branch" --event workflow_dispatch \
+previous=$(gh run list --repo "$repo" --workflow build.yml --branch "$branch" --event workflow_dispatch \
   --limit 1 --json databaseId --jq '.[0].databaseId // 0')
-gh workflow run build.yml --ref "$branch"
+gh workflow run --repo "$repo" build.yml --ref "$branch"
 
 run=
 for (( attempt=0; attempt<30; attempt++ )); do
-  matches=$(gh run list --workflow build.yml --branch "$branch" --event workflow_dispatch \
+  matches=$(gh run list --repo "$repo" --workflow build.yml --branch "$branch" --event workflow_dispatch \
     --commit "$tip" --limit 100 --json databaseId,url \
     --jq ".[] | select(.databaseId > $previous) | [.databaseId, .url] | @tsv")
   if [[ "$matches" == *$'\n'* ]]; then
@@ -55,14 +57,14 @@ if [[ -z "$run" ]]; then
 fi
 
 echo "Build: $url"
-if ! gh run watch "$run" --exit-status; then
+if ! gh run watch "$run" --repo "$repo" --exit-status; then
   echo "Build failed or could not be watched: $url" >&2
   exit 1
 fi
 
 download=$(mktemp -d)
 trap 'rm -rf -- "$download"' EXIT
-gh run download "$run" --name SnapKeyMap --dir "$download"
+gh run download "$run" --repo "$repo" --name SnapKeyMap --dir "$download"
 shopt -s nullglob
 apks=("$download"/SnapKeyMap-*.apk)
 if (( ${#apks[@]} != 1 )) || [[ ! -s "${apks[0]}" ]]; then
