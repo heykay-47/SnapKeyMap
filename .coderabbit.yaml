@@ -21,7 +21,7 @@ reviews:
       mode: "off"
     title:
       mode: warning
-      requirements: "Conventional Commits: type(scope): subject, imperative, no trailing period."
+      requirements: "Conventional Commits: a type, an optional (scope), then a colon and an imperative subject with no trailing period."
   path_instructions:
     - path: "app/src/main/AndroidManifest.xml"
       instructions: |
