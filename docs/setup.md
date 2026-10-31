@@ -69,3 +69,5 @@ The ADB grant survives restarts and app updates. Without Shizuku, Android asks f
 3. If Android blocks the switch, open **App info** for SnapKey Map, tap the three-dot menu, choose **Allow restricted settings**, and try again.
 
 The service runs accessibility actions such as screenshot and lock, opens apps and the device-logs prompt from the background, receives supported key events, and helps keep the app running. It also sees which app is in front by package name only. The latest package name stays in memory and is used only to pause in the apps you choose. It cannot read screen content.
+
+The separate **SnapKey Map Mind Space helper** is off by default. Only the **Send screenshot to Mind Space** Action needs it. Pick that Action, review the disclosure, then agree to save it and open Accessibility settings. Turn on **SnapKey Map Mind Space helper**. It reads only ColorOS's Screenshot preview just after this Action takes a screenshot, to press Snap to Mind Space. It stores nothing. The screenshot also stays in Pictures/Screenshots.

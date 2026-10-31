@@ -90,6 +90,10 @@ fun HelpScreen(onDone: () -> Unit, onRunSetup: () -> Unit) {
                     "One learned signature is saved: tag, shortened message and source UID, plus hold timing. " +
                     "Key lines must match that source UID, so other apps cannot fake presses by copying a line.\n\n" +
                     "Accessibility cannot read window content. Settings are private to the app; Android backup is off.\n\n" +
+                    "The separate SnapKey Map Mind Space helper is off by default and only used for Send screenshot " +
+                    "to Mind Space. It reads only ColorOS's Screenshot preview just after this Action takes a " +
+                    "screenshot, to press Snap to Mind Space. It stores nothing. The screenshot also stays in " +
+                    "Pictures/Screenshots. Picking the Action asks for consent before opening Accessibility settings.\n\n" +
                     "If you allow SnapKey Map in Shizuku, the app also uses Shizuku to run logcat as the " +
                     "shell user. Shizuku must be running for this. Lines are still checked in memory " +
                     "and discarded, not saved as a log, with the teaching exception above. " +

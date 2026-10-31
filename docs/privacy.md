@@ -8,6 +8,8 @@ Circle to Search uses Shizuku when available, then tries the system service dire
 
 The accessibility service checks window-event package and class names to identify app activities, ignoring non-activity windows such as keyboards and status indicators. It keeps only the latest activity's package name in memory and uses it only to pause in the apps you choose. It cannot read screen content. Your chosen paused-app package names are saved in settings.
 
+The separate **SnapKey Map Mind Space helper** is off by default and only used for the **Send screenshot to Mind Space** Action. Picking this Action asks for consent before saving and opening Accessibility settings. The helper reads only ColorOS's Screenshot preview just after this Action takes a screenshot, to press Snap to Mind Space. It stores nothing. The screenshot also stays in Pictures/Screenshots. If Mind Space is unavailable for the current screen, the screenshot stays and a message appears when confirmations are on.
+
 Keep these limits in mind:
 
 - A double-press or tap-then-hold assignment adds a wait after release before the single-press action runs: 350 ms by default, adjustable from 200 to 600 ms in **Timing**. The hold threshold defaults to 650 ms and can be set from 300 to 1200 ms.

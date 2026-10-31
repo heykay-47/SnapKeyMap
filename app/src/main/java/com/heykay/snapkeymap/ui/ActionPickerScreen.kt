@@ -63,6 +63,7 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.heykay.snapkeymap.DeviceAction
 import com.heykay.snapkeymap.Gesture
+import com.heykay.snapkeymap.MindSpaceHelperService
 import com.heykay.snapkeymap.RingerMode
 import com.heykay.snapkeymap.Section
 import com.heykay.snapkeymap.SnapAction
@@ -90,6 +91,9 @@ internal fun loadLauncherApps(pm: PackageManager, exclude: String): List<AppEntr
 fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
     val context = LocalContext.current
     val pm = context.packageManager
+    val mindSpaceInstalled = remember(pm) {
+        runCatching { pm.getPackageInfo("com.oplus.aimemory", 0) }.isSuccess
+    }
     val config by SnapEngine.store.config.collectAsStateWithLifecycle()
     val current = config.action(gesture)
     var query by rememberSaveable { mutableStateOf("") }
@@ -97,6 +101,7 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
     var showShortcuts by rememberSaveable { mutableStateOf(false) }
     var showRingerDialog by rememberSaveable { mutableStateOf(false) }
     var showDndDialog by rememberSaveable { mutableStateOf(false) }
+    var showMindSpaceDialog by rememberSaveable { mutableStateOf(false) }
 
     val apps by produceState<List<AppEntry>?>(null) {
         value = withContext(Dispatchers.IO) {
@@ -155,9 +160,12 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
     val search = query.trim()
     fun matches(text: String) = search.isEmpty() || text.contains(search, ignoreCase = true)
     val filteredApps = remember(apps, search) { apps?.filter { matches(it.label) } }
-    val actionsBySection = remember(search) {
+    val actionsBySection = remember(search, mindSpaceInstalled) {
         Section.entries.associateWith { section ->
-            DeviceAction.entries.filter { it.section == section && matches(it.label) }
+            DeviceAction.entries.filter {
+                it.section == section && matches(it.label) &&
+                    (it != DeviceAction.SEND_SCREENSHOT_TO_MIND_SPACE || mindSpaceInstalled)
+            }
         }
     }
 
@@ -214,7 +222,11 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
                             icon = { VectorIcon(actionIcon(action)) },
                             title = device.label,
                             selected = current == action,
-                        ) { choose(action) }
+                        ) {
+                            if (device == DeviceAction.SEND_SCREENSHOT_TO_MIND_SPACE && !MindSpaceHelperService.isEnabled(context)) {
+                                showMindSpaceDialog = true
+                            } else choose(action)
+                        }
                     }
                 }
             }
@@ -338,6 +350,26 @@ fun ActionPickerScreen(gesture: Gesture, onDone: () -> Unit) {
         )
     }
     if (showDndDialog) DndAccessDialog(onDone, forSilent = current is SnapAction.Ringer)
+    if (showMindSpaceDialog) {
+        AlertDialog(
+            onDismissRequest = { showMindSpaceDialog = false },
+            title = { Text("Mind Space helper") },
+            text = {
+                Text("The optional SnapKey Map Mind Space helper is off by default. It reads only ColorOS's " +
+                    "Screenshot preview, right after this Action takes a screenshot, to press Snap to Mind Space. " +
+                    "It stores nothing. The screenshot also stays in Pictures/Screenshots.\n\n" +
+                    "To use this Action, turn on SnapKey Map Mind Space helper in Accessibility settings.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showMindSpaceDialog = false
+                    choose(SnapAction.Device(DeviceAction.SEND_SCREENSHOT_TO_MIND_SPACE))
+                    context.openAccessibilitySettings()
+                }) { Text("Agree, save and open settings") }
+            },
+            dismissButton = { TextButton(onClick = { showMindSpaceDialog = false }) { Text("Cancel") } },
+        )
+    }
 }
 
 @Composable

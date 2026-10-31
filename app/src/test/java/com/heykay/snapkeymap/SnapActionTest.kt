@@ -73,6 +73,14 @@ class SnapActionTest {
     }
 
     @Test
+    fun mindSpaceActionLoadsByName() {
+        assertEquals(
+            SnapAction.Device(DeviceAction.SEND_SCREENSHOT_TO_MIND_SPACE),
+            SnapAction.fromJson("""{"type":"device","action":"SEND_SCREENSHOT_TO_MIND_SPACE"}"""),
+        )
+    }
+
+    @Test
     fun savedSplitScreenMappingLoadsAsDoNothing() {
         assertEquals(SnapAction.NoAction, SnapAction.fromJson("""{"type":"device","action":"SPLIT_SCREEN"}"""))
     }

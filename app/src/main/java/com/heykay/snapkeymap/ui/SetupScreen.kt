@@ -218,6 +218,10 @@ fun SetupScreen(
                         Button(onClick = { context.openAccessibilitySettings() }) { Text("Open accessibility settings") }
                         Text("Find SnapKey Map and switch it on. If Android blocks the switch, open App info, " +
                             "tap the three-dot menu, choose Allow restricted settings, then try again.")
+                        Text("The separate SnapKey Map Mind Space helper is off by default. Only Send screenshot " +
+                            "to Mind Space needs it. Pick that Action to review its disclosure. The helper reads only " +
+                            "ColorOS's Screenshot preview just after this Action takes a screenshot, to press Snap to " +
+                            "Mind Space. It stores nothing. The screenshot also stays in Pictures/Screenshots.")
                         OutlinedButton(onClick = { context.openAppInfo() }) { Text("App info") }
                     }
                     SetupPage.BATTERY -> {
