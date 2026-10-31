@@ -26,6 +26,11 @@ SCREEN_TITLES = [
     "SnapKey Map", "About", "Open-source licences", "Help", "Teach your Snap Key",
     "Press", "Double press", "Press & hold", "Tap, then hold",
 ]
+# uiautomator suspends the accessibility service while it dumps, so the status card shows this
+# warning and a Fix button only in the dump. Afterwards the card shrinks and every row below moves up.
+DUMP_ONLY_WARNING = "Accessibility is off. Turn it on to run your actions."
+LEARN_DUMP_ONLY_WARNING = "Turn on the SnapKey Map service first"
+IDLE_FOREGROUND = {PACKAGE, "com.android.launcher", "com.android.systemui", "NotificationShade"}
 
 
 def adb_path():
@@ -76,6 +81,16 @@ def log(line):
 
 # ---- read-only checks ----
 
+def accessibility_on():
+    services = sh("settings get secure enabled_accessibility_services")
+    return SERVICE in services or f"{PACKAGE}/.SnapAccessibilityService" in services
+
+
+def foreground():
+    focus = re.search(r"mCurrentFocus=Window\{\S+ \S+ ([^}]+)\}", sh("dumpsys window | grep -m1 mCurrentFocus"))
+    return focus.group(1) if focus else None
+
+
 def doctor_report():
     """Returns (lines, blockers). Blockers mean: do not drive this phone now."""
     lines, blockers = [], []
@@ -102,8 +117,7 @@ def doctor_report():
     # The main user's line has no userId suffix; a work or clone profile adds `, userId=10`.
     read_logs = any(re.search(r"android.permission.READ_LOGS: granted=true\s*$", l) for l in package.splitlines())
     lines.append(f"READ_LOGS: {'granted' if read_logs else 'not granted'}")
-    services = sh("settings get secure enabled_accessibility_services")
-    lines.append(f"accessibility service: {'on' if SERVICE in services or f'{PACKAGE}/.SnapAccessibilityService' in services else 'off'}")
+    lines.append(f"accessibility service: {'on' if accessibility_on() else 'off'}")
     pid = sh(f"pidof {PACKAGE}")
     lines.append(f"app process: {pid or 'not running'}")
     awake = "mWakefulness=Awake" in sh("dumpsys power | grep -m1 mWakefulness=")
@@ -111,8 +125,12 @@ def doctor_report():
     lines.append(f"screen: {'awake' if awake else 'asleep'}, {'locked' if locked else 'unlocked'}")
     if not awake or locked:
         blockers.append("screen is asleep or locked; ask the user to unlock the phone")
-    focus = re.search(r"mCurrentFocus=Window\{\S+ \S+ ([^}]+)\}", sh("dumpsys window | grep -m1 mCurrentFocus"))
-    lines.append(f"foreground: {focus.group(1) if focus else 'unknown'}")
+    focus = foreground()
+    lines.append(f"foreground: {focus or 'unknown'}")
+    if not focus:
+        lines.append("WARNING: foreground is unknown; ask the user before `sk launch --take-over`")
+    elif focus.split("/")[0] not in IDLE_FOREGROUND:
+        lines.append("foreground: another app is open; ask the user before `sk launch --take-over`")
     lines.append(f"ringer: zen_mode={sh('settings get global zen_mode')} mode_ringer={sh('settings get global mode_ringer')}")
     return lines, blockers
 
@@ -164,9 +182,9 @@ def dump_xml():
 
 def nodes(xml):
     for node in ET.fromstring(xml).iter("node"):
-        bounds = re.findall(r"\d+", node.get("bounds", ""))
-        if len(bounds) == 4:
-            yield node, tuple(map(int, bounds))
+        bounds = re.fullmatch(r"\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]", node.get("bounds", ""))
+        if bounds:
+            yield node, tuple(map(int, bounds.groups()))
 
 
 def describe(xml, app_only=True):
@@ -188,10 +206,20 @@ def describe(xml, app_only=True):
 
 def cmd_ui(args):
     xml = dump_xml()
-    packages = {n.get("package") for n, _ in nodes(xml)}
+    if not args.all:
+        root = ET.Element("hierarchy")
+
+        def copy_app(node, parent):
+            if node.tag == "node" and node.get("package") == PACKAGE:
+                parent = ET.SubElement(parent, "node", node.attrib)
+            for child in node:
+                copy_app(child, parent)
+
+        copy_app(ET.fromstring(xml), root)
+        xml = ET.tostring(root, encoding="unicode")
     lines = describe(xml, app_only=not args.all)
-    if not args.all and PACKAGE not in packages:
-        lines = [f"(app not on screen; packages: {', '.join(sorted(p for p in packages if p))})"] + describe(xml, False)
+    if not args.all and not list(ET.fromstring(xml)):
+        lines = ["(app not on screen)"]
     print("\n".join(lines))
     if run_dir(required=False):
         out = next_name(args.name or "ui", "xml")
@@ -201,9 +229,11 @@ def cmd_ui(args):
         print(f"saved {out}")
 
 
-def find(xml, label, contains=False):
+def find(xml, label, contains=False, app_only=False):
     hits = []
     for node, bounds in nodes(xml):
+        if app_only and node.get("package") != PACKAGE:
+            continue
         for value in (node.get("text") or "", node.get("content-desc") or ""):
             if value and (label in value if contains else value == label):
                 hits.append((node, bounds))
@@ -213,13 +243,30 @@ def find(xml, label, contains=False):
 
 def tap_once(args):
     xml = dump_xml()
-    hits = find(xml, args.label, args.contains)
+    hits = find(xml, args.label, args.contains, app_only=not args.all)
     if not hits:
-        sys.exit(f"no element labelled {args.label!r}. On screen:\n" + "\n".join(describe(xml, False)))
+        shown = describe(xml, app_only=not args.all) or ["(app not on screen)"]
+        sys.exit(f"no element labelled {args.label!r}. On screen:\n" + "\n".join(shown))
+    if args.index is not None and not 0 <= args.index < len(hits):
+        sys.exit(f"--index must be between 0 and {len(hits) - 1}")
     if len(hits) > 1 and args.index is None:
         sys.exit(f"{len(hits)} elements labelled {args.label!r}; pass --index:\n" +
                  "\n".join(f"  {i}: {b}" for i, (_, b) in enumerate(hits)))
     node, (x1, y1, x2, y2) = hits[args.index or 0]
+    if node.get("enabled") == "false":
+        sys.exit(f"BLOCKED: {args.label!r} is disabled")
+    w, h = map(int, re.findall(r"(\d+)x(\d+)", sh("wm size"))[-1])
+    if not (0 <= x1 < x2 <= w and 0 <= y1 < y2 <= h):
+        sys.exit(f"BLOCKED: {args.label!r} has empty or out-of-screen bounds; scroll it into view")
+    for title, remedy in (
+        (DUMP_ONLY_WARNING, "Run `sk scroll down --px 700` (more with Details open) until `sk ui` "
+                            "no longer lists the card, then tap again."),
+        (LEARN_DUMP_ONLY_WARNING, "If a teach run is explicitly approved, ask the user to tap Start manually."),
+    ):
+        warning = find(xml, title, app_only=True)
+        if warning and y1 >= warning[0][1][1] and accessibility_on():
+            sys.exit(f"BLOCKED: {args.label!r} is below a transient accessibility warning, so the dump "
+                     f"coordinates may land on another row. {remedy}")
     x, y = (x1 + x2) // 2, (y1 + y2) // 2
     sh(f"input tap {x} {y}", check=True)
     log(f"tap {args.label!r} at {x},{y}")
@@ -277,9 +324,14 @@ def cmd_shot(args):
 def cmd_scroll(args):
     w, h = map(int, re.findall(r"(\d+)x(\d+)", sh("wm size"))[-1])
     top, bottom = int(h * 0.3), int(h * 0.75)
+    duration = 300
+    if args.px is not None:
+        if not 0 < args.px <= int(h * 0.85):
+            sys.exit(f"--px must be between 1 and {int(h * 0.85)}")
+        top, bottom, duration = int(h * 0.85) - args.px, int(h * 0.85), 1500
     a, b = (bottom, top) if args.direction == "down" else (top, bottom)
-    sh(f"input swipe {w // 2} {a} {w // 2} {b} 300", check=True)
-    log(f"scroll {args.direction}")
+    sh(f"input swipe {w // 2} {a} {w // 2} {b} {duration}", check=True)
+    log(f"scroll {args.direction}{f' {args.px}px' if args.px else ''}")
     time.sleep(0.6)
 
 
@@ -290,6 +342,10 @@ def cmd_back(args):
 
 
 def cmd_launch(args):
+    focus = foreground()
+    if (not focus or focus.split("/")[0] not in IDLE_FOREGROUND) and not args.take_over:
+        sys.exit("BLOCKED: foreground is unknown or another app is in front, so the user may be using the phone. "
+                 "Ask them, then run `sk launch --take-over`.")
     out = sh(f"am start -W -n {ACTIVITY}", check=True)
     log("launch")
     deadline = time.time() + args.timeout
@@ -380,6 +436,7 @@ def main():
     s.set_defaults(fn=cmd_run)
     s = sub.add_parser("launch", help="open the app and wait for a known screen")
     s.add_argument("--timeout", type=float, default=15)
+    s.add_argument("--take-over", action="store_true", help="launch even with unknown focus or another app in front")
     s.set_defaults(fn=cmd_launch)
     s = sub.add_parser("ui", help="list labelled elements on screen and save the hierarchy")
     s.add_argument("name", nargs="?")
@@ -388,6 +445,7 @@ def main():
     s = sub.add_parser("tap", help="tap the element whose text or content description matches")
     s.add_argument("label")
     s.add_argument("--contains", action="store_true")
+    s.add_argument("--all", action="store_true", help="allow tapping other packages (system dialogs)")
     s.add_argument("--index", type=int)
     s.add_argument("--settle", type=float, default=0.8, help="seconds to wait after the tap")
     s.add_argument("--expect", help="label that must appear after the tap; retries the tap once")
@@ -402,6 +460,7 @@ def main():
     s.set_defaults(fn=cmd_shot)
     s = sub.add_parser("scroll")
     s.add_argument("direction", choices=["down", "up"])
+    s.add_argument("--px", type=int, help="move the list by about this many pixels")
     s.set_defaults(fn=cmd_scroll)
     sub.add_parser("back").set_defaults(fn=cmd_back)
     s = sub.add_parser("state", help="save ringer, DND, torch and vibration state")
