@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
@@ -653,28 +654,30 @@ private fun StatusCard(
                         color = colors.onSurfaceVariant,
                     )
                 }
-                CardTextButton("Copy report") {
-                    val info = gatherReportInfo(context, config, precise)
-                    val wallOffset = System.currentTimeMillis() - SnapEngine.now()
-                    val secondsFormat = java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM)
-                    val report = buildReport(info, config, SnapEngine.detections.value) {
-                        secondsFormat.format(Date(wallOffset + it))
-                    }
-                    context.getSystemService(ClipboardManager::class.java)
-                        .setPrimaryClip(ClipData.newPlainText("SnapKey Map bug report", report))
-                    if (Build.VERSION.SDK_INT < 33) Toast.makeText(context, "Report copied", Toast.LENGTH_SHORT).show()
-                }
-                CardTextButton("Report a bug") {
-                    val info = gatherReportInfo(context, config, precise)
-                    val wallOffset = System.currentTimeMillis() - SnapEngine.now()
-                    val url = bugReportUrl(info, config, SnapEngine.lastGesture.value) {
-                        timeFormat.format(Date(wallOffset + it))
-                    }
-                    try {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                    } catch (_: ActivityNotFoundException) {
-                        Toast.makeText(context, "No browser available to open the bug form", Toast.LENGTH_SHORT).show()
-                    }
+                Row(Modifier.offset(x = (-12).dp)) {
+                    TextButton(onClick = {
+                        val info = gatherReportInfo(context, config, precise)
+                        val wallOffset = System.currentTimeMillis() - SnapEngine.now()
+                        val secondsFormat = java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM)
+                        val report = buildReport(info, config, SnapEngine.detections.value) {
+                            secondsFormat.format(Date(wallOffset + it))
+                        }
+                        context.getSystemService(ClipboardManager::class.java)
+                            .setPrimaryClip(ClipData.newPlainText("SnapKey Map bug report", report))
+                        if (Build.VERSION.SDK_INT < 33) Toast.makeText(context, "Report copied", Toast.LENGTH_SHORT).show()
+                    }) { Text("Copy report") }
+                    TextButton(onClick = {
+                        val info = gatherReportInfo(context, config, precise)
+                        val wallOffset = System.currentTimeMillis() - SnapEngine.now()
+                        val url = bugReportUrl(info, config, SnapEngine.lastGesture.value) {
+                            timeFormat.format(Date(wallOffset + it))
+                        }
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        } catch (_: ActivityNotFoundException) {
+                            Toast.makeText(context, "No browser available to open the bug form", Toast.LENGTH_SHORT).show()
+                        }
+                    }) { Text("Report a bug") }
                 }
             }
             if (warning != null) {
