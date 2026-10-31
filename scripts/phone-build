@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (( $# > 1 )); then
+  echo 'Usage: scripts/phone-build [branch]' >&2
+  exit 1
+fi
+
+cd "$(git rev-parse --show-toplevel)"
+if [[ -n "${1:-}" ]]; then
+  branch=$1
+elif ! branch=$(git symbolic-ref --quiet --short HEAD); then
+  echo 'Detached HEAD. Pass a pushed branch name to phone-build.' >&2
+  exit 1
+fi
+if ! git check-ref-format "refs/heads/$branch" >/dev/null; then
+  echo "Invalid branch name: $branch" >&2
+  exit 1
+fi
+if ! remote=$(git ls-remote --exit-code --heads origin "refs/heads/$branch"); then
+  echo "Cannot find branch '$branch' on origin. Push it before running phone-build." >&2
+  exit 1
+fi
+tip=${remote%%$'\t'*}
+if [[ "$branch" == "$(git symbolic-ref --quiet --short HEAD || true)" && "$(git rev-parse HEAD)" != "$tip" ]]; then
+  echo "Local HEAD differs from origin/$branch. Push your changes or check out the pushed tip first." >&2
+  exit 1
+fi
+
+# gh defaults to the upstream repository in a fork clone; build where the branch was checked.
+repo=$(gh repo view "$(git remote get-url origin)" --json nameWithOwner --jq .nameWithOwner)
+destination=${SNAPKEYMAP_APK_DIR:-/mnt/c/Users/heykay47/Downloads}
+mkdir -p "$destination"
+previous=$(gh run list --repo "$repo" --workflow build.yml --branch "$branch" --event workflow_dispatch \
+  --limit 1 --json databaseId --jq '.[0].databaseId // 0')
+gh workflow run --repo "$repo" build.yml --ref "$branch"
+
+run=
+for (( attempt=0; attempt<30; attempt++ )); do
+  matches=$(gh run list --repo "$repo" --workflow build.yml --branch "$branch" --event workflow_dispatch \
+    --commit "$tip" --limit 100 --json databaseId,url \
+    --jq ".[] | select(.databaseId > $previous) | [.databaseId, .url] | @tsv")
+  if [[ "$matches" == *$'\n'* ]]; then
+    printf 'Multiple matching workflow runs found. Refusing to choose:\n%s\n' "$matches" >&2
+    exit 1
+  fi
+  if [[ -n "$matches" ]]; then
+    run=${matches%%$'\t'*}
+    url=${matches#*$'\t'}
+    break
+  fi
+  sleep 2
+done
+if [[ -z "$run" ]]; then
+  echo "No new workflow_dispatch run appeared for $branch at $tip within 60 seconds. Check GitHub Actions before retrying." >&2
+  exit 1
+fi
+
+echo "Build: $url"
+if ! gh run watch "$run" --repo "$repo" --exit-status; then
+  echo "Build failed or could not be watched: $url" >&2
+  exit 1
+fi
+
+download=$(mktemp -d)
+trap 'rm -rf -- "$download"' EXIT
+gh run download "$run" --repo "$repo" --name SnapKeyMap --dir "$download"
+shopt -s nullglob
+apks=("$download"/SnapKeyMap-*.apk)
+if (( ${#apks[@]} != 1 )) || [[ ! -s "${apks[0]}" ]]; then
+  echo "Expected one non-empty SnapKeyMap-<versionName>.apk artifact from $url." >&2
+  exit 1
+fi
+filename=${apks[0]##*/}
+version=${filename#SnapKeyMap-}
+version=${version%.apk}
+if [[ -z "$version" ]]; then
+  echo "The APK filename has no versionName: $filename" >&2
+  exit 1
+fi
+cp -- "${apks[0]}" "$destination/$filename"
+printf 'APK: %s/%s\nversionName: %s\n' "$(cd "$destination" && pwd)" "$filename" "$version"

@@ -1,0 +1,478 @@
+#!/usr/bin/env python3
+"""Drive SnapKey Map on the connected phone over adb and keep the evidence.
+
+Run `sk --help` for the commands. Evidence goes to ~/snapkeymap-verify/<run>/.
+"""
+import argparse
+import os
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import time
+import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
+from pathlib import Path
+
+PACKAGE = "com.heykay.snapkeymap"
+ACTIVITY = f"{PACKAGE}/.ui.MainActivity"
+SERVICE = f"{PACKAGE}/{PACKAGE}.SnapAccessibilityService"
+EXPECTED_MODEL = "CPH2797"
+EVIDENCE_ROOT = Path(os.environ.get("SK_EVIDENCE", Path.home() / "snapkeymap-verify"))
+CURRENT = EVIDENCE_ROOT / ".current"
+# Titles of the app's screens. One of them on screen means the app is usable.
+SCREEN_TITLES = [
+    "SnapKey Map", "About", "Open-source licences", "Help", "Teach your Snap Key",
+    "Press", "Double press", "Press & hold", "Tap, then hold",
+]
+# uiautomator suspends the accessibility service while it dumps, so the status card shows this
+# warning and a Fix button only in the dump. Afterwards the card shrinks and every row below moves up.
+DUMP_ONLY_WARNING = "Accessibility is off. Turn it on to run your actions."
+LEARN_DUMP_ONLY_WARNING = "Turn on the SnapKey Map service first"
+IDLE_FOREGROUND = {PACKAGE, "com.android.launcher", "com.android.systemui", "NotificationShade"}
+
+
+def adb_path():
+    for candidate in (os.environ.get("SK_ADB"), shutil.which("adb"), "/mnt/c/platform-tools/adb.exe"):
+        if candidate and (shutil.which(candidate) or Path(candidate).exists()):
+            return candidate
+    sys.exit("No adb found. Set SK_ADB to the adb binary.")
+
+
+def adb(*args, binary=False, check=True, timeout=60):
+    cmd = [adb_path()]
+    if os.environ.get("SK_SERIAL"):
+        cmd += ["-s", os.environ["SK_SERIAL"]]
+    result = subprocess.run(cmd + list(args), capture_output=True, timeout=timeout)
+    if check and result.returncode != 0:
+        sys.exit(f"adb {' '.join(args)} failed: {result.stderr.decode(errors='replace').strip()}")
+    return result.stdout if binary else result.stdout.decode(errors="replace").replace("\r", "")
+
+
+def sh(command, check=False):
+    return adb("shell", command, check=check).strip()
+
+
+def run_dir(required=True):
+    if CURRENT.exists():
+        path = Path(CURRENT.read_text().strip())
+        if path.is_dir():
+            return path
+    if required:
+        sys.exit("No run started. Run `sk run <label>` first.")
+    return None
+
+
+def next_name(name, ext):
+    folder = run_dir()
+    counter = folder / ".counter"
+    n = int(counter.read_text()) + 1 if counter.exists() else 1
+    counter.write_text(str(n))
+    return folder / f"{n:02d}-{re.sub(r'[^A-Za-z0-9_.-]+', '-', name)}.{ext}"
+
+
+def log(line):
+    folder = run_dir(required=False)
+    if folder:
+        with open(folder / "actions.log", "a") as f:
+            f.write(f"{datetime.now().strftime('%H:%M:%S')} {line}\n")
+
+
+# ---- read-only checks ----
+
+def accessibility_on():
+    services = sh("settings get secure enabled_accessibility_services")
+    return SERVICE in services or f"{PACKAGE}/.SnapAccessibilityService" in services
+
+
+def foreground():
+    focus = re.search(r"mCurrentFocus=Window\{\S+ \S+ ([^}]+)\}", sh("dumpsys window | grep -m1 mCurrentFocus"))
+    return focus.group(1) if focus else None
+
+
+def doctor_report():
+    """Returns (lines, blockers). Blockers mean: do not drive this phone now."""
+    lines, blockers = [], []
+    devices = [l for l in adb("devices", "-l").splitlines()[1:] if " device " in l]
+    if len(devices) != 1 and not os.environ.get("SK_SERIAL"):
+        blockers.append(f"expected one device, found {len(devices)}; set SK_SERIAL")
+        return lines, blockers
+    # getprop over adb.exe occasionally returns nothing; ask again before blocking on it.
+    for _ in range(3):
+        model, _, release = sh("getprop ro.product.model; getprop ro.build.version.release").partition("\n")
+        if model and release:
+            break
+        time.sleep(0.5)
+    lines.append(f"device: {model} Android {release.strip()}")
+    if model != EXPECTED_MODEL:
+        blockers.append(f"model {model} is not the Find X9 ({EXPECTED_MODEL})")
+    package = sh(f"dumpsys package {PACKAGE}")
+    version = re.search(r"versionName=(\S+)", package)
+    code = re.search(r"versionCode=(\d+)", package)
+    if not version:
+        blockers.append(f"{PACKAGE} is not installed")
+    else:
+        lines.append(f"app: {version.group(1)} ({code.group(1)})")
+    # The main user's line has no userId suffix; a work or clone profile adds `, userId=10`.
+    read_logs = any(re.search(r"android.permission.READ_LOGS: granted=true\s*$", l) for l in package.splitlines())
+    lines.append(f"READ_LOGS: {'granted' if read_logs else 'not granted'}")
+    lines.append(f"accessibility service: {'on' if accessibility_on() else 'off'}")
+    pid = sh(f"pidof {PACKAGE}")
+    lines.append(f"app process: {pid or 'not running'}")
+    awake = "mWakefulness=Awake" in sh("dumpsys power | grep -m1 mWakefulness=")
+    locked = "isKeyguardShowing=true" in sh("dumpsys window | grep -m1 isKeyguardShowing")
+    lines.append(f"screen: {'awake' if awake else 'asleep'}, {'locked' if locked else 'unlocked'}")
+    if not awake or locked:
+        blockers.append("screen is asleep or locked; ask the user to unlock the phone")
+    focus = foreground()
+    lines.append(f"foreground: {focus or 'unknown'}")
+    if not focus:
+        lines.append("WARNING: foreground is unknown; ask the user before `sk launch --take-over`")
+    elif focus.split("/")[0] not in IDLE_FOREGROUND:
+        lines.append("foreground: another app is open; ask the user before `sk launch --take-over`")
+    lines.append(f"ringer: zen_mode={sh('settings get global zen_mode')} mode_ringer={sh('settings get global mode_ringer')}")
+    return lines, blockers
+
+
+def cmd_doctor(args):
+    lines, blockers = doctor_report()
+    print("\n".join(lines))
+    if args.expect_version and f"app: {args.expect_version} " not in "\n".join(lines) + " ":
+        blockers.append(f"installed version is not {args.expect_version}")
+    for b in blockers:
+        print(f"BLOCKED: {b}")
+    if not blockers:
+        print("OK to drive")
+    sys.exit(1 if blockers else 0)
+
+
+def cmd_state(args):
+    """Side effects outside the app: ringer, Do Not Disturb, torch, vibrations, accessibility."""
+    events = adb("shell", "dumpsys media.camera").split("== Camera service events log", 1)
+    events = events[1].split("\n\n", 1)[0] if len(events) > 1 else "(no camera events section)"
+    vib = sh("dumpsys vibrator_manager | grep -iE -A12 'Previous vibrations|Recent vibrations' | head -40")
+    text = "\n".join([
+        f"# state {args.name} at {datetime.now().isoformat(timespec='seconds')}",
+        *doctor_report()[0],
+        "## camera service events (torch on/off appear here with the PID)",
+        events.strip(),
+        "## recent vibrations",
+        vib,
+    ])
+    out = next_name(f"state-{args.name}", "txt")
+    out.write_text(text + "\n")
+    log(f"state {args.name} -> {out.name}")
+    print(text)
+    print(f"saved {out}")
+
+
+# ---- UI ----
+
+def dump_xml():
+    for _ in range(3):
+        raw = adb("exec-out", "sh -c 'uiautomator dump /sdcard/sk-ui.xml >/dev/null 2>&1; "
+                  "cat /sdcard/sk-ui.xml; rm -f /sdcard/sk-ui.xml'", check=False)
+        start = raw.find("<?xml")
+        if start >= 0:
+            return raw[start:raw.rfind(">") + 1]
+        time.sleep(1)
+    sys.exit("uiautomator dump failed three times")
+
+
+def nodes(xml):
+    for node in ET.fromstring(xml).iter("node"):
+        bounds = re.fullmatch(r"\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]", node.get("bounds", ""))
+        if bounds:
+            yield node, tuple(map(int, bounds.groups()))
+
+
+def describe(xml, app_only=True):
+    out = []
+    for node, (x1, y1, x2, y2) in nodes(xml):
+        if app_only and node.get("package") != PACKAGE:
+            continue
+        label = node.get("text") or node.get("content-desc")
+        if not label and node.get("checkable") != "true":
+            continue
+        flags = [f for f in ("clickable", "checked", "selected") if node.get(f) == "true"]
+        if node.get("enabled") == "false":
+            flags.append("disabled")
+        state = node.get("state-description") or ""
+        out.append(f"[{x1},{y1}][{x2},{y2}] {label!r}{' ' + ' '.join(flags) if flags else ''}"
+                   f"{' state=' + repr(state) if state else ''}")
+    return out
+
+
+def cmd_ui(args):
+    xml = dump_xml()
+    if not args.all:
+        root = ET.Element("hierarchy")
+
+        def copy_app(node, parent):
+            if node.tag == "node" and node.get("package") == PACKAGE:
+                parent = ET.SubElement(parent, "node", node.attrib)
+            for child in node:
+                copy_app(child, parent)
+
+        copy_app(ET.fromstring(xml), root)
+        xml = ET.tostring(root, encoding="unicode")
+    lines = describe(xml, app_only=not args.all)
+    if not args.all and not list(ET.fromstring(xml)):
+        lines = ["(app not on screen)"]
+    print("\n".join(lines))
+    if run_dir(required=False):
+        out = next_name(args.name or "ui", "xml")
+        out.write_text(xml)
+        out.with_suffix(".txt").write_text("\n".join(lines) + "\n")
+        log(f"ui {args.name or ''} -> {out.name}")
+        print(f"saved {out}")
+
+
+def find(xml, label, contains=False, app_only=False):
+    hits = []
+    for node, bounds in nodes(xml):
+        if app_only and node.get("package") != PACKAGE:
+            continue
+        for value in (node.get("text") or "", node.get("content-desc") or ""):
+            if value and (label in value if contains else value == label):
+                hits.append((node, bounds))
+                break
+    return hits
+
+
+def tap_once(args):
+    xml = dump_xml()
+    hits = find(xml, args.label, args.contains, app_only=not args.all)
+    if not hits:
+        shown = describe(xml, app_only=not args.all) or ["(app not on screen)"]
+        sys.exit(f"no element labelled {args.label!r}. On screen:\n" + "\n".join(shown))
+    if args.index is not None and not 0 <= args.index < len(hits):
+        sys.exit(f"--index must be between 0 and {len(hits) - 1}")
+    if len(hits) > 1 and args.index is None:
+        sys.exit(f"{len(hits)} elements labelled {args.label!r}; pass --index:\n" +
+                 "\n".join(f"  {i}: {b}" for i, (_, b) in enumerate(hits)))
+    node, (x1, y1, x2, y2) = hits[args.index or 0]
+    if node.get("enabled") == "false":
+        sys.exit(f"BLOCKED: {args.label!r} is disabled")
+    w, h = map(int, re.findall(r"(\d+)x(\d+)", sh("wm size"))[-1])
+    if not (0 <= x1 < x2 <= w and 0 <= y1 < y2 <= h):
+        sys.exit(f"BLOCKED: {args.label!r} has empty or out-of-screen bounds; scroll it into view")
+    for title, remedy in (
+        (DUMP_ONLY_WARNING, "Run `sk scroll down --px 700` (more with Details open) until `sk ui` "
+                            "no longer lists the card, then tap again."),
+        (LEARN_DUMP_ONLY_WARNING, "If a teach run is explicitly approved, ask the user to tap Start manually."),
+    ):
+        warning = find(xml, title, app_only=True)
+        if warning and y1 >= warning[0][1][1] and accessibility_on():
+            sys.exit(f"BLOCKED: {args.label!r} is below a transient accessibility warning, so the dump "
+                     f"coordinates may land on another row. {remedy}")
+    x, y = (x1 + x2) // 2, (y1 + y2) // 2
+    sh(f"input tap {x} {y}", check=True)
+    log(f"tap {args.label!r} at {x},{y}")
+    print(f"tapped {args.label!r} at {x},{y}")
+    time.sleep(args.settle)
+
+
+def seen(label, timeout):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if find(dump_xml(), label):
+            return True
+        time.sleep(0.5)
+    return False
+
+
+def cmd_tap(args):
+    tap_once(args)
+    if not args.expect:
+        return
+    # Taps right after a screen change are sometimes dropped; tap again once.
+    for attempt in range(2):
+        if seen(args.expect, 4):
+            log(f"saw {args.expect!r}")
+            print(f"found {args.expect!r}")
+            return
+        if attempt == 0:
+            print(f"{args.expect!r} not on screen yet; tapping again")
+            log(f"retry tap {args.label!r}")
+            tap_once(args)
+    sys.exit(f"{args.expect!r} did not appear after tapping {args.label!r} twice")
+
+
+def cmd_wait(args):
+    deadline = time.time() + args.timeout
+    while time.time() < deadline:
+        if find(dump_xml(), args.label, args.contains):
+            log(f"saw {args.label!r}")
+            print(f"found {args.label!r}")
+            return
+        time.sleep(0.5)
+    sys.exit(f"{args.label!r} did not appear within {args.timeout}s")
+
+
+def cmd_shot(args):
+    png = adb("exec-out", "screencap -p", binary=True)
+    if not png.startswith(b"\x89PNG"):
+        sys.exit("screencap did not return a PNG")
+    out = next_name(args.name, "png")
+    out.write_bytes(png)
+    log(f"shot {args.name} -> {out.name}")
+    print(f"saved {out}")
+
+
+def cmd_scroll(args):
+    w, h = map(int, re.findall(r"(\d+)x(\d+)", sh("wm size"))[-1])
+    top, bottom = int(h * 0.3), int(h * 0.75)
+    duration = 300
+    if args.px is not None:
+        if not 0 < args.px <= int(h * 0.85):
+            sys.exit(f"--px must be between 1 and {int(h * 0.85)}")
+        top, bottom, duration = int(h * 0.85) - args.px, int(h * 0.85), 1500
+    a, b = (bottom, top) if args.direction == "down" else (top, bottom)
+    sh(f"input swipe {w // 2} {a} {w // 2} {b} {duration}", check=True)
+    log(f"scroll {args.direction}{f' {args.px}px' if args.px else ''}")
+    time.sleep(0.6)
+
+
+def cmd_back(args):
+    sh("input keyevent KEYCODE_BACK", check=True)
+    log("back")
+    time.sleep(0.6)
+
+
+def cmd_launch(args):
+    focus = foreground()
+    if (not focus or focus.split("/")[0] not in IDLE_FOREGROUND) and not args.take_over:
+        sys.exit("BLOCKED: foreground is unknown or another app is in front, so the user may be using the phone. "
+                 "Ask them, then run `sk launch --take-over`.")
+    out = sh(f"am start -W -n {ACTIVITY}", check=True)
+    log("launch")
+    deadline = time.time() + args.timeout
+    while time.time() < deadline:
+        xml = dump_xml()
+        if any(n.get("package") == PACKAGE for n, _ in nodes(xml)) and \
+                any(find(xml, t) for t in SCREEN_TITLES):
+            print("ready: " + next(t for t in SCREEN_TITLES if find(xml, t)))
+            return
+        time.sleep(0.5)
+    sys.exit(f"app did not show a known screen within {args.timeout}s\n{out}")
+
+
+# ---- runs and cleanup ----
+
+def cmd_run(args):
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    folder = EVIDENCE_ROOT / f"{stamp}-{re.sub(r'[^A-Za-z0-9_.-]+', '-', args.label)}"
+    folder.mkdir(parents=True)
+    CURRENT.write_text(str(folder))
+    lines, blockers = doctor_report()
+    (folder / "00-doctor.txt").write_text("\n".join(lines + [f"BLOCKED: {b}" for b in blockers]) + "\n")
+    log(f"run {args.label} started")
+    print(f"evidence: {folder}")
+    print("\n".join(lines))
+    for b in blockers:
+        print(f"BLOCKED: {b}")
+    sys.exit(1 if blockers else 0)
+
+
+def cmd_logcat(args):
+    folder = run_dir()
+    pidfile = folder / ".logcat.pid"
+    if args.action == "start":
+        if pidfile.exists():
+            sys.exit("logcat already running for this run")
+        cmd = [adb_path()] + (["-s", os.environ["SK_SERIAL"]] if os.environ.get("SK_SERIAL") else [])
+        out = open(folder / "logcat.txt", "w")
+        proc = subprocess.Popen(cmd + ["logcat", "-v", "threadtime,uid", "-T", "1"],
+                                stdout=out, stderr=subprocess.STDOUT, start_new_session=True)
+        pidfile.write_text(str(proc.pid))
+        log(f"logcat started pid {proc.pid}")
+        print(f"logcat -> {folder / 'logcat.txt'} (pid {proc.pid})")
+    else:
+        stop_logcat(folder)
+
+
+def stop_logcat(folder):
+    pidfile = folder / ".logcat.pid"
+    if not pidfile.exists():
+        return
+    pid = int(pidfile.read_text())
+    try:
+        os.killpg(pid, signal.SIGTERM)
+        print(f"stopped logcat pid {pid}")
+    except ProcessLookupError:
+        pass
+    pidfile.unlink()
+    log(f"logcat stopped pid {pid}")
+
+
+def cmd_finish(args):
+    folder = run_dir()
+    stop_logcat(folder)
+    leftovers = sh("ls /sdcard/sk-ui.xml 2>/dev/null")
+    if leftovers:
+        sh("rm -f /sdcard/sk-ui.xml")
+    lines, _ = doctor_report()
+    (folder / "99-doctor-after.txt").write_text("\n".join(lines) + "\n")
+    log("run finished")
+    CURRENT.unlink(missing_ok=True)
+    print("\n".join(lines))
+    print(f"evidence kept in {folder}:")
+    for f in sorted(folder.iterdir()):
+        if not f.name.startswith("."):
+            print(f"  {f.name}")
+
+
+def main():
+    p = argparse.ArgumentParser(prog="sk", description=__doc__,
+                                formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = p.add_subparsers(dest="cmd", required=True)
+    s = sub.add_parser("doctor", help="read-only: is this phone worth driving now?")
+    s.add_argument("--expect-version", help="fail unless this versionName is installed")
+    s.set_defaults(fn=cmd_doctor)
+    s = sub.add_parser("run", help="start a run: new evidence folder plus a doctor snapshot")
+    s.add_argument("label")
+    s.set_defaults(fn=cmd_run)
+    s = sub.add_parser("launch", help="open the app and wait for a known screen")
+    s.add_argument("--timeout", type=float, default=15)
+    s.add_argument("--take-over", action="store_true", help="launch even with unknown focus or another app in front")
+    s.set_defaults(fn=cmd_launch)
+    s = sub.add_parser("ui", help="list labelled elements on screen and save the hierarchy")
+    s.add_argument("name", nargs="?")
+    s.add_argument("--all", action="store_true", help="include other packages (system dialogs)")
+    s.set_defaults(fn=cmd_ui)
+    s = sub.add_parser("tap", help="tap the element whose text or content description matches")
+    s.add_argument("label")
+    s.add_argument("--contains", action="store_true")
+    s.add_argument("--all", action="store_true", help="allow tapping other packages (system dialogs)")
+    s.add_argument("--index", type=int)
+    s.add_argument("--settle", type=float, default=0.8, help="seconds to wait after the tap")
+    s.add_argument("--expect", help="label that must appear after the tap; retries the tap once")
+    s.set_defaults(fn=cmd_tap)
+    s = sub.add_parser("wait", help="wait until an element with this label is on screen")
+    s.add_argument("label")
+    s.add_argument("--contains", action="store_true")
+    s.add_argument("--timeout", type=float, default=10)
+    s.set_defaults(fn=cmd_wait)
+    s = sub.add_parser("shot", help="save a screenshot")
+    s.add_argument("name")
+    s.set_defaults(fn=cmd_shot)
+    s = sub.add_parser("scroll")
+    s.add_argument("direction", choices=["down", "up"])
+    s.add_argument("--px", type=int, help="move the list by about this many pixels")
+    s.set_defaults(fn=cmd_scroll)
+    sub.add_parser("back").set_defaults(fn=cmd_back)
+    s = sub.add_parser("state", help="save ringer, DND, torch and vibration state")
+    s.add_argument("name")
+    s.set_defaults(fn=cmd_state)
+    s = sub.add_parser("logcat", help="capture the device log for this run")
+    s.add_argument("action", choices=["start", "stop"])
+    s.set_defaults(fn=cmd_logcat)
+    sub.add_parser("finish", help="stop what this run started and list the evidence").set_defaults(fn=cmd_finish)
+    args = p.parse_args()
+    args.fn(args)
+
+
+if __name__ == "__main__":
+    main()
