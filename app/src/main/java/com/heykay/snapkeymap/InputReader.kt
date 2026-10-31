@@ -22,10 +22,11 @@ internal fun copyInputKeyEvents(input: InputStream, output: OutputStream) {
 }
 
 /** Shell-only input stream. A failed reader leaves log detection running. */
-class InputReader(
+internal class InputReader(
     private val context: Context,
-    private val onEvent: (InputKeyEvent, Long) -> Unit,
+    private val onEvent: (InputKeyEvent, Long, TeachingDelivery.Stamp) -> Unit,
     private val onLive: (Boolean) -> Unit,
+    private val receipt: () -> TeachingDelivery.Stamp,
     private val dispatch: (() -> Unit) -> Unit,
 ) {
     @Volatile private var session: Session? = null
@@ -68,6 +69,7 @@ class InputReader(
                         val line = reader.readLine() ?: break
                         val event = parseInputKeyEvent(line) ?: continue
                         val time = SystemClock.elapsedRealtime()
+                        val stamp = receipt()
                         dispatch {
                             if (session === this && active) {
                                 // Opening a pipe alone does not prove getevent can read devices.
@@ -75,7 +77,7 @@ class InputReader(
                                     live = true
                                     onLive(true)
                                 }
-                                onEvent(event, time)
+                                onEvent(event, time, stamp)
                             }
                         }
                     }
