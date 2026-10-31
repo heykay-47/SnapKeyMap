@@ -21,6 +21,8 @@ Quality-of-life additions for everyday use. Behaviour on other firmware may diff
 - [x] **Quick Settings tile.** Add the **Snap Key** tile to turn the mapping on or off without opening the app. Long-press the tile to open the app.
 - [x] **Back up and restore.** Save gesture actions, ringer presets, paused apps, timing, theme and the learned key to a file you choose, and restore them later. A gesture mapped to an app that is no longer installed shows "App not installed".
 - [x] **Bug reports.** **Details** on the status card can copy a report with your versions, setup and last 20 detections, or open the bug form with its fields filled in. Reports name only the kind of each action, never contact numbers, links or app names.
+- [x] **Safer teaching.** After teaching, press a different key, such as volume. The app keeps the learned key only if that press doesn't match it, and saves it only when you tap Save. Cancelling or a failed check keeps your previous settings.
+- [x] **Clearer accessibility disclosure.** The service description, store listing and privacy page say that Android passes every hardware key press to the service and tells it which app is in front. The app acts only on the key you taught it.
 
 ## Delivered in v1.1.0
 
