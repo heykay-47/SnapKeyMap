@@ -24,6 +24,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
 
+enum class DetectionSource { KEY_EVENT, PRECISE_INPUT, SYSTEM_LOG }
+
+internal const val DETECTION_HISTORY_SIZE = 20
+
+internal fun appendDetection(history: List<SnapEngine.Detected>, d: SnapEngine.Detected): List<SnapEngine.Detected> =
+    (history + d).takeLast(DETECTION_HISTORY_SIZE)
+
 internal class LogRetryBackoff {
     private var healthySinceMs: Long? = null
     private var delayMs = 1000L
@@ -44,7 +51,7 @@ internal class LogRetryBackoff {
 
 /** Connects the two ways of noticing the Snap Key (key events and the system log) to the actions. */
 object SnapEngine {
-    data class Detected(val gesture: Gesture, val atMs: Long)
+    data class Detected(val gesture: Gesture, val atMs: Long, val source: DetectionSource)
 
     lateinit var store: ConfigStore
         private set
@@ -65,6 +72,7 @@ object SnapEngine {
         onDown = { markKeySeen(); logGestures.down() },
         onUp = { markKeySeen(); logGestures.up() },
     )
+    private val teachingLogEdges = TeachingLogEdges()
 
     private val accessState = MutableStateFlow(LogAccess.OFF)
     val logAccess: StateFlow<LogAccess> = accessState.asStateFlow()
@@ -73,6 +81,8 @@ object SnapEngine {
 
     private val lastDetected = MutableStateFlow<Detected?>(null)
     val lastGesture: StateFlow<Detected?> = lastDetected.asStateFlow()
+    private val historyState = MutableStateFlow<List<Detected>>(emptyList())
+    val detections: StateFlow<List<Detected>> = historyState.asStateFlow()
 
     private val lastKeySeenState = MutableStateFlow<Long?>(null)
     val lastKeySeenAt: StateFlow<Long?> = lastKeySeenState.asStateFlow()
@@ -84,10 +94,16 @@ object SnapEngine {
     private val resumeCount = MutableStateFlow(0)
     val uiResumes: StateFlow<Int> = resumeCount.asStateFlow()
 
-    @Volatile private var learning: MutableList<Observation>? = null
+    private var teachingSession: TeachingSession? = null
+    private val teachingState = MutableStateFlow<TeachingState?>(null)
+    internal val teaching: StateFlow<TeachingState?> = teachingState.asStateFlow()
+    private val delivery = TeachingDelivery()
+    private val inputDelivery = InputKeyDelivery(delivery)
+    private var nextTeachingId = 0L
+    private var teachingLogDemand = false
     private var inputLearningBoundary = Long.MIN_VALUE
     private var inputPressed = false
-    private var ignoreInputUntilUp = false
+    private var logResumeAfterMs = Long.MIN_VALUE
     private var mainUiVisible = false
     private var foregroundApp: String? = null
     private var consentVisible = false
@@ -109,15 +125,14 @@ object SnapEngine {
         main.post { connectShizukuIfNeeded() }
     }
     @Volatile private var logGeneration = 0
-    private val loggedKeysByThread = mutableMapOf<String, String>()
-    private var loggedKeysGeneration = -1
+    private val loggedKeys = LoggedKeyContext()
     private val logRetry = LogRetryBackoff()
     private var inputRetryDelayMs = 1000L
     private val reconnectInput = Runnable {
-        if (wantsLog && store.config.value.enabled && canUseShizuku()) inputReader.start()
+        if (wantsLog && readersDemanded() && canUseShizuku()) inputReader.start()
     }
     private val reconnect = Runnable {
-        if (wantsLog && store.config.value.enabled && hasLogPermission()) {
+        if (wantsLog && readersDemanded() && hasLogPermission()) {
             if (uiVisible || !reader.needsForegroundConsent()) reader.start()
             else startBackgroundLogs()
         }
@@ -136,14 +151,22 @@ object SnapEngine {
             context = app,
             onLine = ::onLogLine,
             onAccess = ::onAccessChanged,
-            onSource = { sourceState.value = it },
+            onSource = {
+                if (sourceState.value != it) invalidateTeachingSource(logs = true)
+                sourceState.value = it
+            },
             dispatchAccess = { task -> main.post { task() }; Unit },
-            shouldParse = { !preciseState.value || learning != null },
+            shouldParse = { !preciseState.value || delivery.stamp.handle != null },
+            onStart = {
+                logGeneration++
+                teachingLogEdges.reset()
+                invalidateTeachingSource(logs = true)
+            },
         )
-        keyGestures = gestureDetector()
-        logGestures = gestureDetector()
-        inputGestures = gestureDetector()
-        inputReader = InputReader(app, ::onInputEvent, ::onInputLiveChanged) { task ->
+        keyGestures = gestureDetector(DetectionSource.KEY_EVENT)
+        logGestures = gestureDetector(DetectionSource.SYSTEM_LOG)
+        inputGestures = gestureDetector(DetectionSource.PRECISE_INPUT)
+        inputReader = InputReader(app, ::onInputEvent, ::onInputLiveChanged, { delivery.stamp }) { task ->
             main.post { task() }; Unit
         }
         Notifications.createChannel(app)
@@ -153,7 +176,7 @@ object SnapEngine {
         scope.launch {
             store.config.map { Triple(it.enabled, it.needsLogAccess, it.isTaught) }
                 .distinctUntilChanged().collect { (enabled, needsLog, _) ->
-                    if (!enabled || !needsLog) {
+                    if ((!enabled || !needsLog) && !teachingLogDemand) {
                         consentAttempted = false
                         stop()
                     } else if (uiVisible && accessState.value == LogAccess.OFF) connect()
@@ -165,12 +188,12 @@ object SnapEngine {
 
     fun now(): Long = SystemClock.elapsedRealtime()
 
-    private fun gestureDetector() = GestureDetector(
+    private fun gestureDetector(source: DetectionSource) = GestureDetector(
         schedule = { task, delay -> main.postDelayed(task, delay); Unit },
         cancel = { task -> main.removeCallbacks(task) },
         holdMs = { store.config.value.holdMs },
         doublePressWindowMs = { store.config.value.doublePressWindowMs },
-        onGesture = ::onGesture,
+        onGesture = { onGesture(it, source) },
     )
 
     fun hasLogPermission(): Boolean =
@@ -178,7 +201,7 @@ object SnapEngine {
 
     /** Local readers need our screen on top; shell readers do not need foreground consent. */
     fun connect(preferShizuku: Boolean = false) {
-        if (!store.config.value.enabled || !hasLogPermission()) return
+        if (!readersDemanded() || !hasLogPermission()) return
         wantLogs()
         main.removeCallbacks(reconnect)
         reader.start(preferShizuku)
@@ -195,7 +218,19 @@ object SnapEngine {
         }
     }
 
+    internal fun prepareTeachingLogs() {
+        teachingLogDemand = true
+        connect()
+    }
+
+    internal fun releaseTeachingLogs() {
+        if (teachingSession != null) return
+        teachingLogDemand = false
+        if (!readersDemanded()) stop()
+    }
+
     fun stop() {
+        invalidateTeachingSource(logs = true, input = true)
         wantsLog = false
         if (watchingShizuku) {
             watchingShizuku = false
@@ -215,6 +250,8 @@ object SnapEngine {
     private fun connectShizukuIfNeeded() {
         if (wantsLog && canUseShizuku()) inputReader.start()
         if (wantsLog && (accessState.value != LogAccess.FULL || sourceState.value == LogSource.LOCAL) && canUseShizuku()) {
+            invalidateTeachingSource(logs = true)
+            logGeneration++
             reader.stop()
             connect(preferShizuku = true)
         }
@@ -267,12 +304,15 @@ object SnapEngine {
     }
 
     fun onServiceConnected() {
+        invalidateTeachingSource(logs = false, accessibility = true)
+        refreshTeachingAccess()
         updateListeningSince()
         startBackgroundLogs()
         if (!uiVisible) notifyIfPaused()
     }
 
     fun onServiceDisconnected() {
+        refreshTeachingAccess()
         foregroundApp = null
         keyGestures.reset()
         updateListeningSince()
@@ -294,11 +334,13 @@ object SnapEngine {
     }
 
     private fun onInputLiveChanged(live: Boolean) {
+        if (!live) inputDelivery.readerLost()
         inputLiveState.value = live
+        refreshTeachingAccess()
         updateInputSource()
         main.removeCallbacks(reconnectInput)
         if (live) inputRetryDelayMs = 1000L
-        else if (wantsLog && store.config.value.enabled && canUseShizuku()) {
+        else if (wantsLog && readersDemanded() && canUseShizuku()) {
             main.postDelayed(reconnectInput, inputRetryDelayMs)
             inputRetryDelayMs = (inputRetryDelayMs * 2).coerceAtMost(60_000L)
         }
@@ -308,31 +350,35 @@ object SnapEngine {
         val config = store.config.value
         val precise = config.enabled && config.needsLogAccess && config.inputKey != null && inputLiveState.value
         if (precise != preciseState.value) {
+            invalidateTeachingSource(logs = true)
+            teachingLogEdges.reset()
             val alreadyHandled = precise && logGestures.hasHandledPress
             val releasedAfterSwitch = !precise && inputPressed
             logGeneration++
             resetGestures()
             oplusEdges.reset(pressed = releasedAfterSwitch)
             inputPressed = releasedAfterSwitch
-            ignoreInputUntilUp = alreadyHandled
+            inputDelivery.suppressUntilUp(config.inputKey.takeIf { alreadyHandled })
             preciseState.value = precise
         }
         updateListeningSince()
     }
 
-    private fun onInputEvent(event: InputKeyEvent, time: Long) {
+    private fun onInputEvent(event: InputKeyEvent, time: Long, stamp: TeachingDelivery.Stamp) {
+        if (preciseState.value && event.key == store.config.value.inputKey) inputPressed = event.down
+        inputDelivery.deliver(event, stamp) { ignored -> onCurrentInputEvent(event, time, ignored) }
+    }
+
+    private fun onCurrentInputEvent(event: InputKeyEvent, time: Long, ignored: Boolean) {
         if (time <= inputLearningBoundary) return
-        learning?.let { list ->
-            if (event.down) synchronized(list) { list += Observation(time, KeyLearning.inputKey(event.key.code)) }
+        teachingSession?.let { session ->
+            session.observe(KeySample.Input(event), time)
+            publishTeaching()
             return
         }
         val config = store.config.value
-        if (!preciseState.value || event.key != config.inputKey) return
-        inputPressed = event.down
-        if (ignoreInputUntilUp) {
-            if (!event.down) ignoreInputUntilUp = false
-            return
-        }
+        if (!preciseState.value || !KeyMatching.matches(config.keyBinding(), KeySample.Input(event))) return
+        if (ignored) return
         inputGestures.wantsDouble = config.action(Gesture.DOUBLE) != SnapAction.NoAction
         inputGestures.wantsLong = config.action(Gesture.LONG) != SnapAction.NoAction
         inputGestures.wantsTapHold = config.action(Gesture.TAP_HOLD) != SnapAction.NoAction
@@ -341,8 +387,14 @@ object SnapEngine {
     }
 
     private fun onAccessChanged(access: LogAccess) {
+        if (accessState.value == LogAccess.FULL && access != LogAccess.FULL) {
+            logGeneration++
+            invalidateTeachingSource(logs = true)
+        }
+        if (access == LogAccess.WAITING) invalidateTeachingSource(logs = true)
         logRetry.onAccess(access, now())
         accessState.value = access
+        refreshTeachingAccess()
         updateListeningSince()
         if (access == LogAccess.FULL) {
             consentAttempted = false
@@ -356,7 +408,7 @@ object SnapEngine {
             if (!uiVisible) notifyIfPaused()
         }
         main.removeCallbacks(reconnect)
-        if (access == LogAccess.OFF && wantsLog && store.config.value.enabled && hasLogPermission()) {
+        if (access == LogAccess.OFF && wantsLog && readersDemanded() && hasLogPermission()) {
             main.postDelayed(reconnect, logRetry.nextDelayMs())
         }
     }
@@ -370,39 +422,28 @@ object SnapEngine {
 
     // Called on the logcat thread for every line from another process.
     private fun onLogLine(timestamp: String, uid: String, tid: String, tag: String, message: String) {
-        if (preciseState.value && learning == null) return
+        val stamp = delivery.stamp
+        val time = now()
+        if (preciseState.value && stamp.handle == null) return
         val generation = logGeneration
-        if (loggedKeysGeneration != generation) {
-            loggedKeysByThread.clear()
-            loggedKeysGeneration = generation
-        }
-        val keyCode = loggedKeyCode(uid, tag, message)
-        if (keyCode != null) loggedKeysByThread[tid] = keyCode
-        val lineKey = loggedKeysByThread[tid]
+        val sample = loggedKeys.sample(generation, stamp.epoch, uid, tid, tag, message)
         val explicitEdges = isKnownOplusKeyLine(uid, tag, message)
-        learning?.let { list ->
-            synchronized(list) {
-                if (learning === list) {
-                    val time = now()
-                    list += Observation(time, KeyLearning.logKey(uid, tag, message))
-                    if (keyCode != null) list += Observation(time, KeyLearning.loggedKey(keyCode))
+        if (stamp.handle == null && !KeyMatching.matches(store.config.value.keyBinding(), sample)) return
+        main.post {
+            if (generation != logGeneration) return@post
+            teachingLogEdges.deliver(delivery, stamp, timestamp, sample, store.config.value.keyBinding(), oplusEdges) {
+                val session = teachingSession
+                if (stamp.handle != null) {
+                    if (session == null) return@deliver
+                    session.observe(sample, time)
+                    publishTeaching()
+                    return@deliver
                 }
-            }
-            if (explicitEdges) main.post {
-                if (generation == logGeneration) oplusEdges.observe(timestamp)
-            }
-            return
-        }
-        val config = store.config.value
-        if (preciseState.value) return
-        if (explicitEdges && !acceptsLoggedKey(config.logKeyCode, lineKey)) return
-        val isSnapKey = config.enabled && config.needsLogAccess && acceptsKeyLog(config.logSignature, uid, tag, message)
-        if (explicitEdges || isSnapKey) main.post {
-            if (generation != logGeneration || !store.config.value.enabled || preciseState.value) return@post
-            if (learning != null) {
-                if (explicitEdges) oplusEdges.observe(timestamp)
-            } else if (isSnapKey) {
-                onLogKeyLine(timestamp, explicitEdges)
+                val config = store.config.value
+                if (!config.enabled || preciseState.value || !config.needsLogAccess) return@deliver
+                if (KeyMatching.matches(config.keyBinding(), sample)) {
+                    onLogKeyLine(timestamp, explicitEdges)
+                }
             }
         }
     }
@@ -418,6 +459,10 @@ object SnapEngine {
             oplusEdges.accept(timestamp)
             return
         }
+        if (now() < logResumeAfterMs) {
+            logResumeAfterMs = now() + config.releaseGapMs
+            return
+        }
         if (!logKeyDown) {
             logKeyDown = true
             markKeySeen()
@@ -429,16 +474,15 @@ object SnapEngine {
 
     /** Called by the accessibility service. Returns true to stop the key from reaching other apps. */
     fun onKeyEvent(event: KeyEvent): Boolean {
-        learning?.let { list ->
-            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 && event.keyCode !in IGNORED_KEYS) {
-                synchronized(list) { list += Observation(now(), KeyLearning.keyEventKey(event.keyCode, event.scanCode)) }
-            }
+        if (event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) return false
+        val sample = KeySample.Accessibility(event.keyCode, event.scanCode, event.action == KeyEvent.ACTION_DOWN, event.repeatCount)
+        teachingSession?.let { session ->
+            session.observe(sample, now())
+            publishTeaching()
             return false
         }
         val config = store.config.value
-        val key = config.keyEvent ?: return false
-        if (!config.enabled || event.keyCode != key.keyCode) return false
-        if (key.keyCode == KeyEvent.KEYCODE_UNKNOWN && event.scanCode != key.scanCode) return false
+        if (!config.enabled || !KeyMatching.matches(config.keyBinding(), sample)) return false
         keyGestures.wantsDouble = config.action(Gesture.DOUBLE) != SnapAction.NoAction
         keyGestures.wantsLong = config.action(Gesture.LONG) != SnapAction.NoAction
         keyGestures.wantsTapHold = config.action(Gesture.TAP_HOLD) != SnapAction.NoAction
@@ -459,9 +503,12 @@ object SnapEngine {
         foregroundApp = packageName
     }
 
-    private fun onGesture(gesture: Gesture) {
+    private fun onGesture(gesture: Gesture, source: DetectionSource) {
+        if (teachingSession != null) return
         markKeySeen()
-        lastDetected.value = Detected(gesture, now())
+        val detected = Detected(gesture, now(), source)
+        historyState.value = appendDetection(historyState.value, detected)
+        lastDetected.value = detected
         val config = store.config.value
         if (foregroundApp in config.pausedApps) return
         if (gesture in config.unlockedOnly && app.getSystemService(KeyguardManager::class.java).isKeyguardLocked) return
@@ -476,70 +523,115 @@ object SnapEngine {
         vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
     }
 
-    fun startLearning() {
+    internal fun beginTeaching(): TeachingHandle {
+        if (teachingSession != null) {
+            teachingLogEdges.restore(store.config.value.logKeyCode, oplusEdges)
+            teachingSession?.cancel()
+        }
+        val handle = TeachingHandle(++nextTeachingId)
         inputLearningBoundary = now()
         resetGestures()
-        learning = mutableListOf()
+        teachingLogEdges.begin(store.config.value.logKeyCode, oplusEdges)
+        oplusEdges.reset()
+        teachingSession = TeachingSession(teachingAccess())
+        delivery.advance(handle)
+        teachingLogDemand = true
+        publishTeaching()
+        connect()
+        return handle
     }
 
     /** Called after the hands-off step: the key is released and lines from earlier presses have been handled. */
-    fun markKeyReleased() {
+    internal fun markKeyReleased(handle: TeachingHandle) {
+        if (delivery.stamp.handle != handle || teachingSession?.state != TeachingState.Capturing) return
+        delivery.discardPending()
         oplusEdges.reset()
+        teachingLogEdges.reset()
     }
 
     private fun resetGestures() {
         main.removeCallbacks(logKeyUp)
         logKeyDown = false
         inputPressed = false
-        ignoreInputUntilUp = false
+        inputDelivery.suppressUntilUp(null)
         keyGestures.reset()
         logGestures.reset()
         inputGestures.reset()
     }
 
-    fun cancelLearning() {
-        if (learning == null) return
-        inputLearningBoundary = now()
-        resetGestures()
-        learning = null
+    internal fun cancelTeaching(handle: TeachingHandle) {
+        if (delivery.stamp.handle != handle) return
+        teachingSession?.cancel()
+        endTeaching()
     }
 
-    fun finishLearning(baseline: LongRange, taps: List<LongRange>, hold: LongRange): LearnResult {
-        val list = learning ?: return LearnResult.NothingFound
+    internal fun captureTeaching(handle: TeachingHandle, baseline: LongRange, taps: List<LongRange>, hold: LongRange) {
+        if (delivery.stamp.handle != handle || teachingSession?.state != TeachingState.Capturing) return
+        teachingSession?.capture(baseline, taps, hold)
+        delivery.advance(handle)
+        publishTeaching()
+    }
+
+    internal fun checkDifferentKey(handle: TeachingHandle) {
+        if (delivery.stamp.handle != handle || teachingSession?.state !is TeachingState.Candidate) return
+        refreshTeachingAccess()
+        delivery.advance(handle)
+        teachingSession?.beginCheck(now())
+        publishTeaching()
+    }
+
+    internal fun finishDifferentKeyCheck(handle: TeachingHandle) {
+        if (delivery.stamp.handle != handle) return
+        refreshTeachingAccess()
+        teachingSession?.finishCheck(now())
+        publishTeaching()
+    }
+
+    internal fun saveTeaching(handle: TeachingHandle): Boolean {
+        if (delivery.stamp.handle != handle) return false
+        refreshTeachingAccess()
+        val saved = teachingSession?.save { patch -> store.updateConfirmed(patch::applyTo) } == true
+        publishTeaching()
+        if (!saved) return false
+        endTeaching()
+        return true
+    }
+
+    private fun endTeaching() {
         inputLearningBoundary = now()
         resetGestures()
-        val observations = synchronized(list) {
-            learning = null
-            list.toList()
-        }
-        val result = KeyLearning.analyze(observations, baseline, taps, hold)
-        when (result) {
-            is LearnResult.KeyEventFound -> store.update {
-                it.copy(keyEvent = result.key, logSignature = null, inputKey = result.inputKey, logKeyCode = null)
-            }
-            is LearnResult.LogLineFound -> store.update {
-                it.copy(
-                    keyEvent = null,
-                    logSignature = result.signature,
-                    inputKey = result.inputKey,
-                    logKeyCode = result.logKeyCode,
-                    holdRepeats = result.holdRepeats,
-                    releaseGapMs = result.releaseGapMs,
-                )
-            }
-            LearnResult.NothingFound -> Unit
-        }
+        teachingSession = null
+        delivery.advance(null)
+        teachingState.value = null
+        teachingLogDemand = false
+        val config = store.config.value
+        if (!config.enabled || !config.needsLogAccess) stop()
+        else if (hasLogPermission() && accessState.value == LogAccess.OFF) connect()
         updateInputSource()
-        return result
+        teachingLogEdges.restore(store.config.value.logKeyCode, oplusEdges)
+        teachingLogEdges.reset()
+        inputPressed = inputDelivery.suppressHeld(store.config.value.inputKey)
+        logResumeAfterMs = now() + store.config.value.releaseGapMs
     }
 
-    private val IGNORED_KEYS = setOf(
-        KeyEvent.KEYCODE_VOLUME_UP,
-        KeyEvent.KEYCODE_VOLUME_DOWN,
-        KeyEvent.KEYCODE_VOLUME_MUTE,
-        KeyEvent.KEYCODE_POWER,
-        KeyEvent.KEYCODE_BACK,
-        KeyEvent.KEYCODE_HOME,
-        KeyEvent.KEYCODE_APP_SWITCH,
+    private fun readersDemanded(): Boolean = teachingLogDemand ||
+        (store.config.value.enabled && store.config.value.needsLogAccess)
+
+    private fun teachingAccess() = TeachingAccess(
+        SnapAccessibilityService.running.value, accessState.value, inputLiveState.value,
     )
+
+    private fun refreshTeachingAccess() {
+        teachingSession?.accessChanged(teachingAccess())
+        publishTeaching()
+    }
+
+    private fun invalidateTeachingSource(logs: Boolean, input: Boolean = false, accessibility: Boolean = false) {
+        teachingSession?.sourceRestarted(logs, input, accessibility)
+        publishTeaching()
+    }
+
+    private fun publishTeaching() {
+        teachingState.value = teachingSession?.state
+    }
 }

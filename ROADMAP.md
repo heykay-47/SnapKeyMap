@@ -13,6 +13,17 @@ The F-Droid submission will request the same developer-signed APK as GitHub Rele
 - [x] **Release v1.0.15 with release notes.** The first release built for F-Droid. Each release since then passes the reproducibility check.
 - [ ] **Submit to F-Droid.** Open a merge request in [fdroiddata](https://gitlab.com/fdroid/fdroiddata) with the build recipe. Review can take days or weeks.
 
+## Delivered in v1.2.0
+
+Quality-of-life additions for everyday use. Behaviour on other firmware may differ.
+
+- [x] **Try a gesture.** Tap ▶ next to an assigned gesture on Home to run its action at once. Try always shows its confirmation, even with Show confirmations off.
+- [x] **Quick Settings tile.** Add the **Snap Key** tile to turn the mapping on or off without opening the app. Long-press the tile to open the app.
+- [x] **Back up and restore.** Save gesture actions, ringer presets, paused apps, timing, theme and the learned key to a file you choose, and restore them later. A gesture mapped to an app that is no longer installed shows "App not installed".
+- [x] **Bug reports.** **Details** on the status card can copy a report with your versions, setup and last 20 detections, or open the bug form with its fields filled in. Reports name only the kind of each action, never contact numbers, links or app names.
+- [x] **Safer teaching.** After teaching, press a different key, such as volume. The app keeps the learned key only if that press doesn't match it, and saves it only when you tap Save. Cancelling or a failed check keeps your previous settings.
+- [x] **Clearer accessibility disclosure.** The service description, store listing and privacy page say that Android passes every hardware key press to the service and tells it which app is in front. The app acts only on the key you taught it.
+
 ## Delivered in v1.1.0
 
 This release replaces v1.0.18 and includes its changes. It combines a review against Android's Compose, lifecycle and accessibility guidance with feedback from the [launch post](https://www.reddit.com/r/Oppo/comments/1xaze1m/i_built_an_app_to_remap_the_oppo_find_x9s_snap_key/). It was tested manually on a Find X9 running ColorOS 17. Behaviour on other firmware may differ.

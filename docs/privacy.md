@@ -6,7 +6,9 @@ With Shizuku allowed, the app runs `logcat` and also reads raw key input events 
 
 Circle to Search uses Shizuku when available, then tries the system service directly if necessary. It opens Google's search interface over the current screen. Google handles that search under its own privacy policy. SnapKey Map does not capture or store the screen for this action. Other mapped actions do not use Shizuku. Apps and websites you open through an action have their own privacy policies.
 
-The accessibility service checks window-event package and class names to identify app activities, ignoring non-activity windows such as keyboards and status indicators. It keeps only the latest activity's package name in memory and uses it only to pause in the apps you choose. It cannot read screen content. Your chosen paused-app package names are saved in settings.
+The accessibility service can receive hardware key events from other apps when Android delivers them. The app acts only on the key you taught it and passes other keys on unchanged. While you teach the key, it keeps key codes, scan codes, and arrival times from eligible key-down events in memory. On success, it saves only the learned key identity, not those observations. The service also checks window-event package and class names to identify app activities, ignoring non-activity windows such as keyboards and status indicators. It keeps a cache of up to 64 package-and-class resolution results and the latest resolved activity package name in memory. Both are cleared when the service disconnects. It uses the latest package name only to pause in the apps you choose. It cannot read screen content. Your chosen paused-app package names are saved in settings.
+
+**Copy report** and **Report a bug**, under **Details** on the status card, build a report on the phone. It lists the app, phone, ColorOS and Android versions, the setup method, the learned key, timing, the kind of each gesture's action, and the last 20 detections, which are kept only in memory. It never includes contact numbers, links, app names or log lines. The app does not send it anywhere. Copy report puts it on the clipboard, and Report a bug opens the GitHub form in your browser so you can review it before you submit.
 
 Keep these limits in mind:
 
@@ -16,5 +18,5 @@ Keep these limits in mind:
 - The shortcut picker lists apps that provide `ACTION_CREATE_SHORTCUT`. It cannot list every pinned shortcut. A deep link may work instead.
 - Calls are not placed directly, because the app has no calling permission. Call a contact opens the dialer, and direct-dial shortcuts show a message instead.
 - With Shizuku running and allowed on Android 15 or later, ringer presets use true Silent without turning on Do Not Disturb. On older Android versions, without Shizuku, or if the shell command fails, Silent uses the public Android API, needs Do Not Disturb access, and may turn on Do Not Disturb. Without that access, the fallback skips Silent and shows a reminder. The Do Not Disturb toggle always needs notification policy access; the app asks when you assign it, or when assigning Silent without Shizuku.
-- Mappings and the learned key are not included in Android backups.
+- Backups are written only to a file you choose and can contain contact numbers, links and app names; Android cloud backup stays off.
 - The app cannot bypass the lock screen or control every function in every app.

@@ -253,7 +253,7 @@ fun SetupScreen(
                     }
                     SetupPage.TEACH -> {
                         Text("First set Settings › Snap Key › Oppo's own action to None, so both actions don't run. " +
-                            "Then teach SnapKey Map: press three times and hold once when asked. It takes about 20 seconds.")
+                            "Then teach SnapKey Map: press three times, hold once, and check a different key before saving. It takes about 30 seconds.")
                         OutlinedButton(onClick = { context.openPhoneSettings() }) { Text("Open phone settings") }
                         Button(onClick = onLearn) { Text(if (config.isTaught) "Teach again" else "Teach the Snap Key") }
                     }

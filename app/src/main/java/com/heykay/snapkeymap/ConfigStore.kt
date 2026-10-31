@@ -2,6 +2,7 @@ package com.heykay.snapkeymap
 
 import android.Manifest
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -74,22 +75,59 @@ internal fun Config.editRingerPreset(oldModes: List<RingerMode>, newModes: List<
     )
 }
 
-class ConfigStore(private val context: Context) {
-    private val prefs = context.getSharedPreferences("snapkey", Context.MODE_PRIVATE)
+class ConfigStore internal constructor(
+    private val prefs: SharedPreferences,
+    private val hasLogPermission: () -> Boolean,
+) {
+    constructor(context: Context) : this(
+        context.getSharedPreferences("snapkey", Context.MODE_PRIVATE),
+        { context.checkSelfPermission(Manifest.permission.READ_LOGS) == PackageManager.PERMISSION_GRANTED },
+    )
+
     private val state = MutableStateFlow(load())
     val config: StateFlow<Config> = state.asStateFlow()
 
     @Synchronized
     fun update(change: (Config) -> Config) {
         state.update { current ->
-            val changed = change(current)
-            changed.copy(
-                doublePressWindowMs = changed.doublePressWindowMs.coerceIn(200L, 600L),
-                holdMs = changed.holdMs.coerceIn(300L, 1200L),
-            )
+            bounded(change(current))
         }
         save(state.value)
     }
+
+    @Synchronized
+    internal fun updateConfirmed(change: (Config) -> Config): Boolean {
+        val changed = bounded(change(state.value))
+        val previous = prefs.all.mapValues { (_, value) -> if (value is Set<*>) value.toSet() else value }
+        val saved = runCatching { edit(changed).commit() }.getOrDefault(false)
+        if (!saved) {
+            // commit can change SharedPreferences memory even when its disk write fails.
+            runCatching {
+                prefs.edit().apply {
+                    clear()
+                    previous.forEach { (key, value) ->
+                        when (value) {
+                            is Boolean -> putBoolean(key, value)
+                            is Int -> putInt(key, value)
+                            is Long -> putLong(key, value)
+                            is Float -> putFloat(key, value)
+                            is String -> putString(key, value)
+                            is Set<*> -> putStringSet(key, value.filterIsInstance<String>().toSet())
+                            else -> Unit
+                        }
+                    }
+                }.commit()
+            }
+            return false
+        }
+        state.value = changed
+        return true
+    }
+
+    private fun bounded(config: Config) = config.copy(
+        doublePressWindowMs = config.doublePressWindowMs.coerceIn(200L, 600L),
+        holdMs = config.holdMs.coerceIn(300L, 1200L),
+    )
 
     private fun load(): Config {
         val defaults = Config()
@@ -135,8 +173,7 @@ class ConfigStore(private val context: Context) {
         )
         if (!prefs.contains("setup_complete")) {
             val migrated = config.copy(
-                setupComplete = config.isTaught &&
-                    context.checkSelfPermission(Manifest.permission.READ_LOGS) == PackageManager.PERMISSION_GRANTED,
+                setupComplete = config.isTaught && hasLogPermission(),
             )
             save(migrated)
             return migrated
@@ -145,6 +182,10 @@ class ConfigStore(private val context: Context) {
     }
 
     private fun save(config: Config) {
+        edit(config).apply()
+    }
+
+    private fun edit(config: Config): SharedPreferences.Editor =
         prefs.edit().apply {
             putBoolean("enabled", config.enabled)
             putBoolean("show_confirmations", config.showConfirmations)
@@ -175,6 +216,5 @@ class ConfigStore(private val context: Context) {
             putLong("release_gap", config.releaseGapMs)
             putLong("double_press_window", config.doublePressWindowMs)
             putLong("hold_ms", config.holdMs)
-        }.apply()
-    }
+        }
 }

@@ -1,6 +1,8 @@
 package com.heykay.snapkeymap
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -286,5 +288,308 @@ class OplusKeyEdgesTest {
             releaseGapMs = DEFAULT_RELEASE_GAP_MS,
         )
         assertTrue(result.canDetectHold)
+    }
+
+    @Test
+    fun teachingRestoresHeldSnapReleaseWithoutAnActionAndKeepsTimestampDedupe() {
+        val tracking = TeachingLogEdges()
+        val snap = KeySample.Log("1000", "KEYLOG_OplusKeyEventUtil",
+            "should not notify undefined keys in restrict listen mode", "KEYCODE_ACTION_BUTTON_CLICK")
+        tracking.observe(stamp(0), snap)
+        tracking.observe(stamp(1), snap)
+        val h = Harness(enableHold = false)
+        tracking.restore("KEYCODE_ACTION_BUTTON_CLICK", h.edges)
+        h.duplicatedLine(1)
+        h.duplicatedLine(100)
+        h.clock.advanceTo(1000)
+        assertTrue(h.gestures.isEmpty())
+        h.duplicatedLine(2000)
+        h.duplicatedLine(2100)
+        h.clock.advanceTo(3000)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
+    fun heldVolumeKeyDuringTeachingDoesNotChangeFilteredSnapPhaseOnExit() {
+        val tracking = TeachingLogEdges()
+        val snap = KeySample.Log("system", "KEYLOG_OplusKeyEventUtil",
+            "should not notify undefined keys in restrict listen mode", "KEYCODE_ACTION_BUTTON_CLICK")
+        tracking.observe(stamp(0), snap)
+        tracking.observe(stamp(100), snap)
+        tracking.observe(stamp(200), snap.copy(threadKey = "KEYCODE_VOLUME_DOWN"))
+        val h = Harness(enableHold = false)
+        tracking.restore("KEYCODE_ACTION_BUTTON_CLICK", h.edges)
+        h.duplicatedLine(1000)
+        h.duplicatedLine(1100)
+        h.clock.advanceTo(2000)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
+    fun missingContextRetainsRuntimeAcceptanceAndResetDiscardsOldTeachingEdges() {
+        val tracking = TeachingLogEdges()
+        tracking.begin("KEYCODE_ACTION_BUTTON_CLICK", OplusKeyEdges({}, {}))
+        val sample = KeySample.Log("1000", "KEYLOG_OplusKeyEventUtil",
+            "should not notify undefined keys in restrict listen mode", null)
+        tracking.observe(stamp(0), sample)
+        val h = Harness(enableHold = false)
+        tracking.restore("KEYCODE_ACTION_BUTTON_CLICK", h.edges)
+        h.duplicatedLine(100)
+        h.clock.advanceTo(1000)
+        assertTrue(h.gestures.isEmpty())
+        tracking.reset()
+        tracking.restore("KEYCODE_ACTION_BUTTON_CLICK", h.edges)
+        h.duplicatedLine(2000)
+        h.duplicatedLine(2100)
+        h.clock.advanceTo(3000)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
+    fun cancellingDuringHandsOffWithTheOldKeyHeldDoesNotInvertItsNextPress() {
+        val h = Harness(enableHold = false)
+        h.duplicatedLine(0)
+        h.detector.reset()
+        val tracking = TeachingLogEdges()
+        tracking.begin("KEYCODE_ACTION_BUTTON_CLICK", h.edges)
+        h.edges.reset()
+        val sample = KeySample.Log("1000", "KEYLOG_OplusKeyEventUtil",
+            "should not notify undefined keys in restrict listen mode", "KEYCODE_ACTION_BUTTON_CLICK")
+        tracking.observe(stamp(100), sample)
+        tracking.restore("KEYCODE_ACTION_BUTTON_CLICK", h.edges)
+        h.duplicatedLine(1000)
+        h.duplicatedLine(1100)
+        h.clock.advanceTo(2000)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
+    fun resetKeepsConfiguredSnapRegistrationBeforeMissingContextDownAndIdentifiedUp() {
+        val h = Harness(enableHold = false)
+        val tracking = TeachingLogEdges()
+        val code = "KEYCODE_ACTION_BUTTON_CLICK"
+        tracking.begin(code, h.edges)
+        tracking.reset()
+        val sample = KeySample.Log("1000", "KEYLOG_OplusKeyEventUtil",
+            "should not notify undefined keys in restrict listen mode", null)
+        tracking.observe(stamp(0), sample)
+        tracking.observe(stamp(100), sample.copy(threadKey = code))
+        tracking.restore(code, h.edges)
+        h.duplicatedLine(1000)
+        h.duplicatedLine(1100)
+        h.clock.advanceTo(2000)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
+    fun heldVolumeWithoutAnySnapSampleCannotSeedConfiguredSnapPhaseOnCancel() {
+        val h = Harness(enableHold = false)
+        val tracking = TeachingLogEdges()
+        val code = "KEYCODE_ACTION_BUTTON_CLICK"
+        tracking.begin(code, h.edges)
+        tracking.reset()
+        tracking.observe(stamp(0), KeySample.Log("1000", "KEYLOG_OplusKeyEventUtil",
+            "should not notify undefined keys in restrict listen mode", "KEYCODE_VOLUME_DOWN"))
+        tracking.restore(code, h.edges)
+        h.duplicatedLine(1000)
+        h.duplicatedLine(1100)
+        h.clock.advanceTo(2000)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
+    fun newCrossThreadCandidateHeldThroughVolumeCheckAndSaveIgnoresReleaseThenFiresOneSingle() {
+        for (oldCode in listOf(null, "KEYCODE_F12")) {
+            val h = Harness(enableHold = false)
+            h.detector.wantsDouble = false
+            var config = Config(logKeyCode = oldCode)
+            val oldConfig = config
+            val session = TeachingSession(TeachingAccess(false, true, false))
+            val context = LoggedKeyContext()
+            val tracking = TeachingLogEdges()
+            tracking.begin(oldCode, h.edges)
+            h.edges.reset()
+            tracking.reset()
+            var epoch = 1L
+            val snapCode = "KEYCODE_ACTION_BUTTON_CLICK"
+            val tag = "KEYLOG_OplusKeyEventUtil"
+            val message = "should not notify undefined keys in restrict listen mode"
+
+            fun log(time: Long, thread: String, lineTag: String, lineMessage: String): KeySample.Log {
+                h.clock.advanceTo(time)
+                val sample = context.sample(1, epoch, "1000", thread, lineTag, lineMessage)
+                session.observe(sample, time)
+                if (isKnownOplusKeyLine(sample.uid, sample.tag, sample.message)) tracking.observe(stamp(time), sample)
+                return sample
+            }
+
+            fun raw(time: Long, thread: String, code: String, down: Boolean) = log(time, thread,
+                "KEYLOG_PhoneWindowManagerExtImpl",
+                "overrideInterceptKeyBeforeQueueing:KeyEvent { action=${if (down) "ACTION_DOWN" else "ACTION_UP"}, keyCode=$code, scanCode=0 }")
+
+            for (time in listOf(7000L, 11000L, 15000L, 18200L)) {
+                raw(time, "raw-snap", snapCode, true)
+                assertNull(log(time + 1, "edge-snap", tag, message).threadKey)
+                log(time + 2, "edge-snap", tag, message)
+                if (time != 18200L) {
+                    raw(time + 100, "raw-snap", snapCode, false)
+                    log(time + 101, "edge-snap", tag, message)
+                    log(time + 102, "edge-snap", tag, message)
+                }
+            }
+            session.capture(0L..5000L, listOf(6000L..9000L, 10000L..13000L, 14000L..17000L), 18000L..21500L)
+            epoch++
+            val learned = (session.state as TeachingState.Candidate).result as LearnResult.LogLineFound
+            assertEquals(snapCode, learned.logKeyCode)
+            assertEquals(KeySignature(tag, message, "1000"), learned.signature)
+            var writes = 0
+            assertFalse(session.save { writes++; true })
+            assertEquals(0, writes)
+            session.beginCheck(23000)
+            epoch++
+            raw(24000, "volume", "KEYCODE_VOLUME_DOWN", true)
+            assertEquals("KEYCODE_VOLUME_DOWN", log(24001, "volume", tag, message).threadKey)
+            log(24002, "volume", tag, message)
+            raw(24100, "volume", "KEYCODE_VOLUME_DOWN", false)
+            log(24101, "volume", tag, message)
+            log(24102, "volume", tag, message)
+            val checkEnd = 23000 + TeachingSession.CHECK_MS + TeachingSession.SETTLE_MS
+            h.clock.advanceTo(checkEnd)
+            session.finishCheck(checkEnd)
+            assertTrue(session.state is TeachingState.Ready)
+            assertEquals(oldConfig, config)
+            assertTrue(h.gestures.isEmpty())
+
+            assertTrue(session.save { patch ->
+                config = patch.applyTo(config)
+                writes++
+                true
+            })
+            assertEquals(1, writes)
+            assertEquals(TeachingState.Closed, session.state)
+            assertEquals(snapCode, config.logKeyCode)
+            h.detector.reset()
+            epoch++
+            tracking.restore(config.logKeyCode, h.edges)
+            tracking.reset()
+
+            fun runtimeEdge(time: Long) {
+                h.clock.advanceTo(time)
+                repeat(2) { copy ->
+                    val sample = context.sample(1, epoch, "1000", "edge-snap", tag, message)
+                    assertNull(sample.threadKey)
+                    assertTrue(KeyMatching.matches(config.keyBinding(), sample))
+                    h.edges.accept(stamp(time + copy))
+                }
+            }
+
+            runtimeEdge(29000)
+            h.clock.advanceTo(30000)
+            assertTrue(h.gestures.isEmpty())
+            runtimeEdge(31000)
+            runtimeEdge(31100)
+            h.clock.advanceTo(32000)
+            assertEquals(listOf(Gesture.SINGLE), h.gestures)
+            assertEquals(listOf(SnapAction.Device(DeviceAction.FLASHLIGHT)), h.gestures.map(config::action))
+        }
+    }
+
+    @Test
+    fun newCandidateIdentifiedUpCompletesItsEarlierMissingContextDownWithoutVolumeContamination() {
+        val h = Harness(enableHold = false)
+        val tracking = TeachingLogEdges()
+        tracking.begin("KEYCODE_F12", h.edges)
+        tracking.reset()
+        val sample = KeySample.Log("1000", "KEYLOG_OplusKeyEventUtil",
+            "should not notify undefined keys in restrict listen mode", null)
+        tracking.observe(stamp(0), sample.copy(threadKey = "KEYCODE_VOLUME_DOWN"))
+        tracking.observe(stamp(100), sample)
+        tracking.observe(stamp(101), sample)
+        tracking.observe(stamp(200), sample.copy(threadKey = "KEYCODE_ACTION_BUTTON_CLICK"))
+        tracking.observe(stamp(201), sample.copy(threadKey = "KEYCODE_ACTION_BUTTON_CLICK"))
+        tracking.restore("KEYCODE_ACTION_BUTTON_CLICK", h.edges)
+        h.duplicatedLine(1000)
+        h.duplicatedLine(1100)
+        h.clock.advanceTo(2000)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
+    fun unrelatedIdentifiedVolumeCannotSeedAnUnregisteredCandidateOrItsFirstIdentifiedDown() {
+        for (identifiedDown in listOf(false, true)) {
+            val h = Harness(enableHold = false)
+            val tracking = TeachingLogEdges()
+            tracking.begin("KEYCODE_F12", h.edges)
+            tracking.reset()
+            val sample = KeySample.Log("1000", "KEYLOG_OplusKeyEventUtil",
+                "should not notify undefined keys in restrict listen mode", "KEYCODE_VOLUME_DOWN")
+            tracking.observe(stamp(0), sample)
+            if (identifiedDown) tracking.observe(stamp(100), sample.copy(threadKey = "KEYCODE_ACTION_BUTTON_CLICK"))
+            tracking.restore("KEYCODE_ACTION_BUTTON_CLICK", h.edges)
+            if (identifiedDown) {
+                h.duplicatedLine(200)
+                h.clock.advanceTo(500)
+                assertTrue(h.gestures.isEmpty())
+            }
+            h.duplicatedLine(1000)
+            h.duplicatedLine(1100)
+            h.clock.advanceTo(2000)
+            assertEquals(listOf(Gesture.SINGLE), h.gestures)
+        }
+    }
+
+    @Test
+    fun unregisteredCandidateInheritsMissingContextTimestampDedupeAsWellAsHeldPhase() {
+        val tracking = TeachingLogEdges()
+        val sample = KeySample.Log("1000", "KEYLOG_OplusKeyEventUtil",
+            "should not notify undefined keys in restrict listen mode", null)
+        tracking.observe(stamp(0), sample)
+        val h = Harness(enableHold = false)
+        tracking.restore("KEYCODE_ACTION_BUTTON_CLICK", h.edges)
+        h.duplicatedLine(1)
+        h.duplicatedLine(100)
+        h.clock.advanceTo(1000)
+        assertTrue(h.gestures.isEmpty())
+        h.duplicatedLine(2000)
+        h.duplicatedLine(2100)
+        h.clock.advanceTo(3000)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
+    }
+
+    @Test
+    fun handsOffOrSourceResetAndNewTeachingDiscardContextFreePhaseAndDedupe() {
+        for (newTeaching in listOf(false, true)) {
+            val tracking = TeachingLogEdges()
+            val sample = KeySample.Log("1000", "KEYLOG_OplusKeyEventUtil",
+                "should not notify undefined keys in restrict listen mode", null)
+            tracking.observe(stamp(0), sample)
+            if (newTeaching) {
+                val oldKey = OplusKeyEdges({}, {}).apply { reset(pressed = true) }
+                tracking.begin("KEYCODE_F12", oldKey)
+            } else tracking.reset()
+            val h = Harness(enableHold = false)
+            tracking.restore("KEYCODE_ACTION_BUTTON_CLICK", h.edges)
+            h.duplicatedLine(0)
+            h.duplicatedLine(100)
+            h.clock.advanceTo(1000)
+            assertEquals(listOf(Gesture.SINGLE), h.gestures)
+        }
+    }
+
+    @Test
+    fun nullCodeStillRestoresTheUnfilteredIdentifiedVolumeAggregate() {
+        val tracking = TeachingLogEdges()
+        tracking.begin(null, OplusKeyEdges({}, {}))
+        tracking.observe(stamp(0), KeySample.Log("1000", "KEYLOG_OplusKeyEventUtil",
+            "should not notify undefined keys in restrict listen mode", "KEYCODE_VOLUME_DOWN"))
+        val h = Harness(enableHold = false)
+        tracking.restore(null, h.edges)
+        h.duplicatedLine(100)
+        h.clock.advanceTo(1000)
+        assertTrue(h.gestures.isEmpty())
+        h.duplicatedLine(2000)
+        h.duplicatedLine(2100)
+        h.clock.advanceTo(3000)
+        assertEquals(listOf(Gesture.SINGLE), h.gestures)
     }
 }

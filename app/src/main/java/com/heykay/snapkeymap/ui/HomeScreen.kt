@@ -1,12 +1,19 @@
 package com.heykay.snapkeymap.ui
 
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import android.text.format.DateFormat
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
@@ -35,9 +43,12 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.AvTimer
 import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -65,6 +76,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -85,7 +97,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.app.NotificationManagerCompat
 import com.heykay.snapkeymap.Gesture
+import com.heykay.snapkeymap.ActionRunner
 import com.heykay.snapkeymap.Config
+import com.heykay.snapkeymap.BackupResult
+import com.heykay.snapkeymap.SettingsBackup
 import com.heykay.snapkeymap.LogAccess
 import com.heykay.snapkeymap.LogSource
 import com.heykay.snapkeymap.R
@@ -93,14 +108,22 @@ import com.heykay.snapkeymap.SnapAccessibilityService
 import com.heykay.snapkeymap.SnapAction
 import com.heykay.snapkeymap.SnapEngine
 import com.heykay.snapkeymap.ThemeMode
+import com.heykay.snapkeymap.buildReport
+import com.heykay.snapkeymap.bugReportUrl
+import com.heykay.snapkeymap.gatherReportInfo
+import com.heykay.snapkeymap.backupToJson
+import com.heykay.snapkeymap.parseBackup
+import java.time.LocalDate
 import java.util.Date
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 
 private const val SHIZUKU_LOG_REQUEST = 2
+private const val MAX_BACKUP_BYTES = 1024 * 1024
 
 private data class HomeChecks(
     val hasLogPermission: Boolean = false,
@@ -135,6 +158,57 @@ fun HomeScreen(
     var showTiming by rememberSaveable { mutableStateOf(false) }
     var showPausedApps by rememberSaveable { mutableStateOf(false) }
     var showUnlockHint by rememberSaveable { mutableStateOf(false) }
+    var showBackupWarning by rememberSaveable { mutableStateOf(false) }
+    var pendingRestore by remember { mutableStateOf<SettingsBackup?>(null) }
+    val scope = rememberCoroutineScope()
+    val backupFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val snapshot = SnapEngine.store.config.value
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val text = backupToJson(snapshot)
+                    val output = checkNotNull(context.contentResolver.openOutputStream(uri, "wt"))
+                    output.bufferedWriter(Charsets.UTF_8).use { it.write(text) }
+                }
+            }
+            Toast.makeText(context, if (result.isSuccess) "Settings backed up" else "Couldn't write the backup file.", Toast.LENGTH_SHORT).show()
+        }
+    }
+    val restoreFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val input = checkNotNull(context.contentResolver.openInputStream(uri))
+                    val text = input.use { stream ->
+                        val bytes = ByteArray(MAX_BACKUP_BYTES + 1)
+                        var size = 0
+                        while (size < bytes.size) {
+                            val count = stream.read(bytes, size, bytes.size - size)
+                            if (count < 0) break
+                            size += count
+                        }
+                        require(size <= MAX_BACKUP_BYTES) { "The backup file is too large. Choose a file smaller than 1 MB." }
+                        String(bytes, 0, size, Charsets.UTF_8)
+                    }
+                    parseBackup(text)
+                }
+            }
+            result.fold(
+                onSuccess = { parsed ->
+                    when (parsed) {
+                        is BackupResult.Ok -> pendingRestore = parsed.backup
+                        is BackupResult.Error -> Toast.makeText(context, parsed.message, Toast.LENGTH_LONG).show()
+                    }
+                },
+                onFailure = { error ->
+                    val message = if (error is IllegalArgumentException) error.message else "Couldn't read the backup file."
+                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                },
+            )
+        }
+    }
     val pausedSummary by produceState("None", config.pausedApps, resumes, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             value = withContext(Dispatchers.Default) {
@@ -272,6 +346,13 @@ fun HomeScreen(
                                 if (on && !config.unlockHintShown) showUnlockHint = true
                             },
                             onClick = { onPick(gesture) },
+                            onTry = {
+                                ActionRunner.run(
+                                    SnapAccessibilityService.instance ?: context,
+                                    config.action(gesture),
+                                    alwaysConfirm = true,
+                                )
+                            },
                         )
                     }
                 }
@@ -320,6 +401,35 @@ fun HomeScreen(
                     )
                 }
             }
+            item { SectionHeader("Backup") }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                ) {
+                    ListItem(
+                        modifier = Modifier.clickable { showBackupWarning = true },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        headlineContent = { Text("Back up settings") },
+                        leadingContent = { Icon(Icons.Rounded.Save, contentDescription = null) },
+                        trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
+                    )
+                    HorizontalDivider()
+                    ListItem(
+                        modifier = Modifier.clickable {
+                            try {
+                                restoreFile.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+                            } catch (_: ActivityNotFoundException) {
+                                Toast.makeText(context, "No file picker available", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        headlineContent = { Text("Restore settings") },
+                        leadingContent = { Icon(Icons.Rounded.Restore, contentDescription = null) },
+                        trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
+                    )
+                }
+            }
             item { SectionHeader("Tips") }
             item {
                 NoteCard(
@@ -361,6 +471,39 @@ fun HomeScreen(
     }
     if (showTiming) TimingDialog(config = config, onDismiss = { showTiming = false })
     if (showPausedApps) PausedAppsSheet(onDismiss = { showPausedApps = false })
+    if (showBackupWarning) {
+        AlertDialog(
+            onDismissRequest = { showBackupWarning = false },
+            title = { Text("Back up settings") },
+            text = { Text("The file can contain contact numbers, links and app names. It is saved only where you choose.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showBackupWarning = false
+                    try {
+                        backupFile.launch("snapkeymap-backup-${LocalDate.now()}.json")
+                    } catch (_: ActivityNotFoundException) {
+                        Toast.makeText(context, "No file picker available", Toast.LENGTH_SHORT).show()
+                    }
+                }) { Text("Continue") }
+            },
+            dismissButton = { TextButton(onClick = { showBackupWarning = false }) { Text("Cancel") } },
+        )
+    }
+    pendingRestore?.let { backup ->
+        AlertDialog(
+            onDismissRequest = { pendingRestore = null },
+            title = { Text("Restore settings?") },
+            text = { Text("This replaces your gesture actions, ringer presets, paused apps, timing, theme, confirmations and the learned key.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    SnapEngine.store.update { backup.applyTo(it) }
+                    pendingRestore = null
+                    Toast.makeText(context, "Settings restored", Toast.LENGTH_SHORT).show()
+                }) { Text("Restore") }
+            },
+            dismissButton = { TextButton(onClick = { pendingRestore = null }) { Text("Cancel") } },
+        )
+    }
     if (showUnlockHint) UnlockHintDialog(onDismiss = {
         SnapEngine.store.update { it.copy(unlockHintShown = true) }
         showUnlockHint = false
@@ -439,7 +582,8 @@ private fun StatusCard(
     now: Long,
     canAskShizuku: Boolean,
 ) {
-    val timeFormat = DateFormat.getTimeFormat(LocalContext.current)
+    val context = LocalContext.current
+    val timeFormat = DateFormat.getTimeFormat(context)
     var showDetails by rememberSaveable { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
     val ready = warning == null && enabled && listening
@@ -510,6 +654,31 @@ private fun StatusCard(
                         color = colors.onSurfaceVariant,
                     )
                 }
+                Row(Modifier.offset(x = (-12).dp)) {
+                    TextButton(onClick = {
+                        val info = gatherReportInfo(context, config, precise)
+                        val wallOffset = System.currentTimeMillis() - SnapEngine.now()
+                        val secondsFormat = java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM)
+                        val report = buildReport(info, config, SnapEngine.detections.value) {
+                            secondsFormat.format(Date(wallOffset + it))
+                        }
+                        context.getSystemService(ClipboardManager::class.java)
+                            .setPrimaryClip(ClipData.newPlainText("SnapKey Map bug report", report))
+                        if (Build.VERSION.SDK_INT < 33) Toast.makeText(context, "Report copied", Toast.LENGTH_SHORT).show()
+                    }) { Text("Copy report") }
+                    TextButton(onClick = {
+                        val info = gatherReportInfo(context, config, precise)
+                        val wallOffset = System.currentTimeMillis() - SnapEngine.now()
+                        val url = bugReportUrl(info, config, SnapEngine.lastGesture.value) {
+                            timeFormat.format(Date(wallOffset + it))
+                        }
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        } catch (_: ActivityNotFoundException) {
+                            Toast.makeText(context, "No browser available to open the bug form", Toast.LENGTH_SHORT).show()
+                        }
+                    }) { Text("Report a bug") }
+                }
             }
             if (warning != null) {
                 Button(onClick = onFix) { Text("Fix") }
@@ -538,7 +707,14 @@ internal fun GestureRow(
     unlockedOnly: Boolean,
     onUnlockedOnlyChange: (Boolean) -> Unit,
     onClick: () -> Unit,
+    onTry: (() -> Unit)? = null,
 ) {
+    val context = LocalContext.current
+    val resumes by SnapEngine.uiResumes.collectAsStateWithLifecycle()
+    val packageName = (action as? SnapAction.OpenApp)?.packageName
+    val missingApp = remember(packageName, resumes) {
+        packageName != null && context.packageManager.getLaunchIntentForPackage(packageName) == null
+    }
     ListItem(
         modifier = Modifier.clickable(enabled = available, onClick = onClick),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -548,7 +724,7 @@ internal fun GestureRow(
             if (available) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Icon(actionIcon(action), contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text(action.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(if (missingApp) "App not installed" else action.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -561,6 +737,11 @@ internal fun GestureRow(
             if (available) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (action != SnapAction.NoAction) {
+                        if (onTry != null) {
+                            IconButton(onClick = onTry) {
+                                Icon(Icons.Rounded.PlayArrow, contentDescription = "Try ${gesture.title}")
+                            }
+                        }
                         IconToggleButton(checked = unlockedOnly, onCheckedChange = onUnlockedOnlyChange) {
                             Icon(
                                 if (unlockedOnly) Icons.Rounded.Lock else Icons.Rounded.LockOpen,

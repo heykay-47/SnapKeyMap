@@ -33,7 +33,8 @@ object ActionRunner {
     private var torchOn: Boolean? = null
     private var torchWatched = false
     private var torchUnavailable = false
-    private var pendingTorchToggle = false
+    // Null means no pending toggle; otherwise this carries that run's confirmation override.
+    private var pendingTorchToggle: Boolean? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val ringerMutex = Mutex()
 
@@ -41,7 +42,7 @@ object ActionRunner {
         runCatching { watchTorch(context.applicationContext) }
     }
 
-    fun run(context: Context, action: SnapAction) {
+    fun run(context: Context, action: SnapAction, alwaysConfirm: Boolean = false) {
         try {
             when (action) {
                 SnapAction.NoAction -> Unit
@@ -70,8 +71,8 @@ object ActionRunner {
                     context,
                     Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(action.number))),
                 )
-                is SnapAction.Device -> runDevice(context, action.action)
-                is SnapAction.Ringer -> cycleRinger(context, action)
+                is SnapAction.Device -> runDevice(context, action.action, alwaysConfirm)
+                is SnapAction.Ringer -> cycleRinger(context, action, alwaysConfirm)
             }
         } catch (e: ActivityNotFoundException) {
             toast(context, "No app can do that: ${action.label}")
@@ -80,10 +81,10 @@ object ActionRunner {
         }
     }
 
-    private fun runDevice(context: Context, action: DeviceAction) {
+    private fun runDevice(context: Context, action: DeviceAction, alwaysConfirm: Boolean) {
         when (action) {
-            DeviceAction.FLASHLIGHT -> toggleTorch(context)
-            DeviceAction.DO_NOT_DISTURB -> toggleDoNotDisturb(context)
+            DeviceAction.FLASHLIGHT -> toggleTorch(context, alwaysConfirm)
+            DeviceAction.DO_NOT_DISTURB -> toggleDoNotDisturb(context, alwaysConfirm)
             DeviceAction.SCREENSHOT -> global(context, AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT)
             DeviceAction.CIRCLE_TO_SEARCH -> if (!CircleToSearch.start()) {
                 toast(context, "Circle to Search isn't available. Set Google as your digital assistant app.")
@@ -158,9 +159,9 @@ object ActionRunner {
                     if (cameraId != torchCameraId) return
                     torchUnavailable = false
                     torchOn = enabled
-                    if (pendingTorchToggle) {
-                        pendingTorchToggle = false
-                        run(app, SnapAction.Device(DeviceAction.FLASHLIGHT))
+                    pendingTorchToggle?.let { alwaysConfirm ->
+                        pendingTorchToggle = null
+                        run(app, SnapAction.Device(DeviceAction.FLASHLIGHT), alwaysConfirm)
                     }
                 }
 
@@ -168,8 +169,8 @@ object ActionRunner {
                     if (cameraId != torchCameraId) return
                     torchUnavailable = true
                     torchOn = null
-                    if (pendingTorchToggle) toast(app, "Flashlight isn't available while the camera is in use")
-                    pendingTorchToggle = false
+                    if (pendingTorchToggle != null) toast(app, "Flashlight isn't available while the camera is in use")
+                    pendingTorchToggle = null
                 }
             }, Handler(Looper.getMainLooper()))
             torchWatched = true
@@ -177,7 +178,7 @@ object ActionRunner {
         return id
     }
 
-    private fun toggleTorch(context: Context) {
+    private fun toggleTorch(context: Context, alwaysConfirm: Boolean) {
         val id = watchTorch(context)
         if (id == null) {
             toast(context, "This phone has no flashlight")
@@ -190,19 +191,20 @@ object ActionRunner {
         val current = torchOn
         if (current == null) {
             // Registration delivers the real initial state asynchronously, including Quick Settings changes.
-            pendingTorchToggle = !pendingTorchToggle
+            pendingTorchToggle = if (pendingTorchToggle == null) alwaysConfirm else null
             return
         }
         context.getSystemService(CameraManager::class.java).setTorchMode(id, !current)
         torchOn = !current
+        if (alwaysConfirm) confirm(context, if (current) "Flashlight off" else "Flashlight on", alwaysConfirm)
     }
 
-    private fun cycleRinger(context: Context, action: SnapAction.Ringer) {
+    private fun cycleRinger(context: Context, action: SnapAction.Ringer, alwaysConfirm: Boolean) {
         val app = context.applicationContext
         scope.launch {
             ringerMutex.withLock {
                 try {
-                    changeRinger(app, action)
+                    changeRinger(app, action, alwaysConfirm)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -212,7 +214,7 @@ object ActionRunner {
         }
     }
 
-    private suspend fun changeRinger(context: Context, action: SnapAction.Ringer) {
+    private suspend fun changeRinger(context: Context, action: SnapAction.Ringer, alwaysConfirm: Boolean) {
         val audio = context.getSystemService(AudioManager::class.java)
         val externalMode = audio.ringerMode
         // Before Android 15, `cmd audio` has no set-ringer-mode yet still exits 0, so success can't be trusted.
@@ -231,7 +233,7 @@ object ActionRunner {
             }
             if (result?.exitCode == 0) {
                 vibrateRinger(context, next)
-                confirm(context, next.label)
+                confirm(context, next.label, alwaysConfirm)
                 return
             }
         }
@@ -242,7 +244,7 @@ object ActionRunner {
         audio.ringerMode = next.audioMode
         vibrateRinger(context, next)
         if (skippedSilent) toast(context, "Allow Do Not Disturb access to use Silent")
-        else confirm(context, next.label)
+        else confirm(context, next.label, alwaysConfirm)
     }
 
     private fun ringerMode(mode: Int): RingerMode? = when (mode) {
@@ -272,7 +274,7 @@ object ActionRunner {
             RingerMode.SILENT -> AudioManager.RINGER_MODE_SILENT
         }
 
-    private fun toggleDoNotDisturb(context: Context) {
+    private fun toggleDoNotDisturb(context: Context, alwaysConfirm: Boolean) {
         val notifications = context.getSystemService(NotificationManager::class.java)
         if (!notifications.isNotificationPolicyAccessGranted) {
             toast(context, "Allow SnapKey Map to change Do Not Disturb")
@@ -283,11 +285,11 @@ object ActionRunner {
         notifications.setInterruptionFilter(
             if (turnOn) NotificationManager.INTERRUPTION_FILTER_PRIORITY else NotificationManager.INTERRUPTION_FILTER_ALL,
         )
-        confirm(context, if (turnOn) "Do Not Disturb on" else "Do Not Disturb off")
+        confirm(context, if (turnOn) "Do Not Disturb on" else "Do Not Disturb off", alwaysConfirm)
     }
 
-    private fun confirm(context: Context, text: String) {
-        if (SnapEngine.store.config.value.showConfirmations) toast(context, text)
+    private fun confirm(context: Context, text: String, alwaysConfirm: Boolean) {
+        if (alwaysConfirm || SnapEngine.store.config.value.showConfirmations) toast(context, text)
     }
 
     private fun toast(context: Context, text: String) {
