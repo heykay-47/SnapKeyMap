@@ -49,6 +49,31 @@ internal class LogRetryBackoff {
     }
 }
 
+/**
+ * Live precise input makes the log stream redundant except while teaching, so logcat stops until it is needed again.
+ * An unfiltered logcat keeps logd and the shell busy with every line on the phone.
+ */
+internal class LogPause {
+    var paused = false
+        private set
+
+    fun shouldRead(precise: Boolean, teaching: Boolean): Boolean = !precise || teaching
+
+    /** Returns true only when the reader was running and should stop now. */
+    fun pause(): Boolean {
+        if (paused) return false
+        paused = true
+        return true
+    }
+
+    /** Returns true only when a paused reader should restart now. */
+    fun resume(): Boolean {
+        if (!paused) return false
+        paused = false
+        return true
+    }
+}
+
 /** Connects the two ways of noticing the Snap Key (key events and the system log) to the actions. */
 object SnapEngine {
     data class Detected(val gesture: Gesture, val atMs: Long, val source: DetectionSource)
@@ -127,13 +152,15 @@ object SnapEngine {
     @Volatile private var logGeneration = 0
     private val loggedKeys = LoggedKeyContext()
     private val logRetry = LogRetryBackoff()
+    private val logPause = LogPause()
     private var inputRetryDelayMs = 1000L
     private val reconnectInput = Runnable {
         if (wantsLog && readersDemanded() && canUseShizuku()) inputReader.start()
     }
     private val reconnect = Runnable {
         if (wantsLog && readersDemanded() && hasLogPermission()) {
-            if (uiVisible || !reader.needsForegroundConsent()) reader.start()
+            if (!logsWanted()) pauseLogs()
+            else if (uiVisible || !reader.needsForegroundConsent()) startLogs()
             else startBackgroundLogs()
         }
     }
@@ -204,7 +231,35 @@ object SnapEngine {
         if (!readersDemanded() || !hasLogPermission()) return
         wantLogs()
         main.removeCallbacks(reconnect)
+        if (logsWanted()) startLogs(preferShizuku) else pauseLogs()
+    }
+
+    /** Precise input replaces the log outside teaching. */
+    private fun logsWanted(): Boolean = logPause.shouldRead(preciseState.value, teachingLogDemand)
+
+    private fun startLogs(preferShizuku: Boolean = false) {
+        logPause.resume()
         reader.start(preferShizuku)
+    }
+
+    /** An explicit stop sends no access report, so the last access state and its status stay as they were. */
+    private fun pauseLogs() {
+        main.removeCallbacks(reconnect)
+        if (!logPause.pause()) return
+        logGeneration++
+        reader.stop()
+    }
+
+    private fun updateLogPause() {
+        if (!wantsLog || !readersDemanded()) return
+        if (!logsWanted()) {
+            pauseLogs()
+        } else if (logPause.resume()) {
+            // Same path as a lost stream: reset log edges, then reconnect now rather than after the backoff.
+            onAccessChanged(LogAccess.OFF)
+            main.removeCallbacks(reconnect)
+            if (hasLogPermission()) main.post(reconnect)
+        }
     }
 
     private fun wantLogs() {
@@ -226,7 +281,7 @@ object SnapEngine {
     internal fun releaseTeachingLogs() {
         if (teachingSession != null) return
         teachingLogDemand = false
-        if (!readersDemanded()) stop()
+        if (!readersDemanded()) stop() else updateLogPause()
     }
 
     fun stop() {
@@ -243,6 +298,7 @@ object SnapEngine {
         main.removeCallbacks(reconnectInput)
         inputReader.stop()
         reader.stop()
+        logPause.resume()
         onAccessChanged(LogAccess.OFF)
         resetGestures()
     }
@@ -272,7 +328,7 @@ object SnapEngine {
 
     fun onConsentResumed(connectReader: Boolean) {
         consentVisible = true
-        if (!connectReader || accessState.value == LogAccess.FULL) return
+        if (!connectReader || accessState.value == LogAccess.FULL || !logsWanted()) return
         // A reader denied while we were backgrounded cannot prompt; replace it now we're on top.
         reader.stop()
         onAccessChanged(LogAccess.WAITING)
@@ -289,6 +345,10 @@ object SnapEngine {
         if (!config.enabled || !config.needsLogAccess || !config.isTaught || !hasLogPermission() ||
             accessState.value == LogAccess.FULL || uiVisible) return
         wantLogs()
+        if (!logsWanted()) {
+            pauseLogs()
+            return
+        }
         if (!reader.needsForegroundConsent()) {
             connect()
             return
@@ -362,6 +422,7 @@ object SnapEngine {
             preciseState.value = precise
         }
         updateListeningSince()
+        updateLogPause()
     }
 
     private fun onInputEvent(event: InputKeyEvent, time: Long, stamp: TeachingDelivery.Stamp) {
