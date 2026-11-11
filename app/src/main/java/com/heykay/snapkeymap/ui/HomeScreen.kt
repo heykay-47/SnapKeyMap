@@ -157,6 +157,7 @@ fun HomeScreen(
     var showThemeMenu by rememberSaveable { mutableStateOf(false) }
     var showTiming by rememberSaveable { mutableStateOf(false) }
     var showPausedApps by rememberSaveable { mutableStateOf(false) }
+    var showDndDialog by rememberSaveable { mutableStateOf(false) }
     var showUnlockHint by rememberSaveable { mutableStateOf(false) }
     var showBackupWarning by rememberSaveable { mutableStateOf(false) }
     var pendingRestore by remember { mutableStateOf<SettingsBackup?>(null) }
@@ -399,6 +400,15 @@ fun HomeScreen(
                         supportingContent = { Text(pausedSummary, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
                     )
+                    HorizontalDivider()
+                    ListItem(
+                        modifier = Modifier.clickable { showDndDialog = true },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        headlineContent = { Text("Do Not Disturb access") },
+                        leadingContent = { Icon(Icons.Rounded.Notifications, contentDescription = null) },
+                        supportingContent = { Text("For Do Not Disturb and Silent actions") },
+                        trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
+                    )
                 }
             }
             item { SectionHeader("Backup") }
@@ -471,6 +481,7 @@ fun HomeScreen(
     }
     if (showTiming) TimingDialog(config = config, onDismiss = { showTiming = false })
     if (showPausedApps) PausedAppsSheet(onDismiss = { showPausedApps = false })
+    if (showDndDialog) DndAccessDialog(onDone = { showDndDialog = false })
     if (showBackupWarning) {
         AlertDialog(
             onDismissRequest = { showBackupWarning = false },
