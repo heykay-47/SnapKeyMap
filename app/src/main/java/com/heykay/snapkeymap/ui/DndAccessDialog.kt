@@ -63,10 +63,10 @@ internal fun DndAccessDialog(onDone: () -> Unit, forSilent: Boolean = false) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(if (forSilent) {
-                    "Your action is saved. Silent works best with Shizuku running on Android 15 or later. " +
+                    "Silent works best with Shizuku running on Android 15 or later. " +
                         "Otherwise it needs Do Not Disturb access and may turn on Do Not Disturb."
                 } else {
-                    "Your action is saved. Do Not Disturb needs Do Not Disturb access. " +
+                    "Do Not Disturb needs this access. Silent also needs it unless Shizuku is running on Android 15 or later. " +
                         "Allow it in Settings, or use Shizuku if your phone blocks the switch."
                 })
                 if (granted) {

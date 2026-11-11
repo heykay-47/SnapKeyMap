@@ -105,7 +105,7 @@
         <li>For Tap, then hold, tap once, then hold the second press. When assigned, a quick double press runs on release instead of on the second press down.</li>
         <li>The known Find X9 log reports press and release edges. Other learned log formats need repeated events while held to detect a hold.</li>
         <li>The shortcut picker supports apps that offer <code>ACTION_CREATE_SHORTCUT</code>, not every pinned shortcut. Try a deep link instead. Direct-dial shortcuts are not supported because the app has no calling permission.</li>
-        <li>Silent mode and Do Not Disturb need notification policy access. Without it, the ringer action cycles between ring and vibrate.</li>
+        <li>Do Not Disturb needs notification policy access. Silent also needs it unless Shizuku is running on Android 15 or later. Without either route, the ringer action skips Silent. Open <strong>Home > Do Not Disturb access > Open settings</strong> to allow access. If ColorOS hides the access switch, connect SnapKey Map to Shizuku and choose <strong>Allow with Shizuku</strong> in the dialog.</li>
         <li>Android permissions, device support, and the lock screen still apply. The app cannot bypass the lock screen. Screen-off detection and background reliability depend on ColorOS.</li>
       </ul>
     </section>
