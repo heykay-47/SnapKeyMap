@@ -63,19 +63,24 @@ internal fun DndAccessDialog(onDone: () -> Unit, forSilent: Boolean = false) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(if (forSilent) {
-                    "Silent works best with Shizuku running on Android 15 or later. " +
-                        "Otherwise it needs Do Not Disturb access and may turn on Do Not Disturb."
+                    "On Android 15 or later, Silent can work without Do Not Disturb access when Shizuku is running, " +
+                        "SnapKey Map is allowed in it, and the ringer command succeeds. " +
+                        "Otherwise, Silent needs this access and may turn on Do Not Disturb."
                 } else {
-                    "Do Not Disturb needs this access. Silent also needs it unless Shizuku is running on Android 15 or later. " +
-                        "Allow it in Settings, or use Shizuku if your phone blocks the switch."
+                    "Do Not Disturb needs this access. On Android 15 or later, Silent can work without it when Shizuku is running, " +
+                        "SnapKey Map is allowed in it, and the ringer command succeeds. " +
+                        "Otherwise, Silent needs this access and may turn on Do Not Disturb. " +
+                        "Allow access in Settings, or use Shizuku if your phone blocks the switch."
                 })
+                Text("Settings may call this Modes access.")
                 if (granted) {
                     Text("Do Not Disturb access granted.")
-                } else {
-                    TextButton(
-                        enabled = !busy,
-                        onClick = { context.openSafely(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) },
-                    ) { Text("Open settings") }
+                }
+                TextButton(
+                    enabled = !busy,
+                    onClick = { context.openSafely(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) },
+                ) { Text("Open settings") }
+                if (!granted) {
                     if (shizukuAvailable) {
                         TextButton(
                             enabled = !busy,
