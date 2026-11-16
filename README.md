@@ -9,7 +9,7 @@
 <h1 align="center">SnapKey Map</h1>
 
 <p align="center">
-  Map the Oppo Find X9's Snap Key to any app or action.<br>
+  Map your OPPO Snap Key or OnePlus Plus Key to any app or action.<br>
   A different action for a press, a double press, a press and hold, and a tap then hold. No root needed.
 </p>
 
@@ -29,6 +29,7 @@
 
 - [Screenshots](#screenshots)
 - [Features](#features)
+- [Supported phones](#supported-phones)
 - [Requirements](#requirements)
 - [Get started](#get-started)
 - [Documentation](#documentation)
@@ -71,9 +72,34 @@ Tap ▶ next to a gesture to try its action without pressing the key. Turn the m
 
 The app follows Material 3 with dynamic colour and a System, Light, or Dark theme. It declares no internet permission.
 
+# Supported phones
+
+SnapKey Map supports **OPPO phones with a Snap Key** and **OnePlus phones with a Plus Key**. It is not limited to the Find X9. The app calls both buttons **Snap Key** during setup.
+
+**App compatibility:** the maintainer tests on an **OPPO Find X9**. Users have also reported it working on the **Find X9 Pro, Find X9 Ultra, Find X9s, Find X9s Pro, OnePlus 15R, and OnePlus 13s**. Detection, screen-off behaviour, and background reliability can vary with the model and ColorOS / OxygenOS version. Teach the key during setup and test each gesture on your phone.
+
+**Phones with the hardware:** examples found in product pages and reviews include:
+
+- **OPPO:** Find X9, Find X9 Pro, Find X9 Ultra, Find X9s, Find X9s Pro; Find X10 and Find X10 Pro Max. Earlier Find X8s, Find X8s+, and Find X8 Ultra models also have a customisable shortcut button.
+- **OnePlus:** OnePlus 15, OnePlus 15R, OnePlus 13s, OnePlus 13T, and OnePlus Nord 5.
+
+This is not an exhaustive list or a claim that every listed model has been tested with SnapKey Map. Having the button alone does not guarantee detection on every firmware. Phones with only the older **Alert Slider**, or without a Snap / Plus Key, are not covered by this support claim. The separate camera **Quick Button** is not the Snap Key.
+
+<details>
+<summary>Sources for the phone hardware list (checked 11 November 2026)</summary>
+
+- OPPO product pages: [Find X9](https://www.oppo.com/en/smartphones/series-find-x/find-x9/), [Find X9 Pro](https://www.oppo.com/en/smartphones/series-find-x/find-x9-pro/), [Find X9 Ultra](https://www.oppo.com/en/smartphones/series-find-x/find-x9-ultra/), and [Find X9s](https://www.oppo.com/en/smartphones/series-find-x/find-x9s/) describe the Snap Key. [ZOL's Find X9s Pro review](https://mobile.zol.com.cn/1169/11693710.html) describes its customisable physical shortcut key.
+- Find X10 reviews: [Digital Trends — Find X10](https://www.digitaltrends.com/phones/the-oppo-find-x10-is-ridiculously-stacked-and-i-havent-even-got-to-the-cameras-yet/) and [The Hindu — Find X10 Pro Max](https://www.thehindu.com/sci-tech/technology/gadgets/oppo-find-x10-pro-max-review-one-of-this-seasons-best-android-flagships/article71656275.ece) describe the Snap Key on the left side.
+- OPPO's Chinese product pages: [Find X8s](https://www.oppo.com/cn/smartphones/series-find-x/find-x8s/), [Find X8s+](https://www.oppo.com/cn/smartphones/series-find-x/find-x8s-plus/), and [Find X8 Ultra](https://www.oppo.com/cn/smartphones/series-find-x/find-x8-ultra/) describe a customisable physical shortcut key.
+- OnePlus product pages: [OnePlus 15](https://www.oneplus.com/us/15), [OnePlus 15R](https://www.oneplus.com/global/15r), [OnePlus 13s](https://www.oneplus.in/13s), and [OnePlus Nord 5](https://www.oneplus.com/global/nord-5) describe the Plus Key. [The Verge's coverage of the 13s and 13T](https://www.theverge.com/news/674506/oneplus-13s-ai-plus-mind-key-button-india-availability) confirms the button on both models.
+
+These sources establish the presence of the button, not app compatibility. Availability and naming vary by market.
+
+</details>
+
 # Requirements
 
-- An Oppo Find X9. Other devices and ColorOS versions may behave differently. Users have also reported it working on the Find X9 Pro, X9 Ultra, X9s, X9s Pro, OnePlus 15R, and OnePlus 13s.
+- An OPPO phone with a Snap Key or a OnePlus phone with a Plus Key. See [supported phones](#supported-phones) for tested and user-reported models.
 - Android 10 or later.
 - One of these, for the one-time log permission:
   - [Shizuku](https://shizuku.rikka.app/guide/setup/), running through wireless debugging. No computer needed.
@@ -82,7 +108,7 @@ The app follows Material 3 with dynamic colour and a System, Light, or Dark them
 # Get started
 
 1. Download `SnapKeyMap-*.apk` from the [latest release](https://github.com/heykay-47/SnapKeyMap/releases/latest) on your phone and install it.
-2. Open SnapKey Map and follow the setup wizard. It gives the app log access through Shizuku or ADB, turns on the accessibility service, and teaches it your Snap Key.
+2. Set your phone's built-in Snap Key / Plus Key action to **None** or **No action** in Settings. Open SnapKey Map and follow the setup wizard. It gives the app log access through Shizuku or ADB, turns on the accessibility service, and teaches it your key.
 3. Assign actions to the gestures and test each one. **Last:** in the Ready card shows what the app detected.
 
 To update, install the new APK over the existing app. Do not uninstall first, or you lose your mappings and the log permission.
@@ -109,7 +135,7 @@ Have an idea? [Request a feature](https://github.com/heykay-47/SnapKeyMap/issues
   <img alt="Contributors" src="https://contrib.rocks/image?repo=heykay-47/SnapKeyMap" />
 </a>
 
-Bug reports, fixes, and device notes from other ColorOS versions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the code layout, Find X9 device notes, and how to build, sign, and release the app.
+Bug reports, fixes, and device notes from OPPO and OnePlus phones on different ColorOS / OxygenOS versions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the code layout, Find X9 device notes, and how to build, sign, and release the app.
 
 # License
 
