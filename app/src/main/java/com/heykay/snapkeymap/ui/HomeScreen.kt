@@ -735,7 +735,7 @@ internal fun GestureRow(
             if (available) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Icon(actionIcon(action), contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text(if (missingApp) "App not installed" else action.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(if (missingApp) "App not installed" else action.label, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 }
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
