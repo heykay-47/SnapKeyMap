@@ -256,16 +256,27 @@ object ActionRunner {
 
     private fun vibrateRinger(context: Context, mode: RingerMode) {
         val vibrator = context.getSystemService(Vibrator::class.java) ?: return
-        vibrator.vibrate(mode.vibrationEffect)
+        vibrator.vibrate(mode.vibrationEffect(vibrator))
     }
 
-    private val RingerMode.vibrationEffect: VibrationEffect
-        get() = when (this) {
-            RingerMode.RING -> VibrationEffect.createOneShot(400L, VibrationEffect.DEFAULT_AMPLITUDE)
-            // ColorOS replaces steps of about 40 ms with a light click, which felt like the Ring buzz.
-            RingerMode.VIBRATE -> VibrationEffect.createWaveform(longArrayOf(0, 150, 200, 150), -1)
-            RingerMode.SILENT -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK)
+    private fun RingerMode.vibrationEffect(vibrator: Vibrator): VibrationEffect = when (this) {
+        RingerMode.RING -> VibrationEffect.createOneShot(400L, VibrationEffect.DEFAULT_AMPLITUDE)
+        RingerMode.VIBRATE -> {
+            // Unsupported primitives silence the whole composition; use the waveform on those phones.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                vibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_CLICK)
+            ) {
+                VibrationEffect.startComposition()
+                    .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, 1.0f)
+                    .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, 1.0f, 70)
+                    .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, 1.0f, 70)
+                    .compose()
+            } else {
+                VibrationEffect.createWaveform(longArrayOf(0, 40, 90, 40, 90, 40), -1)
+            }
         }
+        RingerMode.SILENT -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK)
+    }
 
     private val RingerMode.audioMode: Int
         get() = when (this) {
